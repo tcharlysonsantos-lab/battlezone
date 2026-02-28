@@ -1,0 +1,1 @@
+# Troquei-de-IA
