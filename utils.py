@@ -1,5 +1,8 @@
 # utils.py
 from datetime import datetime
+from models import Operador, db  # ← IMPORT CORRIGIDO
+from app import app  # ← IMPORT CORRIGIDO
+import logging
 
 # Cores do tema (para CSS)
 COR_LARANJA = "#FF6B00"
@@ -89,33 +92,119 @@ def get_modos_permitidos(tempo):
 def format_brl(valor):
     """Formata valor em reais"""
     return f"R$ {valor:.2f}".replace('.', ',')
-# Adicionar em utils.py
-
-def sincronizar_user_operador(user):
-    """Garante que usuário e operador estejam sincronizados"""
-    if not user.operador:
-        # Criar operador se não existir
-        operador = Operador.query.filter_by(warname=user.username).first()
-        if not operador:
-            operador = Operador(
-                nome=user.nome,
-                warname=user.username,
-                cpf=user.cpf,
-                email=user.email,
-                telefone=user.telefone,
-                data_nascimento=user.data_nascimento,
-                idade=str(user.idade) if user.idade else '',
-                battlepass='NAO'
-            )
-            db.session.add(operador)
-            db.session.flush()
-        
-        user.operador_id = operador.id
-    
-    return user.operador
 
 def parse_brl(valor_str):
     """Converte string BRL para float"""
     if isinstance(valor_str, (int, float)):
         return float(valor_str)
     return float(valor_str.replace('R$', '').replace('.', '').replace(',', '.').strip())
+
+# ==================== FUNÇÃO CORRIGIDA COM IMPORTS ====================
+def sincronizar_user_operador(user):
+    """Garante que usuário e operador estejam sincronizados"""
+    try:
+        # Buscar operador pelo warname
+        operador = Operador.query.filter_by(warname=user.username).first()
+        
+        if not operador:
+            # Criar novo operador se não existir
+            app.logger.info(f"🔧 Criando operador para usuário {user.username}")
+            
+            operador = Operador(
+                nome=user.nome,
+                warname=user.username,
+                cpf=user.cpf or '',
+                email=user.email,
+                telefone=user.telefone or '',
+                data_nascimento=user.data_nascimento or '',
+                idade=str(user.idade) if user.idade else '',
+                battlepass='NAO'
+            )
+            db.session.add(operador)
+            db.session.flush()
+            
+            # Vincular ao usuário
+            user.operador_id = operador.id
+            
+            # Registrar log (import aqui para evitar circular)
+            from models import Log
+            log = Log(
+                usuario=user.username,
+                acao='OPERADOR_CRIADO_AUTO',
+                detalhes=f"Operador criado automaticamente para usuário {user.username}"
+            )
+            db.session.add(log)
+            
+        else:
+            # Vincular se não estiver vinculado
+            if not user.operador_id:
+                user.operador_id = operador.id
+            
+            # Atualizar dados do operador se necessário
+            precisa_atualizar = False
+            
+            if operador.nome != user.nome:
+                operador.nome = user.nome
+                precisa_atualizar = True
+                
+            if user.email and operador.email != user.email:
+                operador.email = user.email
+                precisa_atualizar = True
+                
+            if user.cpf and operador.cpf != user.cpf:
+                operador.cpf = user.cpf
+                precisa_atualizar = True
+                
+            if user.telefone and operador.telefone != user.telefone:
+                operador.telefone = user.telefone
+                precisa_atualizar = True
+            
+            if precisa_atualizar:
+                app.logger.info(f"🔄 Atualizando dados do operador {operador.warname}")
+        
+        db.session.commit()
+        return operador
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'❌ Erro ao sincronizar user/operador: {str(e)}')
+        return None
+
+# ==================== FUNÇÃO AUXILIAR PARA VERIFICAR CONSISTÊNCIA ====================
+def verificar_consistencia_user_operador():
+    """
+    Verifica se todos os usuários têm operadores correspondentes
+    """
+    from models import User  # Import aqui para evitar circular
+    
+    inconsistencias = []
+    
+    users = User.query.filter_by(status='aprovado').all()
+    
+    for user in users:
+        operador = Operador.query.filter_by(warname=user.username).first()
+        
+        if not operador:
+            inconsistencias.append({
+                'user_id': user.id,
+                'username': user.username,
+                'problema': 'Sem operador associado'
+            })
+        else:
+            # Verificar dados inconsistentes
+            if operador.nome != user.nome:
+                inconsistencias.append({
+                    'user_id': user.id,
+                    'username': user.username,
+                    'problema': f'Nome diferente: User="{user.nome}", Operador="{operador.nome}"'
+                })
+            
+            # Verificar se o vínculo está correto
+            if user.operador_id != operador.id:
+                inconsistencias.append({
+                    'user_id': user.id,
+                    'username': user.username,
+                    'problema': f'Vínculo incorreto: operador_id={user.operador_id}, deveria ser {operador.id}'
+                })
+    
+    return inconsistencias
