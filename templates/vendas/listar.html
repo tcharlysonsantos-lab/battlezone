@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Vendas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-laranja"><i class="fas fa-shopping-cart me-2"></i>Vendas</h1>
+    <a href="{{ url_for('nova_venda') }}" class="btn" style="background-color: #FF6B00; color: white;">
+        <i class="fas fa-plus-circle me-2"></i>Nova Venda
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control" placeholder="🔍 Buscar..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="Todos" {% if status == 'Todos' %}selected{% endif %}>Todos</option>
+                    <option value="Pago" {% if status == 'Pago' %}selected{% endif %}>Pago</option>
+                    <option value="Pendente" {% if status == 'Pendente' %}selected{% endif %}>Pendente</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="periodo" class="form-select">
+                    <option value="Todas" {% if periodo == 'Todas' %}selected{% endif %}>Todas</option>
+                    <option value="Hoje" {% if periodo == 'Hoje' %}selected{% endif %}>Hoje</option>
+                    <option value="7d" {% if periodo == '7d' %}selected{% endif %}>Últimos 7 dias</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn w-100" style="background-color: #FF6B00; color: white;">
+                    <i class="fas fa-filter me-2"></i>Filtrar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('listar_vendas') }}" class="btn btn-secondary w-100">
+                    <i class="fas fa-undo me-2"></i>Limpar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de Vendas -->
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-list me-2"></i>Histórico de Vendas
+    </div>
+    <div class="card-body">
+        {% if vendas %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Cliente</th>
+                        <th>Produto</th>
+                        <th>Qtd</th>
+                        <th>Valor Unit.</th>
+                        <th>Valor Total</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for venda in vendas %}
+                    <tr id="venda-{{ venda.id }}">
+                        <td>{{ venda.data }}</td>
+                        <td>{{ venda.cliente or 'Não informado' }}</td>
+                        <td>{{ venda.produto }}</td>
+                        <td>{{ venda.quantidade }} {{ venda.unidade }}</td>
+                        
+                        <!-- VALOR UNITÁRIO EDITÁVEL -->
+                        <td>
+                            <span class="valor-unitario-view" data-venda="{{ venda.id }}">
+                                R$ {{ "%.2f"|format(venda.valor / venda.quantidade if venda.quantidade > 0 else venda.valor) }}
+                            </span>
+                            <input type="number" 
+                                   class="form-control form-control-sm valor-unitario-edit" 
+                                   data-venda="{{ venda.id }}"
+                                   data-id="{{ venda.id }}"
+                                   value="{{ venda.valor / venda.quantidade if venda.quantidade > 0 else venda.valor }}"
+                                   step="0.01"
+                                   min="0"
+                                   style="display: none; width: 100px;">
+                        </td>
+                        
+                        <!-- VALOR TOTAL EDITÁVEL -->
+                        <td>
+                            <span class="valor-total-view" data-venda="{{ venda.id }}">
+                                R$ {{ "%.2f"|format(venda.valor) }}
+                            </span>
+                            <input type="number" 
+                                   class="form-control form-control-sm valor-total-edit" 
+                                   data-venda="{{ venda.id }}"
+                                   data-id="{{ venda.id }}"
+                                   value="{{ venda.valor }}"
+                                   step="0.01"
+                                   min="0"
+                                   style="display: none; width: 100px;">
+                        </td>
+                        
+                        <!-- STATUS COM DROPDOWN -->
+                        <td>
+                            <select class="form-select form-select-sm status-select" 
+                                    data-venda="{{ venda.id }}"
+                                    data-id="{{ venda.id }}">
+                                <option value="Pendente" {% if venda.status == 'Pendente' %}selected{% endif %}>Pendente</option>
+                                <option value="Pago" {% if venda.status == 'Pago' %}selected{% endif %}>Pago</option>
+                            </select>
+                        </td>
+                        
+                        <td>
+                            <button class="btn btn-sm btn-outline-success editar-valor" 
+                                    data-venda="{{ venda.id }}"
+                                    title="Editar valores">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success salvar-valor" 
+                                    data-venda="{{ venda.id }}"
+                                    style="display: none;"
+                                    title="Salvar">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-secondary cancelar-edicao" 
+                                    data-venda="{{ venda.id }}"
+                                    style="display: none;"
+                                    title="Cancelar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('deletar_venda', id=venda.id) }}" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Deletar venda?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted my-5">Nenhuma venda encontrada</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- JavaScript para edição de valores -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // STATUS - Atualização automática
+    document.querySelectorAll('.status-select').forEach(select => {
+        select.addEventListener('change', function() {
+            let vendaId = this.dataset.venda;
+            let novoStatus = this.value;
+            
+            fetch(`/vendas/${vendaId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: `status=${novoStatus}`
+            }).then(() => {
+                // Feedback visual
+                this.style.backgroundColor = '#28a745';
+                setTimeout(() => this.style.backgroundColor = '', 500);
+            });
+        });
+    });
+    
+    // EDIÇÃO DE VALORES
+    document.querySelectorAll('.editar-valor').forEach(btn => {
+        btn.addEventListener('click', function() {
+            let vendaId = this.dataset.venda;
+            
+            // Esconder botão editar, mostrar salvar/cancelar
+            this.style.display = 'none';
+            document.querySelector(`.salvar-valor[data-venda="${vendaId}"]`).style.display = 'inline-block';
+            document.querySelector(`.cancelar-edicao[data-venda="${vendaId}"]`).style.display = 'inline-block';
+            
+            // Esconder spans de valor, mostrar inputs
+            document.querySelector(`.valor-unitario-view[data-venda="${vendaId}"]`).style.display = 'none';
+            document.querySelector(`.valor-total-view[data-venda="${vendaId}"]`).style.display = 'none';
+            document.querySelector(`.valor-unitario-edit[data-venda="${vendaId}"]`).style.display = 'inline-block';
+            document.querySelector(`.valor-total-edit[data-venda="${vendaId}"]`).style.display = 'inline-block';
+        });
+    });
+    
+    // CANCELAR EDIÇÃO
+    document.querySelectorAll('.cancelar-edicao').forEach(btn => {
+        btn.addEventListener('click', function() {
+            let vendaId = this.dataset.venda;
+            
+            // Restaurar botões
+            this.style.display = 'none';
+            document.querySelector(`.salvar-valor[data-venda="${vendaId}"]`).style.display = 'none';
+            document.querySelector(`.editar-valor[data-venda="${vendaId}"]`).style.display = 'inline-block';
+            
+            // Restaurar visualização
+            document.querySelector(`.valor-unitario-view[data-venda="${vendaId}"]`).style.display = 'inline-block';
+            document.querySelector(`.valor-total-view[data-venda="${vendaId}"]`).style.display = 'inline-block';
+            document.querySelector(`.valor-unitario-edit[data-venda="${vendaId}"]`).style.display = 'none';
+            document.querySelector(`.valor-total-edit[data-venda="${vendaId}"]`).style.display = 'none';
+        });
+    });
+    
+    // SALVAR EDIÇÃO
+    document.querySelectorAll('.salvar-valor').forEach(btn => {
+        btn.addEventListener('click', function() {
+            let vendaId = this.dataset.venda;
+            
+            let valorUnitario = document.querySelector(`.valor-unitario-edit[data-venda="${vendaId}"]`).value;
+            let valorTotal = document.querySelector(`.valor-total-edit[data-venda="${vendaId}"]`).value;
+            
+            // Aqui você precisará de uma rota para atualizar os valores
+            // Por enquanto, só vamos atualizar a visualização
+            fetch(`/vendas/${vendaId}/atualizar-valores`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: `valor_unitario=${valorUnitario}&valor_total=${valorTotal}`
+            }).then(response => {
+                if (response.ok) {
+                    // Atualizar visualização
+                    document.querySelector(`.valor-unitario-view[data-venda="${vendaId}"]`).textContent = `R$ ${parseFloat(valorUnitario).toFixed(2)}`;
+                    document.querySelector(`.valor-total-view[data-venda="${vendaId}"]`).textContent = `R$ ${parseFloat(valorTotal).toFixed(2)}`;
+                    
+                    // Restaurar botões
+                    btn.style.display = 'none';
+                    document.querySelector(`.cancelar-edicao[data-venda="${vendaId}"]`).style.display = 'none';
+                    document.querySelector(`.editar-valor[data-venda="${vendaId}"]`).style.display = 'inline-block';
+                    
+                    // Restaurar visualização
+                    document.querySelector(`.valor-unitario-view[data-venda="${vendaId}"]`).style.display = 'inline-block';
+                    document.querySelector(`.valor-total-view[data-venda="${vendaId}"]`).style.display = 'inline-block';
+                    document.querySelector(`.valor-unitario-edit[data-venda="${vendaId}"]`).style.display = 'none';
+                    document.querySelector(`.valor-total-edit[data-venda="${vendaId}"]`).style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
+
+<style>
+.valor-unitario-edit, .valor-total-edit {
+    display: inline-block;
+    width: 100px !important;
+}
+.editar-valor, .salvar-valor, .cancelar-edicao {
+    margin-right: 5px;
+}
+</style>
+{% endblock %}

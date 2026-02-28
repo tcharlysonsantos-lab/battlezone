@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Backups{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-laranja"><i class="fas fa-database me-2"></i>Backups</h1>
+    <form method="POST" action="{{ url_for('sincronizar_agora') }}" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
+            <i class="fas fa-sync me-2"></i>Sincronizar Agora
+        </button>
+    </form>
+</div>
+
+<!-- SEÇÃO: SALVOS AUTOMÁTICO -->
+<div class="card mb-4">
+    <div class="card-header" style="background-color: #f8f9fa; border-bottom: 2px solid #FF6B00;">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-clock me-2" style="color: #FF6B00;"></i>SALVOS AUTOMÁTICO <span class="badge" style="background-color: #FF6B00;">{{ backups.automáticos|length }}</span></h5>
+            <small class="text-muted">Criados a cada 5 minutos (máximo 20 mantidos)</small>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if backups.automáticos %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Arquivo</th>
+                        <th>Tamanho</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in backups.automáticos %}
+                    <tr>
+                        <td>{{ b.data }}</td>
+                        <td><code>{{ b.arquivo }}</code></td>
+                        <td>{{ (b.tamanho / 1024 / 1024)|round(2) }} MB</td>
+                        <td class="text-center">
+                            <form method="POST" action="{{ url_for('admin_backup_restaurar', nome=b.arquivo) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja restaurar este backup?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-success" title="Restaurar">
+                                    <i class="fas fa-undo me-1"></i>Restaurar
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin_backup_deletar', nome=b.arquivo) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja deletar este backup?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-danger" title="Deletar">
+                                    <i class="fas fa-trash me-1"></i>Deletar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted my-3">
+            <i class="fas fa-inbox me-2"></i>Nenhum backup automático disponível
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- SEÇÃO: SALVOS MANUAL -->
+<div class="card">
+    <div class="card-header" style="background-color: #f8f9fa; border-bottom: 2px solid #FF6B00;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0"><i class="fas fa-bookmark me-2" style="color: #FF6B00;"></i>SALVOS MANUAL <span class="badge" style="background-color: #FF6B00;">{{ backups.manuais|length }}</span></h5>
+                <small class="text-muted ms-4">Backups personalizados (sem limite de armazenamento)</small>
+            </div>
+            <button type="button" class="btn btn-sm" style="background-color: #FF6B00; color: white;" data-bs-toggle="modal" data-bs-target="#modalNovoBackup">
+                <i class="fas fa-plus me-1"></i>Novo Backup Manual
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if backups.manuais %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome Personalizado</th>
+                        <th>Data/Hora</th>
+                        <th>Arquivo</th>
+                        <th>Tamanho</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in backups.manuais %}
+                    <tr>
+                        <td>
+                            <strong style="color: #FF6B00;">{{ b.nome }}</strong>
+                        </td>
+                        <td>{{ b.data }}</td>
+                        <td><code>{{ b.arquivo }}</code></td>
+                        <td>{{ (b.tamanho / 1024 / 1024)|round(2) }} MB</td>
+                        <td class="text-center">
+                            <form method="POST" action="{{ url_for('admin_backup_restaurar', nome=b.arquivo) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja restaurar este backup?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-success" title="Restaurar">
+                                    <i class="fas fa-undo me-1"></i>Restaurar
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin_backup_deletar', nome=b.arquivo) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja deletar este backup?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-danger" title="Deletar">
+                                    <i class="fas fa-trash me-1"></i>Deletar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted my-3">
+            <i class="fas fa-inbox me-2"></i>Nenhum backup manual disponível
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MODAL: Novo Backup Manual -->
+<div class="modal fade" id="modalNovoBackup" tabindex="-1" aria-labelledby="modalNovoBackupLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="border-bottom: 2px solid #FF6B00;">
+                <h5 class="modal-title" id="modalNovoBackupLabel"><i class="fas fa-bookmark me-2" style="color: #FF6B00;"></i>Criar Novo Backup Manual</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin_backup_criar_manual') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nomeBackup" class="form-label">
+                            <i class="fas fa-tag me-2" style="color: #FF6B00;"></i>Nome do Backup
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="nomeBackup" 
+                            name="nome_backup" 
+                            placeholder="Ex: Backup pré-evento, Production, Versão Final..." 
+                            required
+                            maxlength="100"
+                        >
+                        <small class="form-text text-muted">
+                            Use um nome descritivo para identificar o backup (máx. 100 caracteres)
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
+                        <i class="fas fa-save me-1"></i>Criar Backup
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

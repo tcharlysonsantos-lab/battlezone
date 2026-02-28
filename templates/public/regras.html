@@ -1,0 +1,301 @@
+{% extends "public/base_publica.html" %}
+
+{% block title %}Regras - BattleZone Airsoft{% endblock %}
+
+{% block content %}
+<!-- Hero Section Pequena -->
+<section style="background: linear-gradient(135deg, var(--preto) 0%, var(--laranja-escuro) 100%); padding: 60px 0; margin-top: -80px;">
+    <div class="container text-center">
+        <h1 class="hero-title" style="font-size: 3rem;">📜 Regras do Jogo</h1>
+        <p class="lead">Conheça as regras e o espírito do Airsoft no BattleZone</p>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Regra de Honra -->
+                <div class="regra-destaque">
+                    <i class="fas fa-quote-left"></i>
+                    <p class="lead fst-italic mb-0">
+                        "O campo BattleZone estima muito o esporte Airsoft, por isso, deixamos nossa regra mais básica 
+                        e o legado de todo airsoftero: O airsoft é um jogo de honra acima de qualquer competitividade, 
+                        sempre ressaltamos que apenas uma munição alvejada ou até mesmo um susto gerando dúvida se 
+                        pegou ou não, o indivíduo deve se acusar morto."
+                    </p>
+                    <i class="fas fa-quote-right float-end"></i>
+                </div>
+
+                <!-- PREÇOS -->
+<section id="precos" class="py-5 bg-cinza-escuro">
+    <div class="container">
+        <h2 class="text-laranja text-center mb-5">💰 Tabela de Preços</h2>
+        
+        <!-- Abas para organizar -->
+        <ul class="nav nav-tabs justify-content-center mb-5" id="precoTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active text-laranja" id="avulso-tab" data-bs-toggle="tab" data-bs-target="#avulso" type="button" role="tab">
+                    <i class="fas fa-user me-2"></i>Avulso
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link text-laranja" id="equipe-tab" data-bs-toggle="tab" data-bs-target="#equipe" type="button" role="tab">
+                    <i class="fas fa-users me-2"></i>Equipe
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link text-laranja" id="suaarma-tab" data-bs-toggle="tab" data-bs-target="#suaarma" type="button" role="tab">
+                    <i class="fas fa-gun me-2"></i>Sua Arma
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Conteúdo das abas -->
+        <div class="tab-content" id="precoTabsContent">
+            
+            <!-- ABA AVULSO -->
+            <div class="tab-pane fade show active" id="avulso" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-laranja text-white text-center">
+                                <h4 class="mb-0">Normal</h4>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>10 minutos</td><td>100</td><td class="text-laranja fw-bold">R$ 10</td></tr>
+                                        <tr><td>20 minutos</td><td>200</td><td class="text-laranja fw-bold">R$ 20</td></tr>
+                                        <tr><td>30 minutos</td><td>200</td><td class="text-laranja fw-bold">R$ 25</td></tr>
+                                        <tr><td>60 minutos</td><td>400</td><td class="text-laranja fw-bold">R$ 40</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card h-100 border-warning">
+                            <div class="card-header bg-warning text-dark text-center">
+                                <h4 class="mb-0">Agendado</h4>
+                                <small>Com operador</small>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>30 min*</td><td>200</td><td class="text-laranja fw-bold">R$ 160</td></tr>
+                                        <tr><td>60 min*</td><td>400</td><td class="text-laranja fw-bold">R$ 280</td></tr>
+                                    </tbody>
+                                </table>
+                                <p class="text-muted small mt-3 mb-0"><i class="fas fa-info-circle me-1"></i> * com operador</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ABA EQUIPE -->
+            <div class="tab-pane fade" id="equipe" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-laranja text-white text-center">
+                                <h4 class="mb-0">Planos para Equipes</h4>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                            <th>Observação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>60 min</td><td>0</td><td class="text-laranja fw-bold">R$ 160</td><td>Sem BBs</td></tr>
+                                        <tr><td>60 min</td><td>200</td><td class="text-laranja fw-bold">R$ 200</td><td>200 BBs inclusos</td></tr>
+                                        <tr><td>60 min</td><td>400</td><td class="text-laranja fw-bold">R$ 240</td><td>400 BBs inclusos</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ABA SUA ARMA -->
+            <div class="tab-pane fade" id="suaarma" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-laranja text-white text-center">
+                                <h4 class="mb-0">Normal</h4>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>10 min</td><td>0</td><td class="text-laranja fw-bold">R$ 5</td></tr>
+                                        <tr><td>60 min</td><td>0</td><td class="text-laranja fw-bold">R$ 15</td></tr>
+                                        <tr><td>120 min</td><td>0</td><td class="text-laranja fw-bold">R$ 25</td></tr>
+                                        <tr><td>150 min</td><td>0</td><td class="text-laranja fw-bold">R$ 35</td></tr>
+                                        <tr><td>180 min</td><td>0</td><td class="text-laranja fw-bold">R$ 40</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card h-100 border-warning">
+                            <div class="card-header bg-warning text-dark text-center">
+                                <h4 class="mb-0">Agendado</h4>
+                                <small>Com operador</small>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>60 min</td><td>0</td><td class="text-laranja fw-bold">R$ 80</td></tr>
+                                        <tr><td>120 min</td><td>0</td><td class="text-laranja fw-bold">R$ 140</td></tr>
+                                        <tr><td>180 min</td><td>0</td><td class="text-laranja fw-bold">R$ 250</td></tr>
+                                    </tbody>
+                                </table>
+                                <p class="text-muted small mt-3 mb-0"><i class="fas fa-info-circle me-1"></i> * com operador</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Battlepass -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card bg-laranja text-white">
+                    <div class="card-body text-center p-5">
+                        <i class="fas fa-crown fa-4x mb-3"></i>
+                        <h2 class="mb-3">BATTLEPASS</h2>
+                        <p class="lead mb-4">Desbloqueie benefícios exclusivos!</p>
+                        <div class="row justify-content-center mb-4">
+                            <div class="col-md-4">
+                                <i class="fas fa-percent fa-2x mb-2"></i>
+                                <h5>Descontos</h5>
+                                <p>Até 20% em partidas</p>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                                <h5>Prioridade</h5>
+                                <p>Reservas antecipadas</p>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-gift fa-2x mb-2"></i>
+                                <h5>Brindes</h5>
+                                <p>BBs e equipamentos</p>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('auth.solicitar_acesso') }}" class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-ticket-alt me-2"></i>Garanta seu Battlepass
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+                <!-- REGRAS -->
+<section id="regras" class="py-5" style="scroll-margin-top: 100px;">
+    <div class="container">
+        <h2 class="text-laranja text-center mb-5" style="padding-top: 20px;">📜 REGRAS DO JOGO</h2>
+        
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <div class="card">
+                    <div class="card-body p-5">
+                        <!-- Regra de Honra -->
+                        <div class="regra-destaque mb-5">
+                            <i class="fas fa-quote-left fa-2x text-laranja mb-3"></i>
+                            <p class="lead fst-italic">
+                                "O airsoft é um jogo de honra acima de qualquer competitividade. 
+                                Em caso de dúvida, acuse-se morto."
+                            </p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4 class="text-laranja mb-3">⚔️ Conduta</h4>
+                                <ul class="list-unstyled">
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Distância mínima de 5 metros para atirar</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Proibido ficar reclamando no meio do jogo</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Respeite os limites do campo</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Em caso de dúvida, acuse-se morto</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h4 class="text-laranja mb-3">🔫 Equipamentos</h4>
+                                <ul class="list-unstyled">
+                                    <li class="mb-3"><i class="fas fa-exclamation-triangle text-warning me-2"></i> <strong>Limite de 400 FPS</strong> (proibido sniper e DMS)</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Braçadeiras para identificação de equipes</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Óculos de proteção OBRIGATÓRIOS</li>
+                                    <li class="mb-3"><i class="fas fa-exclamation-triangle text-warning me-2"></i> Proibido tirar os óculos dentro do campo Warfield/Redline</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4 class="text-laranja mb-3">🛡️ Segurança</h4>
+                                <ul class="list-unstyled">
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Monitoramento por câmeras 24/7</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Ranger presente durante todas as partidas</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Equipamentos de segurança obrigatórios</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h4 class="text-laranja mb-3">📝 Termo</h4>
+                                <ul class="list-unstyled">
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Assinatura de termo de responsabilidade obrigatória</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Menores com autorização dos pais</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Usuários{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-laranja"><i class="fas fa-users-cog me-2"></i>Gerenciar Usuários</h1>
+</div>
+
+<!-- Abas -->
+<ul class="nav nav-tabs mb-4" id="userTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="usuarios-tab" data-bs-toggle="tab" data-bs-target="#usuarios" type="button" role="tab">
+            <i class="fas fa-user-check me-2"></i>Usuários Ativos
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="solicitacoes-tab" data-bs-toggle="tab" data-bs-target="#solicitacoes" type="button" role="tab">
+            <i class="fas fa-clock me-2"></i>Solicitações Pendentes
+            {% if solicitacoes|length > 0 %}
+            <span class="badge bg-danger ms-2">{{ solicitacoes|length }}</span>
+            {% endif %}
+        </button>
+    </li>
+</ul>
+
+<!-- Conteúdo das abas -->
+<div class="tab-content">
+    <!-- Usuários Ativos -->
+    <div class="tab-pane fade show active" id="usuarios" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-users me-2 text-laranja"></i>Usuários Ativos</h5>
+            </div>
+            <div class="card-body">
+                
+                <!-- CAMPO DE BUSCA -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <form method="GET" class="d-flex">
+                            <input type="text" name="search" class="form-control me-2" placeholder="🔍 Buscar por usuário, nome ou email..." value="{{ search }}">
+                            <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            {% if search %}
+                            <a href="{{ url_for('admin_usuarios') }}" class="btn btn-secondary ms-2">
+                                <i class="fas fa-times"></i>
+                            </a>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Nível</th>
+                                <th>Status</th>
+                                <th>Último Login</th>
+                                <th>Nível</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in usuarios %}
+                            <tr>
+                                <td><strong>{{ user.username }}</strong></td>
+                                <td>{{ user.nome }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    <span class="badge {% if user.nivel == 'admin' %}bg-danger{% elif user.nivel == 'gerente' %}bg-warning{% else %}bg-info{% endif %}">
+                                        {{ user.nivel|upper }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if user.status == 'aprovado' %}
+                                    <span class="badge bg-success">Aprovado</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ user.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.last_login.strftime('%d/%m/%Y %H:%M') if user.last_login else 'Nunca' }}</td>
+                                <td>
+                                    <!-- SELECT DE NÍVEL -->
+                                    <select class="form-select form-select-sm nivel-select" data-user-id="{{ user.id }}" style="width: 130px;">
+                                        <option value="operador" {% if user.nivel == 'operador' %}selected{% endif %}>Operador</option>
+                                        <option value="gerente" {% if user.nivel == 'gerente' %}selected{% endif %}>Gerente</option>
+                                        <option value="admin" {% if user.nivel == 'admin' %}selected{% endif %}>Admin</option>
+                                        <option value="financeiro" {% if user.nivel == 'financeiro' %}selected{% endif %}>Financeiro</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <!-- BOTÃO DELETAR (proteção para não deletar a si mesmo) -->
+                                    {% if user.id != current_user.id %}
+                                    <form method="POST" action="{{ url_for('deletar_usuario', id=user.id) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja deletar o usuário {{ user.username }}? Esta ação não pode ser desfeita!');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Deletar usuário">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="text-muted" title="Você não pode deletar seu próprio usuário">
+                                        <i class="fas fa-ban"></i>
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Solicitações Pendentes -->
+    <div class="tab-pane fade" id="solicitacoes" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clock me-2 text-laranja"></i>Solicitações Pendentes</h5>
+            </div>
+            <div class="card-body">
+                {% if solicitacoes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>CPF</th>
+                                <th>Idade</th>
+                                <th>Nível</th>
+                                <th>Solicitado em</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sol in solicitacoes %}
+                            <tr>
+                                <td>{{ sol.usuario }}</td>
+                                <td>{{ sol.nome }}</td>
+                                <td>{{ sol.email }}</td>
+                                <td>{{ sol.cpf }}</td>
+                                <td>{{ sol.idade }} anos</td>
+                                <td>
+                                    <span class="badge bg-info">{{ sol.nivel|upper }}</span>
+                                </td>
+                                <td>{{ sol.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('aprovar_solicitacao', id=sol.id, acao='aprovar') }}" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Aprovar este usuário?')">
+                                            <i class="fas fa-check"></i> Aprovar
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('aprovar_solicitacao', id=sol.id, acao='rejeitar') }}" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Rejeitar este usuário?')">
+                                            <i class="fas fa-times"></i> Rejeitar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center text-muted my-5">Nenhuma solicitação pendente</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript para alterar nível -->
+<script>
+document.querySelectorAll('.nivel-select').forEach(select => {
+    select.addEventListener('change', function() {
+        let userId = this.dataset.userId;
+        let novoNivel = this.value;
+        
+        if (confirm(`Alterar nível do usuário para ${novoNivel}?`)) {
+            fetch(`/admin/usuario/${userId}/alterar-nivel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: `nivel=${novoNivel}`
+            }).then(response => {
+                if (response.ok) {
+                    alert('Nível alterado com sucesso!');
+                } else {
+                    alert('Erro ao alterar nível');
+                    location.reload();
+                }
+            });
+        } else {
+            // Reverter select
+            this.value = this.querySelector(`[value="${this.dataset.valorOriginal}"]`).value;
+        }
+    });
+    
+    // Salvar valor original para reverter se cancelar
+    select.dataset.valorOriginal = select.value;
+});
+</script>
+{% endblock %}

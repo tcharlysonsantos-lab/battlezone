@@ -1,0 +1,160 @@
+{% extends "public/base_publica.html" %}
+
+{% block title %}Calendário - BattleZone{% endblock %}
+
+{% block content %}
+<<!-- Hero Section Pequena - COM MAIS ESPAÇO -->
+<section style="background: linear-gradient(135deg, var(--preto) 0%, var(--laranja-escuro) 100%); 
+                padding: 100px 0 60px;  /* ← AUMENTADO DE 60px para 100px no topo */
+                margin-top: -80px;">
+    <div class="container text-center">
+        <h1 class="hero-title" style="font-size: 3rem;">📅 Calendário</h1>
+        <p class="lead">{{ mes_nome }} {{ ano }}</p>
+        <p class="text-white-50">Hoje é dia <strong class="text-laranja">{{ dia_hoje }}</strong></p>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <!-- Informação importante -->
+        <div class="alert alert-info text-center mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            Mostrando apenas partidas do dia <strong>{{ data_hoje }}</strong>
+        </div>
+
+        <!-- Calendário -->
+        <div class="card">
+            <div class="card-body">
+                <table class="table table-bordered text-center">
+                    <thead>
+                        <tr>
+                            <th style="color: var(--laranja);">Dom</th>
+                            <th style="color: var(--laranja);">Seg</th>
+                            <th style="color: var(--laranja);">Ter</th>
+                            <th style="color: var(--laranja);">Qua</th>
+                            <th style="color: var(--laranja);">Qui</th>
+                            <th style="color: var(--laranja);">Sex</th>
+                            <th style="color: var(--laranja);">Sáb</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for semana in cal %}
+                        <tr>
+                            {% for dia in semana %}
+                            <td style="height: 100px; width: 14%; vertical-align: top; 
+                                       {% if dia == 0 %}background-color: #2D2D2D;{% endif %}
+                                       {% if dia == dia_hoje %}border: 3px solid var(--laranja);{% endif %}">
+                                {% if dia != 0 %}
+                                    <div class="d-flex justify-content-between p-1">
+                                        <strong>{{ dia }}</strong>
+                                        {% if partidas_por_dia[dia] %}
+                                            <span class="badge" style="background-color: var(--laranja);">
+                                                {{ partidas_por_dia[dia]|length }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Só mostra partidas se for o dia de hoje -->
+                                    {% if dia == dia_hoje and partidas_por_dia[dia] %}
+                                        <div class="mt-2" style="font-size: 0.75rem;">
+                                            {% for partida in partidas_por_dia[dia] %}
+                                                <div class="mb-1 p-1 rounded text-white" 
+                                                    style="background-color: var(--laranja); cursor: pointer;"
+                                                    onclick="verPartida('{{ partida.nome }}', '{{ partida.horario }}', '{{ partida.campo }}', '{{ partida.modo }}', {{ partida.vagas }})">
+                                                    <small>{{ partida.horario }} - {{ partida.nome|truncate(10) }}</small>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Lista detalhada das partidas de hoje -->
+        {% if partidas_por_dia[dia_hoje] %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">📋 Partidas de hoje ({{ data_hoje }})</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for partida in partidas_por_dia[dia_hoje] %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="text-laranja">{{ partida.nome }}</h6>
+                                <p class="mb-1"><i class="fas fa-clock me-2"></i>{{ partida.horario }}</p>
+                                <p class="mb-1"><i class="fas fa-map-marker-alt me-2"></i>{{ partida.campo }}</p>
+                                <p class="mb-1"><i class="fas fa-crosshairs me-2"></i>{{ partida.modo }}</p>
+                                <p class="mb-3"><i class="fas fa-users me-2"></i>{{ partida.vagas }} vagas</p>
+                                <a href="{{ url_for('auth.solicitar_acesso') }}" class="btn btn-laranja btn-sm w-100">
+                                    Reservar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<<!-- Modal de Detalhes da Partida (CORRIGIDO) -->
+<div class="modal fade" id="partidaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--cinza-escuro); color: white;">
+            <div class="modal-header" style="border-bottom: 2px solid var(--laranja);">
+                <h5 class="modal-title text-laranja" id="partidaModalTitle">Detalhes da Partida</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="partidaModalBody">
+                <div class="text-center mb-4">
+                    <i class="fas fa-gamepad fa-3x text-laranja mb-3"></i>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <small class="text-laranja">⏰ Horário</small>
+                        <p class="fs-5" id="modalHorario">--:--</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <small class="text-laranja">🎯 Campo</small>
+                        <p class="fs-5" id="modalCampo">---</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <small class="text-laranja">⚔️ Modo</small>
+                        <p class="fs-5" id="modalModo">---</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <small class="text-laranja">👥 Vagas</small>
+                        <p class="fs-5" id="modalVagas">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--cinza-claro);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+function verPartida(id, nome, horario, campo, modo, vagas) {
+    document.getElementById('partidaModalTitle').textContent = nome;
+    document.getElementById('modalHorario').textContent = horario;
+    document.getElementById('modalCampo').textContent = campo;
+    document.getElementById('modalModo').textContent = modo;
+    document.getElementById('modalVagas').textContent = vagas;
+    new bootstrap.Modal(document.getElementById('partidaModal')).show();
+}
+</script>
+{% endblock %}
+{% endblock %}

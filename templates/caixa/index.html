@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Caixa{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-laranja"><i class="fas fa-cash-register me-2"></i>Caixa</h1>
+    <div>
+        <a href="{{ url_for('listar_vendas') }}" class="btn btn-outline-laranja me-2">
+            <i class="fas fa-shopping-cart me-2"></i>Ir para Vendas
+        </a>
+        <a href="{{ url_for('nova_venda') }}?tipo=caixa" class="btn" style="background-color: #FF6B00; color: white;">
+            <i class="fas fa-plus-circle me-2"></i>Novo Movimento
+        </a>
+    </div>
+</div>
+
+<!-- Cards de resumo do caixa -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-wallet fa-2x text-laranja mb-2"></i>
+                <h6>Saldo Atual</h6>
+                <h3 class="{% if saldo_atual >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    R$ {{ "%.2f"|format(saldo_atual) }}
+                </h3>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CARD DE ENTRADAS -->
+    <div class="col-md-3">
+        <a href="{{ url_for('caixa') }}?tipo=entrada" class="text-decoration-none">
+            <div class="card text-center" style="cursor: pointer;">
+                <div class="card-body">
+                    <i class="fas fa-arrow-up fa-2x text-success mb-2"></i>
+                    <h6>Entradas</h6>
+                    <h4 class="text-success">R$ {{ "%.2f"|format(entradas_hoje) }}</h4>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <!-- CARD DE SAÍDAS -->
+    <div class="col-md-3">
+        <a href="{{ url_for('caixa') }}?tipo=saida" class="text-decoration-none">
+            <div class="card text-center" style="cursor: pointer;">
+                <div class="card-body">
+                    <i class="fas fa-arrow-down fa-2x text-danger mb-2"></i>
+                    <h6>Saídas</h6>
+                    <h4 class="text-danger">R$ {{ "%.2f"|format(saidas_hoje) }}</h4>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <!-- CARD DE PENDENTES (COM VALOR CORRETO) -->
+<div class="col-md-3">
+    <a href="{{ url_for('caixa') }}?status=Pendente" class="text-decoration-none">
+        <div class="card text-center" style="cursor: pointer;">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                <h6>Pendentes</h6>
+                <h4 class="text-warning">R$ {{ "%.2f"|format(total_pendente) }}</h4>
+            </div>
+        </div>
+    </a>
+</div>
+
+<!-- INDICADOR DE FILTRO ATIVO -->
+{% if tipo != 'todos' or status_filtro != 'todos' %}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-filter me-2"></i>
+    <strong>Filtro ativo:</strong> 
+    {% if tipo == 'entrada' %}Mostrando apenas ENTRADAS{% endif %}
+    {% if tipo == 'saida' %}Mostrando apenas SAÍDAS{% endif %}
+    {% if status_filtro == 'Pago' %}Mostrando apenas PAGOS{% endif %}
+    {% if status_filtro == 'Pendente' %}Mostrando apenas PENDENTES{% endif %}
+    <a href="{{ url_for('caixa') }}" class="btn btn-sm btn-outline-secondary ms-3">
+        <i class="fas fa-times me-1"></i>Limpar filtro
+    </a>
+</div>
+{% endif %}
+
+<!-- FILTROS DO CAIXA -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio }}">
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="data_fim" class="form-control" value="{{ data_fim }}">
+            </div>
+            <div class="col-md-2">
+                <select name="tipo" class="form-select">
+                    <option value="todos" {% if tipo == 'todos' %}selected{% endif %}>Todos</option>
+                    <option value="entrada" {% if tipo == 'entrada' %}selected{% endif %}>Entradas</option>
+                    <option value="saida" {% if tipo == 'saida' %}selected{% endif %}>Saídas</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="todos" {% if status_filtro == 'todos' %}selected{% endif %}>Todos</option>
+                    <option value="Pago" {% if status_filtro == 'Pago' %}selected{% endif %}>Pagos</option>
+                    <option value="Pendente" {% if status_filtro == 'Pendente' %}selected{% endif %}>Pendentes</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn w-100" style="background-color: #FF6B00; color: white;">
+                    <i class="fas fa-filter me-2"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de movimentos do caixa -->
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-history me-2"></i>Movimentos do Caixa
+    </div>
+    <div class="card-body">
+        {% if movimentos %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Cliente</th>
+                        <th>Descrição</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mov in movimentos %}
+                    <tr>
+                        <td>{{ mov.data }}</td>
+                        <td>
+                            <strong>{{ mov.cliente or 'Não informado' }}</strong>
+                        </td>
+                        <td>
+                            {{ mov.produto }}
+                            {% if mov.descricao %}
+                            <br><small class="text-muted">{{ mov.descricao }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge" style="background-color: #FF6B00;">{{ mov.tipo }}</span>
+                        </td>
+                        <td class="{% if mov.valor >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                            R$ {{ "%.2f"|format(mov.valor) }}
+                        </td>
+                        <td>
+                            {% if mov.status == 'Pago' %}
+                            <span class="badge bg-success">Pago</span>
+                            {% else %}
+                            <span class="badge bg-warning">Pendente</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted my-5">Nenhum movimento encontrado</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

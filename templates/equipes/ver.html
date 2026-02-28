@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes da Equipe{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-flag me-2"></i>Detalhes da Equipe</h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <!-- Foto ou Escudo (GRANDE) -->
+                    <div style="width: 150px; height: 150px; border-radius: 15px; margin: 0 auto; overflow: hidden; background-color: #FF6B00; display: flex; align-items: center; justify-content: center;">
+                        {% if equipe.foto %}
+                            <img src="{{ url_for('static', filename='uploads/' + equipe.foto) }}" alt="{{ equipe.nome }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <i class="fas fa-shield-alt" style="font-size: 80px; color: white;"></i>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Nome da Equipe -->
+                    <h2 class="mt-3" style="color: #FF6B00; font-size: 36px;">{{ equipe.nome }}</h2>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-crown me-2" style="color: #FF6B00;"></i>Capitão:</strong> 
+                            {% set capitao = operadores|selectattr('id', 'equalto', equipe.capitao_id)|first %}
+                            {% if capitao %}
+                                {{ capitao.nome }} (@{{ capitao.warname }})
+                            {% else %}
+                                <span class="text-muted">Não definido</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-crown me-2" style="color: #FF6B00;"></i>Battlepass:</strong> 
+                            {% if equipe.battlepass == 'SIM' %}
+                                <span class="badge" style="background-color: #FF6B00; color: white;">SIM</span>
+                            {% else %}
+                                <span class="badge bg-secondary">NÃO</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                    <!-- Membros da Equipe -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 style="color: #FF6B00;"><i class="fas fa-users me-2"></i>Membros ({{ equipe.membros.count() }})</h5>
+                    
+                    <!-- Botão para adicionar membro -->
+                    <button class="btn btn-sm" style="background-color: #FF6B00; color: white;" data-bs-toggle="modal" data-bs-target="#adicionarMembroModal">
+                        <i class="fas fa-plus-circle me-1"></i>Adicionar Membro
+                    </button>
+                </div>
+
+                {% if equipe.membros.count() > 0 %}
+                    <div class="row">
+                        {% for membro in equipe.membros.all() %}
+                        <div class="col-md-6 mb-2">
+                            <div class="card bg-preto">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ membro.nome }}</strong>
+                                            <br>
+                                            <small class="text-muted">@{{ membro.warname }}</small>
+                                        </div>
+                                        <div>
+                                            {% if membro.id == equipe.capitao_id %}
+                                                <span class="badge" style="background-color: #FF6B00; margin-right: 5px;">Capitão</span>
+                                            {% endif %}
+                                            
+                                            <!-- FORM SIMPLES PARA REMOVER - SEM JAVASCRIPT -->
+                                            <form method="POST" action="{{ url_for('gerenciar_membros', id=equipe.id) }}" style="display: inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="acao" value="remover">
+                                                <input type="hidden" name="operador_id" value="{{ membro.id }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remover {{ membro.nome }} da equipe?')">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">Nenhum membro na equipe</p>
+                {% endif %}
+                
+                <hr>
+                
+                <!-- Botões de ação -->
+<div class="d-flex justify-content-between">
+    <a href="{{ url_for('listar_equipes') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+    <div>
+        <a href="{{ url_for('editar_equipe', id=equipe.id) }}" class="btn" style="background-color: #FF6B00; color: white;">
+            <i class="fas fa-edit me-2"></i>Editar
+        </a>
+        
+        <!-- FORM DIRETO PARA DELETAR (SEM MODAL) -->
+        <form method="POST" action="{{ url_for('deletar_equipe', id=equipe.id) }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja deletar a equipe {{ equipe.nome }}?')">
+                <i class="fas fa-trash me-2"></i>Deletar
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de confirmação para deletar -->
+<div class="modal fade" id="deletarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: #2D2D2D; color: white;">
+            <div class="modal-header" style="border-bottom: 1px solid #FF6B00;">
+                <h5 class="modal-title" style="color: #FF6B00;">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar a equipe <strong style="color: #FF6B00;" id="equipeNome"></strong>?</p>
+                <p class="text-danger"><small>Esta ação não pode ser desfeita!</small></p>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #FF6B00;">
+                <form id="deletarForm" method="POST">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Deletar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para adicionar membro -->
+<div class="modal fade" id="adicionarMembroModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: #2D2D2D; color: white;">
+            <div class="modal-header" style="border-bottom: 1px solid #FF6B00;">
+                <h5 class="modal-title" style="color: #FF6B00;">Adicionar Membro</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('gerenciar_membros', id=equipe.id) }}">
+                    <!-- USAR O MESMO MÉTODO DO FORM PRINCIPAL -->
+                    {{ form.hidden_tag() if form else '' }}
+                    
+                    <!-- Fallback caso form não exista -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <input type="hidden" name="acao" value="adicionar">
+                    <div class="mb-3">
+                        <label class="form-label">Selecione o operador:</label>
+                        <select name="operador_id" class="form-select" required>
+                            <option value="">-- Selecione --</option>
+                            {% for op in operadores %}
+                                {% if op.id not in equipe.membros.all()|map(attribute='id') %}
+                                    <option value="{{ op.id }}">{{ op.nome }} (@{{ op.warname }})</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="modal-footer" style="border-top: 1px solid #FF6B00; padding: 15px 0 0 0;">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">Adicionar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para remover membro -->
+<div class="modal fade" id="removerMembroModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: #2D2D2D; color: white;">
+            <div class="modal-header" style="border-bottom: 1px solid #FF6B00;">
+                <h5 class="modal-title" style="color: #FF6B00;">Confirmar Remoção</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Remover o membro <strong style="color: #FF6B00;" id="membroNome"></strong> da equipe?</p>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #FF6B00;">
+                <form id="removerMembroForm" method="POST">
+                    <input type="hidden" name="acao" value="remover">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Remover</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deletarEquipe(id, nome) {
+    document.getElementById('equipeNome').textContent = nome;
+    var url = "{{ url_for('deletar_equipe', id=0) }}";
+    document.getElementById('deletarForm').action = url.replace('0', id);
+    new bootstrap.Modal(document.getElementById('deletarModal')).show();
+}
+
+function removerMembro(equipeId, membroId, membroNome) {
+    console.log("Remover membro:", equipeId, membroId, membroNome);  // DEBUG
+    
+    // Criar form dinamicamente
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{ url_for('gerenciar_membros', id=0) }}".replace('0', equipeId);
+    
+    // CSRF token
+    var csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrf_token';
+    csrf.value = '{{ csrf_token() }}';
+    form.appendChild(csrf);
+    
+    // Ação
+    var acao = document.createElement('input');
+    acao.type = 'hidden';
+    acao.name = 'acao';
+    acao.value = 'remover';
+    form.appendChild(acao);
+    
+    // ID do operador
+    var opId = document.createElement('input');
+    opId.type = 'hidden';
+    opId.name = 'operador_id';
+    opId.value = membroId;
+    form.appendChild(opId);
+    
+    // Adicionar form ao body e submeter
+    document.body.appendChild(form);
+    
+    if (confirm(`Remover ${membroNome} da equipe?`)) {
+        form.submit();
+    } else {
+        document.body.removeChild(form);
+    }
+}
+</script>
+{% endblock %}

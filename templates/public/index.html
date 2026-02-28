@@ -1,0 +1,515 @@
+{% extends "public/base_publica.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section" style="margin-top: -80px;">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <h1 class="hero-title">BATTLEZONE</h1>
+                <h2 class="hero-subtitle">O verdadeiro campo de batalha</h2>
+                <p class="lead text-white-50 mb-4">
+                    Venha viver a melhor experiência de Airsoft da região. 
+                    Campos temáticos, equipamentos completos e muita adrenalina!
+                </p>
+                <a href="#partidas-hoje" class="btn btn-laranja btn-lg me-3">
+                    <i class="fas fa-calendar-alt me-2"></i>Ver partidas de hoje
+                </a>
+                <a href="{{ url_for('auth.solicitar_acesso') }}" class="btn btn-outline-laranja btn-lg">
+                    <i class="fas fa-user-plus me-2"></i>Criar conta
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PARTIDAS DE HOJE -->
+<section id="partidas-hoje" class="py-5">
+    <div class="container">
+        <h2 class="text-laranja text-center mb-5">
+            <i class="fas fa-calendar-day me-3"></i>Partidas para hoje
+        </h2>
+        
+        {% if partidas_hoje %}
+            <div class="row">
+                {% for partida in partidas_hoje %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <i class="fas fa-clock me-2"></i>{{ partida.horario }}
+                        </div>
+                        <div class="card-body">
+                            <h5 class="text-laranja">{{ partida.nome }}</h5>
+                            <p class="mb-2">
+                                <i class="fas fa-map-marker-alt me-2"></i>{{ partida.campo }}
+                            </p>
+                            <p class="mb-2">
+                                <i class="fas fa-crosshairs me-2"></i>{{ partida.modo }}
+                            </p>
+                            <p class="mb-3">
+                                <i class="fas fa-users me-2"></i>{{ partida.total_participantes }} participantes
+                            </p>
+                            <div class="d-grid">
+                                <a href="{{ url_for('auth.solicitar_acesso') }}" class="btn btn-laranja">
+                                    <i class="fas fa-ticket-alt me-2"></i>Marcar partida
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                    <h4>Nenhuma partida agendada para hoje</h4>
+                    <p class="text-muted">Que tal agendar a primeira?</p>
+                    <a href="{{ url_for('auth.solicitar_acesso') }}" class="btn btn-laranja mt-3">
+                        <i class="fas fa-plus-circle me-2"></i>Criar partida
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- HORÁRIOS DISPONÍVEIS -->
+<section id="horarios" class="py-5 bg-cinza-escuro">
+    <div class="container">
+        <h2 class="text-laranja text-center mb-5">
+            <i class="fas fa-clock me-3"></i>Horários disponíveis hoje
+        </h2>
+        
+        <div class="row">
+            {% for horario in horarios_disponiveis %}
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-laranja">{{ horario }}</h3>
+                        <p class="text-muted mb-0">vaga disponível</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{{ url_for('auth.solicitar_acesso') }}" class="btn btn-laranja btn-lg">
+                <i class="fas fa-calendar-plus me-2"></i>Reservar horário
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- SOBRE -->
+<section id="sobre" class="py-5">
+    <div class="container">
+        <h2 class="text-laranja text-center mb-5">🎯 Sobre o BattleZone</h2>
+        
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="media-placeholder">
+                    <i class="fas fa-video"></i>
+                    <h4>Melhor jogada da semana</h4>
+                    <p class="text-muted">Em breve - Vídeos incríveis</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="row">
+                    <!-- Card Campos Temáticos -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100" style="cursor: pointer;" onclick="abrirImagem('Campos Temáticos', '/static/uploads/campos.jpg', 'Warfield e Redline')">
+                            <div class="card-body">
+                                <i class="fas fa-flag fa-2x text-laranja mb-3"></i>
+                                <h5>2 Campos Temáticos</h5>
+                                <p class="text-muted">Warfield e Redline</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Card Equipamentos -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100" style="cursor: pointer;" onclick="abrirImagem('Equipamentos', '/static/uploads/equipamentos.jpg', 'Óculos e máscaras')">
+                            <div class="card-body">
+                                <i class="fas fa-shield-alt fa-2x text-laranja mb-3"></i>
+                                <h5>Equipamentos</h5>
+                                <p class="text-muted">Óculos e máscaras</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Card Arbitragem -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100" style="cursor: pointer;" onclick="abrirImagem('Arbitragem', '/static/uploads/arbitragem.jpg', 'Monitoramento por câmeras e ranger')">
+                            <div class="card-body">
+                                <i class="fas fa-users fa-2x text-laranja mb-3"></i>
+                                <h5>Arbitragem</h5>
+                                <p class="text-muted">Monitoramento</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Card Lanchonete -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100" style="cursor: pointer;" onclick="abrirImagem('HANGAR DA BZ', '/static/uploads/hangar.jpg', 'Açaí e hamburgueria')">
+                            <div class="card-body">
+                                <i class="fas fa-store fa-2x text-laranja mb-3"></i>
+                                <h5>HANGAR DA BZ</h5>
+                                <p class="text-muted">Açaí e hamburgueria</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card Galeria -->
+                <div class="card mt-3" style="cursor: pointer;" onclick="abrirImagem('Galeria', '/static/uploads/galeria.jpg', 'Fotos do espaço')">
+                    <div class="card-body">
+                        <i class="fas fa-images fa-2x text-laranja mb-3"></i>
+                        <h5>Galeria de Fotos</h5>
+                        <p class="text-muted">Clique para ver imagens</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PREÇOS -->
+<section id="precos" class="py-5 bg-cinza-escuro">
+    <div class="container">
+        <h2 class="text-laranja text-center mb-5">💰 Tabela de Preços</h2>
+        
+        <!-- Abas para organizar -->
+        <ul class="nav nav-tabs justify-content-center mb-5" id="precoTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="avulso-tab" data-bs-toggle="tab" data-bs-target="#avulso" type="button" role="tab" 
+                        style="background-color: var(--laranja); color: white; font-weight: bold;">
+                    <i class="fas fa-user me-2"></i>Avulso
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="equipe-tab" data-bs-toggle="tab" data-bs-target="#equipe" type="button" role="tab"
+                        style="color: white; background-color: transparent; border: 1px solid var(--laranja);">
+                    <i class="fas fa-users me-2"></i>Equipe
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="suaarma-tab" data-bs-toggle="tab" data-bs-target="#suaarma" type="button" role="tab"
+                        style="color: white; background-color: transparent; border: 1px solid var(--laranja);">
+                    <i class="fas fa-gun me-2"></i>Sua Arma
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Conteúdo das abas -->
+        <div class="tab-content" id="precoTabsContent">
+            
+            <!-- ABA AVULSO -->
+            <div class="tab-pane fade show active" id="avulso" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-laranja text-white text-center">
+                                <h4 class="mb-0">Normal</h4>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>10 minutos</td><td>100</td><td class="text-laranja fw-bold">R$ 10</td></tr>
+                                        <tr><td>20 minutos</td><td>200</td><td class="text-laranja fw-bold">R$ 20</td></tr>
+                                        <tr><td>30 minutos</td><td>200</td><td class="text-laranja fw-bold">R$ 25</td></tr>
+                                        <tr><td>60 minutos</td><td>400</td><td class="text-laranja fw-bold">R$ 40</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card h-100 border-warning">
+                            <div class="card-header bg-warning text-dark text-center">
+                                <h4 class="mb-0">Agendado</h4>
+                                <small>Com operador</small>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>30 min*</td><td>200</td><td class="text-laranja fw-bold">R$ 160</td></tr>
+                                        <tr><td>60 min*</td><td>400</td><td class="text-laranja fw-bold">R$ 280</td></tr>
+                                    </tbody>
+                                </table>
+                                <p class="text-muted small mt-3 mb-0"><i class="fas fa-info-circle me-1"></i> * com operador</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ABA EQUIPE -->
+            <div class="tab-pane fade" id="equipe" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-laranja text-white text-center">
+                                <h4 class="mb-0">Planos para Equipes</h4>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>60 min</td><td>0</td><td class="text-laranja fw-bold">R$ 160</td></tr>
+                                        <tr><td>60 min</td><td>200</td><td class="text-laranja fw-bold">R$ 200</td></tr>
+                                        <tr><td>60 min</td><td>400</td><td class="text-laranja fw-bold">R$ 240</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ABA SUA ARMA -->
+            <div class="tab-pane fade" id="suaarma" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-laranja text-white text-center">
+                                <h4 class="mb-0">Normal</h4>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>10 min</td><td>0</td><td class="text-laranja fw-bold">R$ 5</td></tr>
+                                        <tr><td>60 min</td><td>0</td><td class="text-laranja fw-bold">R$ 15</td></tr>
+                                        <tr><td>120 min</td><td>0</td><td class="text-laranja fw-bold">R$ 25</td></tr>
+                                        <tr><td>150 min</td><td>0</td><td class="text-laranja fw-bold">R$ 35</td></tr>
+                                        <tr><td>180 min</td><td>0</td><td class="text-laranja fw-bold">R$ 40</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card h-100 border-warning">
+                            <div class="card-header bg-warning text-dark text-center">
+                                <h4 class="mb-0">Agendado</h4>
+                                <small>Com operador</small>
+                            </div>
+                            <div class="card-body">
+                                <table class="price-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tempo</th>
+                                            <th>BBs</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>60 min</td><td>0</td><td class="text-laranja fw-bold">R$ 80</td></tr>
+                                        <tr><td>120 min</td><td>0</td><td class="text-laranja fw-bold">R$ 140</td></tr>
+                                        <tr><td>180 min</td><td>0</td><td class="text-laranja fw-bold">R$ 250</td></tr>
+                                    </tbody>
+                                </table>
+                                <p class="text-muted small mt-3 mb-0"><i class="fas fa-info-circle me-1"></i> * com operador</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BATTLEPASS ATUALIZADO -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card bg-laranja text-white">
+            <div class="card-body text-center p-5">
+                <i class="fas fa-crown fa-4x mb-3"></i>
+                <h2 class="mb-3">BATTLEPASS</h2>
+                <p class="lead mb-4">Benefícios exclusivos para quem faz parte da BattleZone!</p>
+                
+                <div class="row justify-content-center mb-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="bg-dark bg-opacity-25 p-4 rounded">
+                            <i class="fas fa-gift fa-3x mb-3"></i>
+                            <h5>Brindes Semanais</h5>
+                            <p class="small">Battlepass Caveira/Operador concorre toda semana a sorteios de <strong>20 minutos grátis</strong></p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="bg-dark bg-opacity-25 p-4 rounded">
+                            <i class="fas fa-trophy fa-3x mb-3"></i>
+                            <h5>Sorteios Mensais</h5>
+                            <p class="small">Battlepass Equipe concorre mensalmente a sorteios de <strong>30 minutos grátis</strong></p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="bg-dark bg-opacity-25 p-4 rounded">
+                            <i class="fas fa-clock fa-3x mb-3"></i>
+                            <h5>Upsell Mais Barato</h5>
+                            <p class="small">Tempo extra com valores reduzidos e opção de <strong>30 minutos adicionais</strong> (não só 1h)</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <p class="mb-3"><i class="fas fa-check-circle me-2"></i> Battlepass Caveira/Operador: Sorteio semanal de 20min grátis</p>
+                    <p class="mb-3"><i class="fas fa-check-circle me-2"></i> Battlepass Equipe: Sorteio mensal de 30min grátis</p>
+                    <p class="mb-3"><i class="fas fa-check-circle me-2"></i> Upsell com preço especial e opção de 30min adicionais</p>
+                </div>
+                
+                <a href="{{ url_for('auth.solicitar_acesso') }}" class="btn btn-outline-light btn-lg mt-3">
+                    <i class="fas fa-ticket-alt me-2"></i>Garanta seu Battlepass
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- REGRAS -->
+<section id="regras" class="py-5" style="scroll-margin-top: 100px;">
+    <div class="container">
+        <h2 class="text-laranja text-center mb-5" style="padding-top: 20px;">📜 REGRAS DO JOGO</h2>
+        
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <div class="card">
+                    <div class="card-body p-5">
+                        <!-- Regra de Honra -->
+                        <div class="regra-destaque mb-5">
+                            <i class="fas fa-quote-left fa-2x text-laranja mb-3"></i>
+                            <p class="lead fst-italic">
+                                "A BattleZone preza muito pelo esporte Airsoft, por isso, deixamos nossa regra mais básica 
+                                e o legado de todo airsoftero: O Airsoft é um jogo de honra acima de qualquer competitividade. 
+                                Sempre ressaltamos que, apenas uma munição alvejada ou até mesmo um susto gerando dúvida 
+                                se pegou ou não, o indivíduo deve se acusar morto."
+                            </p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4 class="text-laranja mb-3">⚔️ Conduta</h4>
+                                <ul class="list-unstyled">
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Proibido ficar reclamando no meio do jogo</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Respeite os limites do campo</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Em caso de dúvida, acuse-se morto</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h4 class="text-laranja mb-3">🔫 Equipamentos</h4>
+                                <ul class="list-unstyled">
+                                    <li class="mb-3"><i class="fas fa-exclamation-triangle text-warning me-2"></i> <strong>Limite de 400 FPS</strong> (proibido sniper e DMS)</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Braçadeiras para identificação de equipes</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Óculos de proteção OBRIGATÓRIOS</li>
+                                    <li class="mb-3"><i class="fas fa-exclamation-triangle text-warning me-2"></i> Proibido tirar os óculos dentro do campo Warfield/Redline</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4 class="text-laranja mb-3">🛡️ Segurança</h4>
+                                <ul class="list-unstyled">
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Monitoramento por câmeras 24/7</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Ranger presente durante todas as partidas</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Equipamentos de segurança obrigatórios</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h4 class="text-laranja mb-3">📝 Termo</h4>
+                                <ul class="list-unstyled">
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Assinatura de termo de responsabilidade obrigatória</li>
+                                    <li class="mb-3"><i class="fas fa-check-circle text-laranja me-2"></i> Menores com autorização dos pais</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CONTATO -->
+<section id="contato" class="py-5 bg-cinza-escuro">
+    <div class="container">
+        <h2 class="text-laranja text-center mb-5">📞 Fale Conosco</h2>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center p-5">
+                        <i class="fab fa-whatsapp fa-4x text-success mb-4"></i>
+                        <h4 class="text-laranja">WhatsApp</h4>
+                        <p class="display-6">(83) 99356-3759</p>
+                        <a href="https://wa.me/5583993563759" class="btn btn-laranja btn-lg mt-3">
+                            <i class="fab fa-whatsapp me-2"></i>Falar agora
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal para exibir imagens -->
+<div class="modal fade" id="imagemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-laranja" id="modalTitulo"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img src="" id="modalImagem" class="img-fluid" alt="Imagem">
+                <p id="modalDescricao" class="mt-3 text-muted"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Função para abrir modal com imagem
+function abrirImagem(titulo, imagem, descricao) {
+    document.getElementById('modalTitulo').textContent = titulo;
+    document.getElementById('modalImagem').src = imagem;
+    document.getElementById('modalDescricao').textContent = descricao;
+    new bootstrap.Modal(document.getElementById('imagemModal')).show();
+}
+</script>
+
+{% endblock %}

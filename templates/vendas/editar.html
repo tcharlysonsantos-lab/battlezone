@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Venda{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1 class="text-laranja"><i class="fas fa-edit me-2"></i>Editar Venda</h1>
+    <p class="text-muted">ID: {{ venda.id }} | Data original: {{ venda.data }}</p>
+</div>
+
+{% if not is_admin %}
+<div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+    <i class="fas fa-lock me-3" style="font-size: 1.3em;"></i>
+    <div>
+        <strong>Permissões Limitadas:</strong> Você não tem permissão para editar valores. Apenas administradores podem alterar o campo "Valor Total". 
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Dados da Venda -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="data" class="form-label">Data</label>
+                            <input type="text" class="form-control" id="data" name="data" value="{{ venda.data }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cliente" class="form-label">Cliente</label>
+                            <input type="text" class="form-control" id="cliente" name="cliente" value="{{ venda.cliente or '' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="produto" class="form-label">Produto</label>
+                            <input type="text" class="form-control" id="produto" name="produto" value="{{ venda.produto or '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="tipo" class="form-label">Tipo</label>
+                            <select class="form-select" id="tipo" name="tipo" required>
+                                <option value="Venda" {% if venda.tipo == 'Venda' %}selected{% endif %}>Venda</option>
+                                <option value="Estoque" {% if venda.tipo == 'Estoque' %}selected{% endif %}>Estoque</option>
+                                <option value="BBs" {% if venda.tipo == 'BBs' %}selected{% endif %}>BBs</option>
+                                <option value="Serviço" {% if venda.tipo == 'Serviço' %}selected{% endif %}>Serviço</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Valores e Quantidades -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="quantidade" class="form-label">Quantidade</label>
+                            <input type="number" class="form-control" id="quantidade" name="quantidade" step="0.01" value="{{ venda.quantidade or 0 }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="unidade" class="form-label">Unidade</label>
+                            <input type="text" class="form-control" id="unidade" name="unidade" value="{{ venda.unidade or 'un' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="valor" class="form-label">
+                                Valor Total
+                                {% if not is_admin %}
+                                <span class="badge bg-warning" title="Apenas ADMIN pode editar valores">🔒 ADMIN</span>
+                                {% endif %}
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" class="form-control" id="valor" name="valor" step="0.01" value="{{ "%.2f"|format(venda.valor) }}" 
+                                       {% if not is_admin %}disabled{% endif %} required>
+                            </div>
+                            {% if not is_admin %}
+                            <small class="form-text text-danger d-block mt-1">
+                                <i class="fas fa-lock me-1"></i>Apenas administradores podem editar o valor
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- BBs e Status -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="bbs" class="form-label">BBs</label>
+                            <input type="number" class="form-control" id="bbs" name="bbs" value="{{ venda.bbs or 0 }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="Pendente" {% if venda.status == 'Pendente' %}selected{% endif %}>Pendente</option>
+                                <option value="Pago" {% if venda.status == 'Pago' %}selected{% endif %}>Pago</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Pagamento -->
+                    <div class="mb-3">
+                        <label for="pagamento" class="form-label">Forma de Pagamento</label>
+                        <select class="form-select" id="pagamento" name="pagamento">
+                            <option value="A definir" {% if venda.pagamento == 'A definir' %}selected{% endif %}>A definir</option>
+                            <option value="Dinheiro" {% if venda.pagamento == 'Dinheiro' %}selected{% endif %}>Dinheiro</option>
+                            <option value="Cartão Débito" {% if venda.pagamento == 'Cartão Débito' %}selected{% endif %}>Cartão Débito</option>
+                            <option value="Cartão Crédito" {% if venda.pagamento == 'Cartão Crédito' %}selected{% endif %}>Cartão Crédito</option>
+                            <option value="Pix" {% if venda.pagamento == 'Pix' %}selected{% endif %}>Pix</option>
+                            <option value="Boleto" {% if venda.pagamento == 'Boleto' %}selected{% endif %}>Boleto</option>
+                        </select>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="3">{{ venda.descricao or '' }}</textarea>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-save me-2"></i>Salvar Alterações
+                        </button>
+                        <a href="{{ url_for('listar_vendas') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo da Venda -->
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <i class="fas fa-info-circle me-2"></i>Resumo
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted d-block">ID da Venda</small>
+                    <strong>#{{ venda.id }}</strong>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Status Atual</small>
+                    {% if venda.status == 'Pago' %}
+                    <span class="badge bg-success">Pago</span>
+                    {% else %}
+                    <span class="badge bg-warning">Pendente</span>
+                    {% endif %}
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Valor</small>
+                    <strong>R$ {{ "%.2f"|format(venda.valor) }}</strong>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Criado em</small>
+                    <small>{{ venda.created_at.strftime('%d/%m/%Y %H:%M') if venda.created_at else 'N/A' }}</small>
+                </div>
+                {% if venda.partida_id %}
+                <hr>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Partida</small>
+                    <small><a href="{{ url_for('ver_partida', id=venda.partida_id) }}">Ver Partida #{{ venda.partida_id }}</a></small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Histórico de Mudanças -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="fas fa-history me-2"></i>Informações
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    {% if venda.warname %}
+                    <p><strong>Operador:</strong> {{ venda.warname }}</p>
+                    {% endif %}
+                    {% if venda.nome_partida %}
+                    <p><strong>Partida:</strong> {{ venda.nome_partida }}</p>
+                    {% endif %}
+                    <p><strong>Tipo:</strong> {{ venda.tipo }}</p>
+                    <p><strong>Forma de Pagamento:</strong> {{ venda.pagamento }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.text-laranja {
+    color: #FF6B00;
+}
+</style>
+{% endblock %}

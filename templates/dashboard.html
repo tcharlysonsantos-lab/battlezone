@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Título -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-laranja"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h1>
+    <span class="text-muted">{{ now.strftime('%d/%m/%Y %H:%M') }}</span>
+</div>
+
+<!-- Cards de métricas (VISÍVEL PARA TODOS) -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-3x text-laranja mb-3"></i>
+                <h5>Total Operadores</h5>
+                <h2 class="text-laranja">{{ total_operadores }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-flag fa-3x text-laranja mb-3"></i>
+                <h5>Equipes Ativas</h5>
+                <h2 class="text-laranja">{{ total_equipes }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-gamepad fa-3x text-laranja mb-3"></i>
+                <h5>Partidas Hoje</h5>
+                <h2 class="text-laranja">{{ partidas_hoje }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-clock fa-3x text-laranja mb-3"></i>
+                <h5>Horários</h5>
+                <h2 class="text-laranja">7</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CONTEÚDO DINÂMICO BASEADO NO NÍVEL DO USUÁRIO -->
+
+{% if current_user.nivel in ['admin', 'gerente'] %}
+    <!-- ========== VISÃO ADMIN/GERENTE ========== -->
+    
+    <!-- Acesso Rápido -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-rocket me-2"></i>Acesso Rápido
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('listar_operadores') }}" class="btn btn-outline-laranja w-100">
+                        <i class="fas fa-users me-2"></i>Operadores
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('listar_equipes') }}" class="btn btn-outline-laranja w-100">
+                        <i class="fas fa-flag me-2"></i>Equipes
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('nova_partida') }}" class="btn btn-outline-laranja w-100">
+                        <i class="fas fa-plus-circle me-2"></i>Nova Partida
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('nova_venda') }}" class="btn btn-outline-laranja w-100">
+                        <i class="fas fa-cash-register me-2"></i>Registrar Venda
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Próximas Partidas -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-calendar-alt me-2"></i>Próximas Partidas
+                </div>
+                <div class="card-body">
+                    {% if proximas_partidas %}
+                        {% for partida in proximas_partidas %}
+                        <div class="card bg-preto mb-2">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ partida.nome }}</strong>
+                                        <br>
+                                        <small>{{ partida.data }} às {{ partida.horario }} - {{ partida.campo }}</small>
+                                    </div>
+                                    <span class="badge {% if partida.status == 'Agendada' %}bg-laranja{% else %}bg-secondary{% endif %}">
+                                        {{ partida.status }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-muted my-3">Nenhuma partida agendada</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alertas de Estoque (APENAS ADMIN/GERENTE) -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Alertas de Estoque
+                </div>
+                <div class="card-body">
+                    {% if itens_baixo %}
+                        {% for item in itens_baixo %}
+                        <div class="card bg-preto mb-2 border-danger">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ item.nome }}</strong>
+                                        <br>
+                                        <small>Atual: {{ item.quantidade }} {{ item.unidade }}</small>
+                                    </div>
+                                    <span class="badge bg-danger">
+                                        Mín: {{ item.quantidade_minima }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-muted my-3">Nenhum alerta de estoque</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    <!-- ========== VISÃO OPERADOR ========== -->
+    
+    <!-- Reservar Horário -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-clock me-2"></i>Reservar Horário
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <p class="lead mb-0">Quer jogar? Reserve seu horário agora mesmo!</p>
+                    <small class="text-muted">Horário de funcionamento: 15:30 às 22:00</small>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{{ url_for('nova_partida') }}" class="btn btn-laranja">
+                        <i class="fas fa-calendar-plus me-2"></i>Reservar Agora
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Próximas Partidas (OCUPA A LINHA INTEIRA) -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-calendar-alt me-2"></i>Próximas Partidas
+        </div>
+        <div class="card-body">
+            {% if proximas_partidas %}
+                {% for partida in proximas_partidas %}
+                <div class="card bg-preto mb-2">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ partida.nome }}</strong>
+                                <br>
+                                <small>{{ partida.data }} às {{ partida.horario }} - {{ partida.campo }}</small>
+                            </div>
+                            <a href="{{ url_for('ver_partida', id=partida.id) }}" class="btn btn-sm btn-outline-laranja">
+                                <i class="fas fa-eye me-1"></i>Ver
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-center text-muted my-3">Nenhuma partida agendada</p>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

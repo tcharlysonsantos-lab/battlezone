@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header" style="background-color: #FF6B00; color: white;">
+                <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>Meu Perfil</h5>
+            </div>
+            <div class="card-body">
+                <!-- Avatar with initial -->
+                <div class="text-center mb-4">
+                    <div class="avatar-circle mx-auto mb-3" style="width: 120px; height: 120px; font-size: 60px; background-color: #FF6B00; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white;">
+                        {{ usuario.nome[0]|upper }}
+                    </div>
+                </div>
+
+                <!-- Informações do Usuário -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Usuário</label>
+                        <h6>{{ usuario.username }}</h6>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Nível</label>
+                        <h6>
+                            {% if usuario.nivel == 'admin' %}
+                            <span class="badge bg-danger">ADMINISTRADOR</span>
+                            {% elif usuario.nivel == 'gerente' %}
+                            <span class="badge bg-warning">GERENTE</span>
+                            {% else %}
+                            <span class="badge bg-info">{{ usuario.nivel|upper }}</span>
+                            {% endif %}
+                        </h6>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Dados Pessoais -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Nome</label>
+                        <h6>{{ usuario.nome }}</h6>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Email</label>
+                        <h6>{{ usuario.email }}</h6>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Status</label>
+                        <h6>
+                            {% if usuario.status == 'ativo' %}
+                            <span class="badge bg-success">ATIVO</span>
+                            {% elif usuario.status == 'pendente' %}
+                            <span class="badge bg-warning">PENDENTE</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ usuario.status|upper }}</span>
+                            {% endif %}
+                        </h6>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Último Acesso</label>
+                        <h6>
+                            {% if usuario.last_login %}
+                            {{ usuario.last_login.strftime("%d/%m/%Y às %H:%M") }}
+                            {% else %}
+                            <span class="text-muted">Nunca acessou</span>
+                            {% endif %}
+                        </h6>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Data de Criação -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Criado em</label>
+                        <h6>{{ usuario.created_at.strftime("%d/%m/%Y às %H:%M") }}</h6>
+                    </div>
+                    {% if usuario.approved_at %}
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Aprovado em</label>
+                        <h6>
+                            {{ usuario.approved_at.strftime("%d/%m/%Y às %H:%M") }}
+                            <br>
+                            <small class="text-muted">por {{ usuario.approved_by }}</small>
+                        </h6>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <!-- Permissões -->
+                <div class="row">
+                    <div class="col-12">
+                        <label class="form-label text-muted"><i class="fas fa-lock me-2"></i>Permissões</label>
+                        <div class="mt-2">
+                            {% if usuario.nivel == 'admin' %}
+                            <p class="text-success">
+                                <i class="fas fa-check-circle me-1"></i> Acesso total ao sistema
+                            </p>
+                            {% elif usuario.nivel == 'gerente' %}
+                            <p>
+                                <i class="fas fa-check-circle text-success me-1"></i> Dashboard<br>
+                                <i class="fas fa-check-circle text-success me-1"></i> Vendas<br>
+                                <i class="fas fa-check-circle text-success me-1"></i> Caixa<br>
+                                <i class="fas fa-check-circle text-success me-1"></i> Estoque
+                            </p>
+                            {% else %}
+                            <p>
+                                <i class="fas fa-check-circle text-success me-1"></i> Dashboard<br>
+                                <i class="fas fa-check-circle text-success me-1"></i> Partidas<br>
+                                <i class="fas fa-check-circle text-success me-1"></i> Estatísticas
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Botões -->
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary flex-grow-1">
+                        <i class="fas fa-arrow-left me-2"></i>Voltar ao Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-laranja {
+    color: #FF6B00;
+}
+</style>
+{% endblock %}

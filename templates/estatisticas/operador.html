@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Estatísticas de {{ operador.warname }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('estatisticas') }}" class="btn btn-outline-secondary mb-3">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<!-- Cabeçalho do Operador -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h1 class="text-laranja mb-2">
+                    <i class="fas fa-user-circle me-2"></i>{{ operador.warname }}
+                </h1>
+                <p class="text-muted">{{ operador.nome }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estatísticas Principais -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div style="font-size: 2.5rem; color: #FF6B00;" class="fw-bold">
+                    {{ stats.total_partidas }}
+                </div>
+                <div class="text-muted">Partidas</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div style="font-size: 2.5rem; color: #28a745;" class="fw-bold">
+                    {{ stats.total_kills }}
+                </div>
+                <div class="text-muted">Kills</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div style="font-size: 2.5rem; color: #dc3545;" class="fw-bold">
+                    {{ stats.total_deaths }}
+                </div>
+                <div class="text-muted">Deaths</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div style="font-size: 2.5rem; color: #FF6B00;" class="fw-bold">
+                    {{ "%.2f"|format(stats.kd) }}
+                </div>
+                <div class="text-muted">K/D Ratio</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estatísticas Secundárias -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-chart-line me-2 text-laranja"></i>Estatísticas Detalhadas</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="bg-light p-3 rounded">
+                    <div class="text-muted small">Vitórias</div>
+                    <div style="font-size: 1.8rem;" class="fw-bold text-success">{{ stats.total_vitorias }}</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="bg-light p-3 rounded">
+                    <div class="text-muted small">Derrotas</div>
+                    <div style="font-size: 1.8rem;" class="fw-bold text-danger">{{ stats.total_derrotas }}</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="bg-light p-3 rounded">
+                    <div class="text-muted small">MVPs</div>
+                    <div style="font-size: 1.8rem; color: #FF6B00;" class="fw-bold">{{ stats.total_mvps }}</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="bg-light p-3 rounded">
+                    <div class="text-muted small">Taxa de Vitória</div>
+                    {% set total_jogos = stats.total_vitorias + stats.total_derrotas %}
+                    {% if total_jogos > 0 %}
+                        <div style="font-size: 1.8rem;" class="fw-bold text-success">
+                            {{ "%.1f"|format((stats.total_vitorias / total_jogos) * 100) }}%
+                        </div>
+                    {% else %}
+                        <div class="text-muted">-</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="bg-light p-3 rounded">
+                    <div class="text-muted small">Capturas</div>
+                    <div style="font-size: 1.8rem;" class="fw-bold">{{ stats.total_capturas }}</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="bg-light p-3 rounded">
+                    <div class="text-muted small">Plantas de Bomba</div>
+                    <div style="font-size: 1.8rem;" class="fw-bold">{{ stats.total_plantas_bomba }}</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="bg-light p-3 rounded">
+                    <div class="text-muted small">Desarmes de Bomba</div>
+                    <div style="font-size: 1.8rem;" class="fw-bold">{{ stats.total_desarmes_bomba }}</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="bg-light p-3 rounded">
+                    <div class="text-muted small">Reféns Salvos</div>
+                    <div style="font-size: 1.8rem;" class="fw-bold">{{ stats.total_refens }}</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="bg-light p-3 rounded">
+                    <div class="text-muted small">Caçadas</div>
+                    <div style="font-size: 1.8rem;" class="fw-bold">{{ stats.total_cacos }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Histórico de Partidas -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-history me-2 text-laranja"></i>Histórico de Partidas ({{ partidas_historico|length }})</h5>
+    </div>
+    <div class="card-body">
+        <!-- Filtros -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-6">
+                        <input type="text" name="search" class="form-control" placeholder="Buscar por nome da partida..." value="{{ search }}">
+                    </div>
+                    <div class="col-md-4">
+                        <select name="periodo" class="form-select">
+                            <option value="Todas" {% if periodo == 'Todas' %}selected{% endif %}>Todas</option>
+                            <option value="Hoje" {% if periodo == 'Hoje' %}selected{% endif %}>Hoje</option>
+                            <option value="7d" {% if periodo == '7d' %}selected{% endif %}>Últimos 7 Dias</option>
+                            <option value="30d" {% if periodo == '30d' %}selected{% endif %}>Últimos 30 Dias</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn w-100" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-filter me-2"></i>Filtrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Lista de Partidas -->
+        {% if partidas_historico %}
+            <div class="list-group">
+                {% for partida in partidas_historico %}
+                <a href="{{ url_for('ver_partida', id=partida.partida_id) }}" class="list-group-item list-group-item-action" style="cursor: pointer; text-decoration: none; color: inherit;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1 fw-bold" style="color: #FF6B00;">{{ partida.nome_partida }}</h6>
+                            <p class="mb-2 text-muted small">
+                                <i class="fas fa-gamepad me-1"></i>{{ partida.modo }}
+                                <i class="fas fa-calendar me-1 ms-2"></i>{{ partida.data }}
+                            </p>
+                            <div class="d-flex gap-3">
+                                <span>
+                                    <span class="badge bg-success">K: {{ partida.kills }}</span>
+                                    <span class="badge bg-danger">D: {{ partida.deaths }}</span>
+                                </span>
+                                {% if partida.resultado == 'vitoria' %}
+                                    <span class="badge bg-success text-white">VITÓRIA</span>
+                                {% elif partida.resultado == 'derrota' %}
+                                    <span class="badge bg-danger text-white">DERROTA</span>
+                                {% else %}
+                                    <span class="badge bg-secondary text-white">EMPATE</span>
+                                {% endif %}
+                                {% if partida.mvp %}
+                                    <span class="badge" style="background-color: #FF6B00;">MVP</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <i class="fas fa-arrow-right text-laranja"></i>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Nenhuma partida encontrada com os filtros selecionados.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .text-laranja {
+        color: #FF6B00 !important;
+    }
+    
+    .btn-outline-laranja {
+        color: #FF6B00;
+        border-color: #FF6B00;
+    }
+    
+    .btn-outline-laranja:hover {
+        background-color: #FF6B00;
+        border-color: #FF6B00;
+        color: white;
+    }
+</style>
+{% endblock %}

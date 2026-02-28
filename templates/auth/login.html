@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4><i class="fas fa-lock me-2"></i>Login - BattleZone</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.username.label(class="form-label") }}
+                        {{ form.username(class="form-control", placeholder="Digite seu usuário") }}
+                        {% for error in form.username.errors %}
+                            <small class="text-danger">{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label") }}
+                        {{ form.password(class="form-control", placeholder="Digite sua senha") }}
+                        {% for error in form.password.errors %}
+                            <small class="text-danger">{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-sign-in-alt me-2"></i>Entrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('auth.solicitar_acesso') }}" style="color: #FF6B00;">Não tem conta? Solicitar acesso</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast para mensagens de sucesso do cadastro -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            {% if 'solicitação' in message.lower() or 'aguarde' in message.lower() %}
+                <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+                    <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true" style="background-color: var(--cinza-escuro); min-width: 320px; border-left: 4px solid #28a745;">
+                        <div class="toast-header" style="background-color: #28a745; color: white; border-bottom: none;">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong class="me-auto">Solicitação Enviada</strong>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                        </div>
+                        <div class="toast-body text-white" style="background-color: var(--cinza-escuro);">
+                            <p class="mb-2">{{ message }}</p>
+                            <hr class="bg-secondary">
+                            <div class="text-center">
+                                <a href="https://wa.me/5583993563759" target="_blank" class="btn btn-success btn-sm w-100" style="background-color: #25D366; border: none;">
+                                    <i class="fab fa-whatsapp me-2"></i>Falar no WhatsApp
+                                </a>
+                                <small class="text-muted d-block mt-2">(83) 99356-3759</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<script>
+// Inicializar toasts automaticamente
+document.addEventListener('DOMContentLoaded', function() {
+    var toastElList = [].slice.call(document.querySelectorAll('.toast'))
+    var toastList = toastElList.map(function(toastEl) {
+        return new bootstrap.Toast(toastEl, { autohide: false })
+    })
+    toastList.forEach(toast => toast.show())
+})
+</script>
+
+{% endblock %}

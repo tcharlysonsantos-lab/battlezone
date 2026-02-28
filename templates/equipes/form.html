@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-flag me-2"></i>{{ titulo }}</h4>
+            </div>
+            <div class="card-body">
+                <!-- IMPORTANTE: adicionar enctype="multipart/form-data" -->
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.nome.label(class="form-label") }}
+                        {{ form.nome(class="form-control", placeholder="Nome da equipe") }}
+                    </div>
+                    
+                    <!-- Campo de foto com preview da imagem atual -->
+                    <div class="mb-3">
+                        {{ form.foto.label(class="form-label") }}
+                        
+                        <!-- Mostrar foto atual se existir -->
+                        {% if equipe and equipe.foto %}
+                        <div class="mb-2">
+                            <p class="text-muted small">Foto atual:</p>
+                            <img src="{{ url_for('static', filename='uploads/' + equipe.foto) }}" 
+                                alt="Foto da equipe" 
+                                style="max-width: 200px; max-height: 200px; border-radius: 10px; border: 2px solid var(--laranja);">
+                            <p class="text-muted small mt-1">Deixe em branco para manter esta foto</p>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Campo para upload de nova foto -->
+                        <input type="file" name="foto" class="form-control" accept="image/*">
+                        <small class="text-muted">Selecione uma nova imagem apenas se quiser substituir a atual</small>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.foto.label(class="form-label") }}
+                        <!-- Mudar de text para file -->
+                        <input type="file" 
+                               name="foto" 
+                               class="form-control" 
+                               accept="image/png, image/jpeg, image/jpg, image/gif, image/bmp, image/webp">
+                        <small class="text-muted">Selecione uma imagem do seu computador</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.capitao_id.label(class="form-label") }}
+                        {{ form.capitao_id(class="form-select") }}
+                        <small class="text-muted">Opcional - Selecione o capitão da equipe</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.battlepass.label(class="form-label") }}
+                        {{ form.battlepass(class="form-select") }}
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('listar_equipes') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-save me-2"></i>Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

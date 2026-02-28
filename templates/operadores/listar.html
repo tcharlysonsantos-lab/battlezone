@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Operadores{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-laranja"><i class="fas fa-users me-2"></i>Operadores</h1>
+    <a href="{{ url_for('novo_operador') }}" class="btn" style="background-color: #FF6B00; color: white;">
+        <i class="fas fa-plus-circle me-2"></i>Novo Operador
+    </a>
+</div>
+
+<!-- Busca -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-10">
+                <input type="text" name="search" class="form-control" placeholder="🔍 Buscar por nome ou warname..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn w-100" style="background-color: #FF6B00; color: white;">
+                    <i class="fas fa-search me-2"></i>Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de Operadores -->
+{% if operadores %}
+    <div class="row">
+        {% for operador in operadores %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <!-- Quadrado Laranja com a Inicial (lado esquerdo) -->
+                        <div style="background-color: #FF6B00; width: 100px; height: 100px; border-radius: 15px; display: flex; align-items: center; justify-content: center; margin-right: 20px;">
+                            <span style="font-size: 48px; font-weight: bold; color: white;">
+                                {{ operador.nome[0]|upper }}
+                            </span>
+                        </div>
+                        
+                        <!-- Informações do operador (lado direito do quadrado) -->
+                        <div class="flex-grow-1">
+                            <h3 class="mb-1" style="color: #FF6B00; font-size: 28px;">{{ operador.nome }}</h3>
+                            <p class="text-muted mb-3" style="font-size: 18px;">@{{ operador.warname }}</p>
+                            
+                            <!-- Informações inferiores: Telefone, Idade, Battlepass -->
+                            <div class="d-flex justify-content-start gap-4 mt-3">
+                                <div>
+                                    <i class="fas fa-phone me-2" style="color: #FF6B00;"></i>
+                                    <span>{{ operador.telefone or 'N/A' }}</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-birthday-cake me-2" style="color: #FF6B00;"></i>
+                                    <span>{{ operador.idade or 'N/A' }} anos</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-crown me-2" style="color: #FF6B00;"></i>
+                                    {% if operador.battlepass == 'SIM' %}
+                                        <span class="badge" style="background-color: #FF6B00; color: white; font-size: 14px;">BATTLEPASS</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary" style="font-size: 14px;">SEM BP</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Botões de ação -->
+                            <div class="mt-4">
+                                <a href="{{ url_for('ver_operador', id=operador.id) }}" class="btn btn-sm" style="background-color: #FF6B00; color: white; margin-right: 5px;">
+                                    <i class="fas fa-eye me-1"></i>Ver
+                                </a>
+                                <a href="{{ url_for('editar_operador', id=operador.id) }}" class="btn btn-sm btn-outline-laranja" style="border: 1px solid #FF6B00; color: #FF6B00; margin-right: 5px;">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </a>
+                                <button onclick="deletarOperador({{ operador.id }}, '{{ operador.nome }}')" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash me-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-users fa-4x text-muted mb-3"></i>
+            <h4>Nenhum operador encontrado</h4>
+            <p class="text-muted">Clique em "Novo Operador" para começar a cadastrar.</p>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Modal de confirmação para deletar -->
+<div class="modal fade" id="deletarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: #2D2D2D; color: white;">
+            <div class="modal-header" style="border-bottom: 1px solid #FF6B00;">
+                <h5 class="modal-title" style="color: #FF6B00;">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar o operador <strong style="color: #FF6B00;" id="operadorNome"></strong>?</p>
+                <p class="text-danger"><small>Esta ação não pode ser desfeita!</small></p>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #FF6B00;">
+                <form id="deletarForm" method="POST">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Deletar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deletarOperador(id, nome) {
+    document.getElementById('operadorNome').textContent = nome;
+    var url = "{{ url_for('deletar_operador', id=0) }}";
+    document.getElementById('deletarForm').action = url.replace('0', id);
+    new bootstrap.Modal(document.getElementById('deletarModal')).show();
+}
+</script>
+{% endblock %}

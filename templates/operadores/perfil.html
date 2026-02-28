@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil de {{ operador.warname }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Coluna da esquerda - Informações do Operador -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header" style="background-color: #FF6B00; color: white;">
+                <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>{{ operador.warname }}</h5>
+            </div>
+            <div class="card-body text-center">
+                <!-- Avatar com inicial -->
+                <div class="avatar-circle mx-auto mb-3" style="width: 100px; height: 100px; font-size: 48px;">
+                    {{ operador.nome[0]|upper }}
+                </div>
+                
+                <h4>{{ operador.nome }}</h4>
+                <p class="text-muted">@{{ operador.warname }}</p>
+                
+                <hr>
+                
+                <!-- Informações de contato -->
+                <div class="text-start">
+                    {% if é_proprio %}
+                    <!-- Mostrar todas as informações se for o próprio operador -->
+                    <p><i class="fas fa-envelope me-2 text-laranja"></i> {{ operador.email or 'Não informado' }}</p>
+                    <p><i class="fas fa-phone me-2 text-laranja"></i> {{ operador.telefone or 'Não informado' }}</p>
+                    <p><i class="fas fa-id-card me-2 text-laranja"></i> {{ operador.cpf or 'Não informado' }}</p>
+                    <p><i class="fas fa-birthday-cake me-2 text-laranja"></i> {{ operador.data_nascimento or 'Não informado' }} ({{ operador.idade or '?' }} anos)</p>
+                    {% else %}
+                    <!-- Mostrar apenas informações públicas para outros usuários -->
+                    <p><i class="fas fa-birthday-cake me-2 text-laranja"></i> {{ operador.idade or '?' }} anos</p>
+                    {% endif %}
+                    <p>
+                        <i class="fas fa-crown me-2 text-laranja"></i> 
+                        Battlepass: 
+                        {% if operador.battlepass == 'SIM' %}
+                            <span class="badge" style="background-color: #FF6B00;">ATIVO</span>
+                        {% else %}
+                            <span class="badge bg-secondary">INATIVO</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cards de estatísticas gerais -->
+        <div class="card mb-4">
+            <div class="card-header" style="background-color: #FF6B00; color: white;">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estatísticas Gerais</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="bg-preto p-3 rounded">
+                            <h6 class="text-laranja">Kills</h6>
+                            <h3 class="text-success">{{ total_kills }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="bg-preto p-3 rounded">
+                            <h6 class="text-laranja">Deaths</h6>
+                            <h3 class="text-danger">{{ total_deaths }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="bg-preto p-3 rounded">
+                            <h6 class="text-laranja">K/D</h6>
+                            <h3 class="text-info">{{ "%.2f"|format(kd_ratio) }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="bg-preto p-3 rounded">
+                            <h6 class="text-laranja">Partidas</h6>
+                            <h3>{{ total_partidas }}</h3>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row text-center mt-2">
+                    <div class="col-4">
+                        <div class="bg-preto p-2 rounded">
+                            <span class="text-success">{{ vitorias }}</span>
+                            <br><small>Vitórias</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-preto p-2 rounded">
+                            <span class="text-danger">{{ derrotas }}</span>
+                            <br><small>Derrotas</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-preto p-2 rounded">
+                            <span class="text-warning">{{ empates }}</span>
+                            <br><small>Empates</small>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if total_partidas > 0 %}
+                <div class="mt-3">
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-success" style="width: {{ (vitorias / total_partidas * 100)|round }}%">
+                            {{ (vitorias / total_partidas * 100)|round }}%
+                        </div>
+                        <div class="progress-bar bg-danger" style="width: {{ (derrotas / total_partidas * 100)|round }}%">
+                            {{ (derrotas / total_partidas * 100)|round }}%
+                        </div>
+                        <div class="progress-bar bg-warning" style="width: {{ (empates / total_partidas * 100)|round }}%">
+                            {{ (empates / total_partidas * 100)|round }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">Aproveitamento</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Coluna da direita - Históricos -->
+    <div class="col-md-8">
+        <!-- Abas de navegação -->
+        <ul class="nav nav-tabs mb-4" id="perfilTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="partidas-tab" data-bs-toggle="tab" data-bs-target="#partidas" type="button" role="tab">
+                    <i class="fas fa-gamepad me-2"></i>Partidas ({{ partidas|length }})
+                </button>
+            </li>
+            {% if é_proprio or é_admin %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="compras-tab" data-bs-toggle="tab" data-bs-target="#compras" type="button" role="tab">
+                    <i class="fas fa-shopping-cart me-2"></i>Compras ({{ compras|length }})
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+        
+        <!-- Conteúdo das abas -->
+        <div class="tab-content" id="perfilTabContent">
+            
+            <!-- Aba de Partidas -->
+            <div class="tab-pane fade show active" id="partidas" role="tabpanel">
+                <div class="card">
+                    <div class="card-header" style="background-color: #FF6B00; color: white;">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Histórico de Partidas</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if partidas %}
+                            {% for p in partidas %}
+                            <div class="card mb-3 bg-preto" style="cursor: pointer;" onclick="window.location.href='{{ url_for('ver_partida', id=p.partida.id) }}'">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="text-laranja">{{ p.partida.nome }}</h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i> {{ p.partida.data }} às {{ p.partida.horario }}
+                                                <br>
+                                                <i class="fas fa-map-marker-alt me-1"></i> {{ p.partida.campo }} - {{ p.partida.modo }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <div class="mb-1">
+                                                <span class="badge" style="background-color: #FF6B00;">{{ p.partida.status }}</span>
+                                            </div>
+                                            {% if p.partida.finalizada %}
+                                            <div>
+                                                <small>Kills: <span class="text-success">{{ p.kills or 0 }}</span></small><br>
+                                                <small>Deaths: <span class="text-danger">{{ p.deaths or 0 }}</span></small>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-center text-muted my-5">Nenhuma partida encontrada</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Aba de Compras -->
+            {% if é_proprio or é_admin %}
+            <div class="tab-pane fade" id="compras" role="tabpanel">
+                <div class="card">
+                    <div class="card-header" style="background-color: #FF6B00; color: white;">
+                        <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Histórico de Compras</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if compras %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Produto</th>
+                                            <th>Descrição</th>
+                                            <th>Valor</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for v in compras %}
+                                        <tr>
+                                            <td>{{ v.data }}</td>
+                                            <td>{{ v.produto }}</td>
+                                            <td>{{ v.descricao or '—' }}</td>
+                                            <td class="{% if v.valor > 0 %}text-success{% else %}text-danger{% endif %}">
+                                                R$ {{ "%.2f"|format(v.valor) }}
+                                            </td>
+                                            <td>
+                                                {% if v.status == 'Pago' %}
+                                                <span class="badge bg-success">Pago</span>
+                                                {% else %}
+                                                <span class="badge bg-warning">Pendente</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-center text-muted my-5">Nenhuma compra encontrada</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}Estatísticas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-laranja"><i class="fas fa-chart-bar me-2"></i>Estatísticas</h1>
+</div>
+
+<!-- Abas de navegação -->
+<ul class="nav nav-tabs mb-4" id="estatisticasTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if aba_ativa == 'operadores' %}active{% endif %}" 
+                id="operadores-tab" 
+                data-bs-toggle="tab" 
+                data-bs-target="#operadores" 
+                type="button" 
+                role="tab"
+                style="color: var(--laranja); {% if aba_ativa == 'operadores' %}background-color: var(--laranja); color: white;{% endif %}">
+            <i class="fas fa-users me-2"></i>Operadores
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if aba_ativa == 'equipes' %}active{% endif %}" 
+                id="equipes-tab" 
+                data-bs-toggle="tab" 
+                data-bs-target="#equipes" 
+                type="button" 
+                role="tab"
+                style="color: var(--laranja); {% if aba_ativa == 'equipes' %}background-color: var(--laranja); color: white;{% endif %}">
+            <i class="fas fa-flag me-2"></i>Equipes
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if aba_ativa == 'partidas' %}active{% endif %}" 
+                id="partidas-tab" 
+                data-bs-toggle="tab" 
+                data-bs-target="#partidas" 
+                type="button" 
+                role="tab"
+                style="color: var(--laranja); {% if aba_ativa == 'partidas' %}background-color: var(--laranja); color: white;{% endif %}">
+            <i class="fas fa-gamepad me-2"></i>Partidas
+        </button>
+    </li>
+</ul>
+
+<!-- Conteúdo das abas -->
+<div class="tab-content" id="estatisticasTabContent">
+    
+    <!-- ========== ABA DE OPERADORES ========== -->
+    <div class="tab-pane fade {% if aba_ativa == 'operadores' %}show active{% endif %}" id="operadores" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-trophy me-2 text-laranja"></i>Ranking de Operadores</h5>
+            </div>
+            <div class="card-body">
+                
+                <!-- Filtros para Operadores -->
+                <form method="GET" class="row mb-4">
+                    <input type="hidden" name="aba" value="operadores">
+                    <div class="col-md-4">
+                        <input type="text" name="search_operador" class="form-control" placeholder="🔍 Buscar operador..." value="{{ search_operador }}">
+                    </div>
+                    <div class="col-md-2">
+                        <select name="ordenar_por" class="form-select">
+                            <option value="kd" {% if ordenar_por == 'kd' %}selected{% endif %}>K/D</option>
+                            <option value="kills" {% if ordenar_por == 'kills' %}selected{% endif %}>Kills</option>
+                            <option value="deaths" {% if ordenar_por == 'deaths' %}selected{% endif %}>Deaths</option>
+                            <option value="capturas" {% if ordenar_por == 'capturas' %}selected{% endif %}>Capturas</option>
+                            <option value="plantas" {% if ordenar_por == 'plantas' %}selected{% endif %}>Plantou B.</option>
+                            <option value="desarmes" {% if ordenar_por == 'desarmes' %}selected{% endif %}>Desarmou B.</option>
+                            <option value="refens" {% if ordenar_por == 'refens' %}selected{% endif %}>Reféns</option>
+                            <option value="cacos" {% if ordenar_por == 'cacos' %}selected{% endif %}>Caçou</option>
+                            <option value="vitorias" {% if ordenar_por == 'vitorias' %}selected{% endif %}>Vitórias</option>
+                            <option value="derrotas" {% if ordenar_por == 'derrotas' %}selected{% endif %}>Derrotas</option>
+                            <option value="mvps" {% if ordenar_por == 'mvps' %}selected{% endif %}>MVPs</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="ordem" class="form-select">
+                            <option value="desc" {% if ordem == 'desc' %}selected{% endif %}>Decrescente</option>
+                            <option value="asc" {% if ordem == 'asc' %}selected{% endif %}>Crescente</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn w-100" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-filter me-2"></i>Filtrar
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{{ url_for('estatisticas', aba='operadores') }}" class="btn btn-secondary w-100">
+                            <i class="fas fa-undo me-2"></i>Limpar
+                        </a>
+                    </div>
+                </form>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Operador</th>
+                                <th>Kills</th>
+                                <th>Deaths</th>
+                                <th>K/D</th>
+                                <th>Capt.</th>
+                                <th>Plant.</th>
+                                <th>Desarm.</th>
+                                <th>Reféns</th>
+                                <th>Caçou</th>
+                                <th>Vitórias</th>
+                                <th>Derrotas</th>
+                                <th>MVPs</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for op in operadores_ranking %}
+                            <tr>
+                                <td><strong>{{ loop.index }}º</strong></td>
+                                <td>
+                                    <strong>{{ op.warname }}</strong>
+                                    <br>
+                                    <small>{{ op.nome }}</small>
+                                </td>
+                                <td class="text-success fw-bold">{{ op.total_kills }}</td>
+                                <td class="text-danger">{{ op.total_deaths }}</td>
+                                <td class="text-laranja fw-bold">{{ "%.2f"|format(op.kd) }}</td>
+                                <td>{{ op.total_capturas or 0 }}</td>
+                                <td>{{ op.total_plantas_bomba or 0 }}</td>
+                                <td>{{ op.total_desarmes_bomba or 0 }}</td>
+                                <td>{{ op.total_refens or 0 }}</td>
+                                <td>{{ op.total_cacos or 0 }}</td>
+                                <td class="text-success">{{ op.total_vitorias }}</td>
+                                <td class="text-danger">{{ op.total_derrotas }}</td>
+                                <td><span class="badge" style="background-color: #FF6B00;">{{ op.total_mvps }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ========== ABA DE EQUIPES (FILTRO CORRIGIDO) ========== -->
+    <div class="tab-pane fade {% if aba_ativa == 'equipes' %}show active{% endif %}" id="equipes" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-flag me-2 text-laranja"></i>Desempenho das Equipes</h5>
+            </div>
+            <div class="card-body">
+                
+                <!-- Filtros para Equipes -->
+                <form method="GET" class="row mb-4">
+                    <input type="hidden" name="aba" value="equipes">
+                    <div class="col-md-4">
+                        <input type="text" name="search_equipe" class="form-control" placeholder="🔍 Buscar equipe..." value="{{ search_equipe }}">
+                    </div>
+                    <div class="col-md-2">
+                        <select name="ordenar_equipe" class="form-select">
+                            <option value="vitorias" {% if ordenar_equipe == 'vitorias' %}selected{% endif %}>Vitórias</option>
+                            <option value="total_kills" {% if ordenar_equipe == 'total_kills' %}selected{% endif %}>Total Kills</option>
+                            <option value="aproveitamento" {% if ordenar_equipe == 'aproveitamento' %}selected{% endif %}>Aproveitamento</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="ordem_equipe" class="form-select">
+                            <option value="desc" {% if ordem_equipe == 'desc' %}selected{% endif %}>Decrescente</option>
+                            <option value="asc" {% if ordem_equipe == 'asc' %}selected{% endif %}>Crescente</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn w-100" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-filter me-2"></i>Filtrar
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{{ url_for('estatisticas', aba='equipes') }}" class="btn btn-secondary w-100">
+                            <i class="fas fa-undo me-2"></i>Limpar
+                        </a>
+                    </div>
+                </form>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Equipe</th>
+                                <th>Partidas</th>
+                                <th>Vitórias</th>
+                                <th>Derrotas</th>
+                                <th>Empates</th>
+                                <th>Aproveitamento</th>
+                                <th>Total Kills</th>
+                                <th>Média Kills</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for equipe in estatisticas_equipes %}
+                            <tr>
+                                <td>
+                                    <strong class="text-laranja">{{ equipe.nome }}</strong>
+                                </td>
+                                <td>{{ equipe.total_partidas }}</td>
+                                <td class="text-success">{{ equipe.vitorias }}</td>
+                                <td class="text-danger">{{ equipe.derrotas }}</td>
+                                <td class="text-warning">{{ equipe.empates }}</td>
+                                <td>
+                                    {% if equipe.total_partidas > 0 %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-success" 
+                                                 style="width: {{ (equipe.vitorias / equipe.total_partidas * 100)|int }}%">
+                                                {{ (equipe.vitorias / equipe.total_partidas * 100)|int }}%
+                                            </div>
+                                            <div class="progress-bar bg-danger" 
+                                                 style="width: {{ (equipe.derrotas / equipe.total_partidas * 100)|int }}%">
+                                            </div>
+                                            <div class="progress-bar bg-warning" 
+                                                 style="width: {{ (equipe.empates / equipe.total_partidas * 100)|int }}%">
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ equipe.total_kills }}</td>
+                                <td>
+                                    {% if equipe.total_partidas > 0 %}
+                                        {{ (equipe.total_kills / equipe.total_partidas)|int }}
+                                    {% else %}
+                                        0
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ========== ABA DE PARTIDAS ========== -->
+    <div class="tab-pane fade {% if aba_ativa == 'partidas' %}show active{% endif %}" id="partidas" role="tabpanel">
+        
+        <!-- Filtros -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <input type="hidden" name="aba" value="partidas">
+                    <div class="col-md-3">
+                        <select name="tipo_partida" class="form-select">
+                            <option value="todas" {% if tipo_partida == 'todas' %}selected{% endif %}>Todas as partidas</option>
+                            <option value="individual" {% if tipo_partida == 'individual' %}selected{% endif %}>Individual</option>
+                            <option value="equipe" {% if tipo_partida == 'equipe' %}selected{% endif %}>Equipe</option>
+                        </select>
+                    </div>
+                    <div class="col-md-7">
+                        <input type="text" name="search" class="form-control" placeholder="🔍 Buscar por partida, operador, equipe ou modo..." value="{{ search }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn w-100" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-search me-2"></i>Buscar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Lista de Partidas - 2 COLUNAS COM CONTAINERS -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2 text-laranja"></i>Últimas Partidas</h5>
+            </div>
+            <div class="card-body">
+                {% if partidas_finalizadas %}
+                    <div class="row g-4">  <!-- g-4 adiciona espaçamento entre os cards -->
+                        {% for partida in partidas_finalizadas %}
+                        <div class="col-md-6">
+                            <!-- Card com borda e sombra para separação -->
+                            <div class="card h-100 border border-secondary" style="border-width: 2px !important; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                                <!-- Cabeçalho do card com gradiente -->
+                                <div class="card-header" style="background: linear-gradient(145deg, var(--cinza-escuro), var(--preto)); border-bottom: 2px solid var(--laranja);">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-calendar-alt text-laranja me-2"></i>
+                                            <span class="text-white">{{ partida.data }}</span>
+                                        </h6>
+                                        <span class="badge {% if partida.tipo_participacao == 'equipe' %}bg-laranja{% else %}bg-secondary{% endif %}">
+                                            {{ partida.tipo_participacao|upper }}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body">
+                                    <!-- Informações gerais com ícones -->
+                                    <div class="mb-3 pb-2 border-bottom border-secondary">
+                                        <h5 class="text-laranja mb-2">{{ partida.nome }}</h5>
+                                        <div class="d-flex flex-wrap gap-3 small">
+                                            <span><i class="fas fa-clock text-laranja me-1"></i> {{ partida.horario }}</span>
+                                            <span><i class="fas fa-map-marker-alt text-laranja me-1"></i> {{ partida.campo }}</span>
+                                            <span><i class="fas fa-crosshairs text-laranja me-1"></i> {{ partida.modo }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if partida.tipo_participacao == 'individual' %}
+                                        <!-- INDIVIDUAL - Tabela compacta com scroll -->
+                                        <div class="table-responsive" style="max-height: 180px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--cinza-claro);">
+                                            <table class="table table-sm table-hover mb-0">
+                                                <thead class="sticky-top" style="background-color: var(--preto);">
+                                                    <tr>
+                                                        <th class="text-laranja">Operador</th>
+                                                        <th class="text-laranja">K/D</th>
+                                                        <th class="text-laranja">Res.</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for p in partida.participantes %}
+                                                    <tr>
+                                                        <td>{{ p.warname }}</td>
+                                                        <td>
+                                                            <span class="text-success">{{ p.kills or 0 }}</span>
+                                                            <span class="text-muted">/</span>
+                                                            <span class="text-danger">{{ p.deaths or 0 }}</span>
+                                                        </td>
+                                                        <td>
+                                                            {% if p.resultado == 'vitoria' %}
+                                                            <span class="badge bg-success" title="Vitória">V</span>
+                                                            {% elif p.resultado == 'derrota' %}
+                                                            <span class="badge bg-danger" title="Derrota">D</span>
+                                                            {% else %}
+                                                            <span class="badge bg-warning" title="Empate">E</span>
+                                                            {% endif %}
+                                                            {% if p.mvp %}
+                                                            <span class="badge bg-warning ms-1" title="MVP">👑</span>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    
+                                    {% else %}
+                                        <!-- EQUIPE - Visual melhorado com containers internos -->
+                                        <div class="row g-2">
+                                            <!-- Container Equipe GTA -->
+                                            <div class="col-5">
+                                                <div class="p-2 rounded" style="background-color: rgba(255,107,0,0.1); border: 1px solid var(--laranja);">
+                                                    <div class="text-center mb-2">
+                                                        <div class="fw-bold text-laranja">⚔️ GTA</div>
+                                                        <div class="display-6">{{ partida.placar_equipe1 }}</div>
+                                                        <small class="text-muted">kills totais</small>
+                                                    </div>
+                                                    <div class="mt-2 small">
+                                                        {% for p in partida.participantes if p.equipe == 'GTA' %}
+                                                        <div class="d-flex justify-content-between py-1 px-2 {% if loop.index is odd %}bg-dark{% endif %} rounded">
+                                                            <span>{{ p.warname }}</span>
+                                                            <span class="text-success fw-bold">{{ p.kills or 0 }}</span>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Container VS / MVP -->
+                                            <div class="col-2 d-flex flex-column align-items-center justify-content-center">
+                                                <div class="text-center">
+                                                    <span class="badge bg-success mb-2 px-3 py-2">{{ partida.equipe_vencedora }}</span>
+                                                    <h5 class="text-muted">VS</h5>
+                                                    {% if partida.mvp %}
+                                                    <div class="mt-2 text-center">
+                                                        <small class="text-warning">🌟 MVP</small>
+                                                        <div class="small fw-bold text-warning">{{ partida.mvp.warname }}</div>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Container Equipe SPARTAS -->
+                                            <div class="col-5">
+                                                <div class="p-2 rounded" style="background-color: rgba(220,53,69,0.1); border: 1px solid #dc3545;">
+                                                    <div class="text-center mb-2">
+                                                        <div class="fw-bold text-danger">⚔️ SPARTAS</div>
+                                                        <div class="display-6">{{ partida.placar_equipe2 }}</div>
+                                                        <small class="text-muted">kills totais</small>
+                                                    </div>
+                                                    <div class="mt-2 small">
+                                                        {% for p in partida.participantes if p.equipe == 'SPARTAS' %}
+                                                        <div class="d-flex justify-content-between py-1 px-2 {% if loop.index is odd %}bg-dark{% endif %} rounded">
+                                                            <span>{{ p.warname }}</span>
+                                                            <span class="text-danger fw-bold">{{ p.kills or 0 }}</span>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <!-- Rodapé do card com botão -->
+                                    <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-users me-1"></i> {{ partida.participantes|length }} participantes
+                                        </small>
+                                        <a href="{{ url_for('ver_partida', id=partida.id) }}" class="btn btn-sm" style="background-color: #FF6B00; color: white;">
+                                            <i class="fas fa-eye me-1"></i>Detalhes
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted my-5">
+                        <i class="fas fa-calendar-times fa-4x mb-3"></i>
+                        <h4>Nenhuma partida finalizada encontrada</h4>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Manter a aba ativa
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const abaAtiva = urlParams.get('aba') || 'operadores';
+    
+    // Ativar a aba correta
+    document.querySelectorAll('.nav-link').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`#${abaAtiva}-tab`).classList.add('active');
+    
+    // Mostrar o conteúdo correto
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.remove('show', 'active');
+    });
+    document.querySelector(`#${abaAtiva}`).classList.add('show', 'active');
+});
+</script>
+{% endblock %}

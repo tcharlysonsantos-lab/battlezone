@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Venda{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-cash-register me-2"></i>Nova Venda</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.produto.label(class="form-label") }}
+                            {{ form.produto(class="form-control", placeholder="Nome do produto") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.quantidade.label(class="form-label") }}
+                            {{ form.quantidade(class="form-control", placeholder="0") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.unidade.label(class="form-label") }}
+                            {{ form.unidade(class="form-select") }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            {{ form.valor.label(class="form-label") }}
+                            {{ form.valor(class="form-control", placeholder="0.00", step="0.01") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.tipo.label(class="form-label") }}
+                            {{ form.tipo(class="form-select") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.pagamento.label(class="form-label") }}
+                            {{ form.pagamento(class="form-select") }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.cliente.label(class="form-label") }}
+                            {{ form.cliente(class="form-control", placeholder="Nome do cliente (opcional)") }}
+                            <small class="text-muted">Deixe em branco para vendas internas</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.data.label(class="form-label") }}
+                            {{ form.data(class="form-control") }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.descricao.label(class="form-label") }}
+                        {{ form.descricao(class="form-control", rows="2", placeholder="Descrição da venda...") }}
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('listar_vendas') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-save me-2"></i>Registrar Venda
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

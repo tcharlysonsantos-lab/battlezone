@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Calendário de Partidas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-laranja"><i class="fas fa-calendar-alt me-2"></i>Calendário de Partidas</h1>
+</div>
+
+<!-- Card do Calendário -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-calendar me-2 text-laranja"></i>
+                {{ mes_nome }} {{ ano }}
+            </h5>
+            <div>
+                <a href="{{ url_for('calendario', mes=mes-1, ano=ano if mes > 1 else ano-1) }}" class="btn btn-sm btn-outline-laranja">
+                    <i class="fas fa-chevron-left"></i> Anterior
+                </a>
+                <a href="{{ url_for('calendario') }}" class="btn btn-sm btn-outline-laranja mx-2">
+                    <i class="fas fa-calendar-day"></i> Hoje
+                </a>
+                <a href="{{ url_for('calendario', mes=mes+1, ano=ano if mes < 12 else ano+1) }}" class="btn btn-sm btn-outline-laranja">
+                    Próximo <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Tabela do Calendário -->
+        <table class="table table-bordered text-center">
+            <thead>
+                <tr>
+                    <th style="color: #FF6B00;">Dom</th>
+                    <th style="color: #FF6B00;">Seg</th>
+                    <th style="color: #FF6B00;">Ter</th>
+                    <th style="color: #FF6B00;">Qua</th>
+                    <th style="color: #FF6B00;">Qui</th>
+                    <th style="color: #FF6B00;">Sex</th>
+                    <th style="color: #FF6B00;">Sáb</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for semana in cal %}
+                <tr>
+                    {% for dia in semana %}
+                    <td style="height: 120px; width: 14%; vertical-align: top; {% if dia == 0 %}background-color: #2D2D2D;{% endif %}">
+                        {% if dia != 0 %}
+                            <!-- Cabeçalho do dia (clicável) -->
+                            <div class="d-flex justify-content-between p-1" 
+                                 style="cursor: pointer;" 
+                                 onclick="verDia({{ dia }})">
+                                <strong>{{ dia }}</strong>
+                                {% if partidas_por_dia[dia] %}
+                                    <span class="badge" style="background-color: #FF6B00;">
+                                        {{ partidas_por_dia[dia]|length }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Lista de partidas do dia -->
+                            {% if partidas_por_dia[dia] %}
+                                <div class="mt-1" style="font-size: 0.7rem; max-height: 70px; overflow-y: auto;">
+                                    {% for partida in partidas_por_dia[dia][:3] %}
+                                        <!-- Card da partida com cor baseada no status -->
+                                        <div class="mb-1 p-1 rounded text-white" 
+                                             style="background-color: {% if partida.status == 'Finalizada' %}#28a745{% else %}#007bff{% endif %}; cursor: pointer; font-size: 0.65rem;"
+                                             onclick="event.stopPropagation(); verPartida({{ partida.id }})">
+                                            <small>{{ partida.horario }} - {{ partida.nome|truncate(12) }}</small>
+                                        </div>
+                                    {% endfor %}
+                                    
+                                    {% if partidas_por_dia[dia]|length > 3 %}
+                                        <small class="text-muted" style="cursor: pointer;" onclick="verDia({{ dia }})">
+                                            +{{ partidas_por_dia[dia]|length - 3 }} mais...
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal para mostrar detalhes da partida -->
+<div class="modal fade" id="partidaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-laranja">Detalhes da Partida</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="partidaModalBody">
+                Carregando...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <a href="#" id="verPartidaBtn" class="btn" style="background-color: #FF6B00; color: white;">
+                    <i class="fas fa-eye me-2"></i>Ver Partida
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para mostrar todas as partidas do dia -->
+<div class="modal fade" id="diaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-laranja" id="diaModalTitle"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="diaModalBody">
+                Carregando...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Dados das partidas por dia (passados do backend)
+const partidasPorDia = {{ partidas_por_dia_json|safe }};
+
+function verPartida(id) {
+    fetch(`/api/partida/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            let html = `
+                <p><strong>📛 Nome:</strong> ${data.nome}</p>
+                <p><strong>📅 Data:</strong> ${data.data} às ${data.horario}</p>
+                <p><strong>🎯 Campo:</strong> ${data.campo}</p>
+                <p><strong>⚔️ Modo:</strong> ${data.modo}</p>
+                <p><strong>👥 Participantes:</strong> ${data.num_participantes}</p>
+                <p><strong>💰 Valor:</strong> R$ ${data.valor_total.toFixed(2)}</p>
+                <p><strong>📊 Status:</strong> <span class="badge ${data.status === 'Agendada' ? 'bg-primary' : 'bg-success'}">${data.status}</span></p>
+            `;
+            
+            document.getElementById('partidaModalBody').innerHTML = html;
+            document.getElementById('verPartidaBtn').href = `/partidas/${id}`;
+            
+            new bootstrap.Modal(document.getElementById('partidaModal')).show();
+        });
+}
+
+function verDia(dia) {
+    let mes = {{ mes }};
+    let ano = {{ ano }};
+    let dataStr = `${dia.toString().padStart(2, '0')}/${mes.toString().padStart(2, '0')}/${ano}`;
+    
+    document.getElementById('diaModalTitle').textContent = `Partidas do dia ${dataStr}`;
+    
+    let partidas = partidasPorDia[dia] || [];
+    
+    if (partidas.length === 0) {
+        document.getElementById('diaModalBody').innerHTML = '<p class="text-center text-muted">Nenhuma partida neste dia</p>';
+    } else {
+        let html = '<div class="list-group">';
+        partidas.forEach(p => {
+            let statusClass = p.status === 'Finalizada' ? 'bg-success' : 'bg-primary';
+            html += `
+                <div class="list-group-item bg-preto text-white mb-2" style="cursor: pointer;" onclick="verPartida(${p.id})">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${p.nome}</strong>
+                            <br>
+                            <small>${p.horario} - ${p.campo} - ${p.modo}</small>
+                        </div>
+                        <div>
+                            <span class="badge ${statusClass} me-2">${p.status}</span>
+                            <i class="fas fa-chevron-right text-laranja"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        document.getElementById('diaModalBody').innerHTML = html;
+    }
+    
+    new bootstrap.Modal(document.getElementById('diaModal')).show();
+}
+</script>
+{% endblock %}
