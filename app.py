@@ -1,11 +1,17 @@
-# app.py
+# app.py - BATTLEZONE SECURITY-FIRST EDITION
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import LoginManager, login_required, current_user
-from flask_wtf.csrf import CSRFProtect  # <-- ADICIONADO
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
 from datetime import datetime, timedelta
 import os
 import json
-from werkzeug.utils import secure_filename
+import logging
+
+# Importar configuração (NOVO)
+from config import config as app_config
 
 # Importar módulos
 from models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao
@@ -14,30 +20,44 @@ from decorators import requer_permissao, operador_session_required, admin_requir
 from utils import get_valores_plano, get_modos_permitidos, PLANOS_WARFIELD, PLANOS_REDLINE
 from cloud_manager import CloudManager
 from forms import OperadorForm, EquipeForm, PartidaForm, VendaForm, EstoqueForm
+from security_utils import allowed_file_secure, safe_filename_with_timestamp, create_upload_directory
 
-# Inicializar app
+# ==================== CONFIGURAR LOGGING ====================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# ==================== INICIALIZAR APP ====================
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
-app.config['REMEMBER_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
-# ==================== CONFIGURAÇÕES DE UPLOAD ====================
-UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'heic', 'raw'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+# CARREGAR CONFIGURAÇÃO DO config.py (NOVO)
+app.config.from_object(app_config)
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+# ==================== INICIALIZAR SEGURANÇA ====================
+# 1. CSRF Protection
+csrf = CSRFProtect(app)
 
-# ==================== INICIALIZAR CSRF PROTECTION ====================
-csrf = CSRFProtect(app)  # <-- ADICIONADO AQUI
+# 2. Headers de Segurança (NOVO)
+Talisman(app, 
+    force_https=app.config['SESSION_COOKIE_SECURE'],  # HTTPS apenas em produção
+    strict_transport_security=True,
+    strict_transport_security_max_age=31536000,  # 1 ano
+    content_security_policy={
+        'default-src': "'self'",
+        'script-src': ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
+        'style-src': ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "fonts.googleapis.com"],
+        'img-src': ["'self'", 'data:', 'https:'],
+        'font-src': ["'self'", 'data:', 'fonts.gstatic.com'],
+        'connect-src': ["'self'"],
+    }
+)
+
+# 3. Rate Limiting (NOVO)
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",  # Em produção, usar Redis
+)
 
 # ==================== INICIALIZAR EXTENSÕES ====================
 db.init_app(app)
@@ -48,6 +68,9 @@ login_manager.login_message_category = 'warning'
 
 # Inicializar Cloud Manager
 cloud_manager = CloudManager(app)
+
+# Criar diretório de upload
+create_upload_directory(app.config['UPLOAD_FOLDER'])
 
 # Registrar blueprints
 app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -81,10 +104,7 @@ def inject_now():
 @app.route('/calendario-publico')
 def calendario_publico():
     """Calendário público - MOSTRA CALENDÁRIO COMPLETO MAS SÓ PARTIDAS DE HOJE"""
-    from datetime import datetime
     import calendar
-    import json
-    from models import Partida
     
     hoje = datetime.now()
     mes = hoje.month
@@ -244,18 +264,32 @@ def deletar_usuario(id):
     return redirect(url_for('admin_usuarios'))
 
 @app.route('/test-upload', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def test_upload():
     if request.method == 'POST':
         if 'foto' in request.files:
             file = request.files['foto']
-            print(f"Arquivo: {file.filename}")
-            if file.filename != '':
-                filename = secure_filename(file.filename)
-                file.save(os.path.join('static/uploads', filename))
-                return f"Arquivo salvo: {filename}"
+            
+            # Validar arquivo (NOVO)
+            is_valid, msg = allowed_file_secure(
+                filename=file.filename,
+                max_size=app.config['MAX_CONTENT_LENGTH'],
+                file_obj=file
+            )
+            
+            if not is_valid:
+                return f"❌ Erro: {msg}", 400
+            
+            # Gerar nome seguro (NOVO)
+            safe_name = safe_filename_with_timestamp(file.filename)
+            
+            # Salvar arquivo
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], safe_name))
+            return f"✅ Arquivo salvo: {safe_name}"
+    
     return '''
     <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="foto">
+        <input type="file" name="foto" accept="image/*">
         <button type="submit">Enviar</button>
     </form>
     '''
@@ -285,7 +319,6 @@ def listar_operadores():
 @requer_permissao('caixa')
 def caixa():
     """Página do Caixa - Movimentação Financeira"""
-    from datetime import datetime, timedelta
     
     # Parâmetros de filtro
     data_inicio = request.args.get('data_inicio', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
@@ -357,12 +390,12 @@ def caixa():
 @login_required
 @requer_permissao('estatisticas')
 def estatisticas():
-    """Página de estatísticas"""
+    """Página de estatísticas completa com todos os módulos"""
     
     # Pegar parâmetros
     aba_ativa = request.args.get('aba', 'operadores')
     
-    # ===== RANKING DE OPERADORES =====
+    # ===== RANKING DE OPERADORES COM FILTROS =====
     operadores = Operador.query.all()
     operadores_ranking = []
     
@@ -384,17 +417,18 @@ def estatisticas():
             'kd': (op.total_kills or 0) / (op.total_deaths or 1) if op.total_deaths else (op.total_kills or 0)
         })
     
-    # Aplicar filtros de operadores
+    # FILTROS DE OPERADORES
     search_operador = request.args.get('search_operador', '').lower()
     ordenar_por = request.args.get('ordenar_por', 'kd')
     ordem = request.args.get('ordem', 'desc')
     
+    # Aplicar busca
     if search_operador:
         operadores_ranking = [op for op in operadores_ranking 
                             if search_operador in op['nome'].lower() 
                             or search_operador in op['warname'].lower()]
     
-    # Ordenar
+    # Ordenar operadores
     reverse = ordem == 'desc'
     if ordenar_por == 'kd':
         operadores_ranking.sort(key=lambda x: x['kd'], reverse=reverse)
@@ -420,34 +454,71 @@ def estatisticas():
         operadores_ranking.sort(key=lambda x: x['total_mvps'], reverse=reverse)
     
     # ===== ESTATÍSTICAS DE EQUIPES =====
+    from models import Equipe
+    
+    # Primeiro, buscar TODAS as partidas finalizadas de equipe
     partidas_equipe = Partida.query.filter_by(tipo_participacao='equipe', finalizada=True).all()
     
-    estatisticas_equipes = [
-        {'nome': 'GTA', 'total_partidas': 0, 'vitorias': 0, 'derrotas': 0, 'empates': 0, 'total_kills': 0},
-        {'nome': 'SPARTAS', 'total_partidas': 0, 'vitorias': 0, 'derrotas': 0, 'empates': 0, 'total_kills': 0}
-    ]
+    # Extrair todas as equipes únicas que realmente participaram de partidas
+    equipes_participantes = set()
+    for partida in partidas_equipe:
+        for participante in partida.participantes:
+            if participante.equipe:
+                equipes_participantes.add(participante.equipe.lower())
+    
+    # Inicializar estatísticas com as equipes que realmente participaram
+    estatisticas_equipes = []
+    for equipe_nome in sorted(equipes_participantes):
+        # Tentar encontrar a equipe no banco para pegar o ID
+        equipe_db = Equipe.query.filter(Equipe.nome.ilike(equipe_nome)).first()
+        
+        estatisticas_equipes.append({
+            'id': equipe_db.id if equipe_db else None,
+            'nome': equipe_nome.upper() if equipe_nome in ['gta', 'spartas'] else equipe_nome,  # Manter maiúscula para GTA e SPARTAS
+            'total_partidas': 0,
+            'vitorias': 0,
+            'derrotas': 0,
+            'empates': 0,
+            'total_kills': 0
+        })
+    
+    print(f"\n🏆 DEBUG Estatísticas de Equipes:")
+    print(f"  Equipes participantes: {equipes_participantes}")
+    print(f"  Total de partidas de equipe: {len(partidas_equipe)}")
     
     for partida in partidas_equipe:
-        for eq in estatisticas_equipes:
-            eq['total_partidas'] += 1
+        # Contar kills por equipe dinamicamente
+        kills_por_equipe = {}
         
-        if partida.equipe_vencedora == 'GTA':
-            estatisticas_equipes[0]['vitorias'] += 1
-            estatisticas_equipes[1]['derrotas'] += 1
-        elif partida.equipe_vencedora == 'SPARTAS':
-            estatisticas_equipes[1]['vitorias'] += 1
-            estatisticas_equipes[0]['derrotas'] += 1
-        else:
-            estatisticas_equipes[0]['empates'] += 1
-            estatisticas_equipes[1]['empates'] += 1
-        
+        # Extrair equipes únicas e contar kills
         for participante in partida.participantes:
-            if participante.equipe == 'GTA':
-                estatisticas_equipes[0]['total_kills'] += participante.kills or 0
-            elif participante.equipe == 'SPARTAS':
-                estatisticas_equipes[1]['total_kills'] += participante.kills or 0
+            if participante.equipe:
+                equipe_lower = participante.equipe.lower()
+                if equipe_lower not in kills_por_equipe:
+                    kills_por_equipe[equipe_lower] = 0
+                kills_por_equipe[equipe_lower] += participante.kills or 0
+        
+        print(f"  - Partida {partida.id}: {partida.nome} | Vencedora: {partida.equipe_vencedora} | Kills: {kills_por_equipe}")
+        
+        equipe_vencedora_lower = partida.equipe_vencedora.lower() if partida.equipe_vencedora else None
+        
+        # Atualizar estatísticas para TODAS as equipes que participaram (dinâmico)
+        for eq in estatisticas_equipes:
+            eq_nome_lower = eq['nome'].lower()
+            
+            # Se esta equipe participou da partida
+            if eq_nome_lower in kills_por_equipe:
+                eq['total_partidas'] += 1
+                eq['total_kills'] += kills_por_equipe[eq_nome_lower]
+                
+                if equipe_vencedora_lower == eq_nome_lower:
+                    eq['vitorias'] += 1
+                elif equipe_vencedora_lower and equipe_vencedora_lower != eq_nome_lower:
+                    eq['derrotas'] += 1
+                else:
+                    eq['empates'] += 1
     
-    # Aplicar filtros de equipes
+    # FILTROS DE EQUIPES
     search_equipe = request.args.get('search_equipe', '').lower()
     ordenar_equipe = request.args.get('ordenar_equipe', 'vitorias')
     ordem_equipe = request.args.get('ordem_equipe', 'desc')
@@ -459,6 +530,8 @@ def estatisticas():
     reverse_equipe = ordem_equipe == 'desc'
     if ordenar_equipe == 'vitorias':
         estatisticas_equipes.sort(key=lambda x: x['vitorias'], reverse=reverse_equipe)
+    elif ordenar_equipe == 'derrotas':
+        estatisticas_equipes.sort(key=lambda x: x['derrotas'], reverse=reverse_equipe)
     elif ordenar_equipe == 'total_kills':
         estatisticas_equipes.sort(key=lambda x: x['total_kills'], reverse=reverse_equipe)
     elif ordenar_equipe == 'aproveitamento':
@@ -469,14 +542,45 @@ def estatisticas():
     # ===== PARTIDAS FINALIZADAS =====
     tipo_partida = request.args.get('tipo_partida', 'todas')
     search = request.args.get('search', '')
+    periodo = request.args.get('periodo', 'todas')
     
     query = Partida.query.filter_by(finalizada=True)
     
     if tipo_partida != 'todas':
         query = query.filter_by(tipo_participacao=tipo_partida)
     
-    partidas = query.order_by(Partida.data.desc()).all()
+    partidas = query.all()
     
+    # Ordenar por ID descendente (mais recentes primeiro)
+    partidas.sort(key=lambda p: p.id, reverse=True)
+    
+    print(f"DEBUG: Total de partidas em estatísticas: {len(partidas)}")
+    if partidas:
+        for i, p in enumerate(partidas[:3]):
+            print(f"  {i+1}. ID={p.id} | {p.data} {p.horario} - {p.nome}")
+    
+    # Filtrar por período
+    hoje = datetime.now()
+    
+    if periodo != 'todas':
+        partidas_filtradas = []
+        for p in partidas:
+            try:
+                data_p = datetime.strptime(p.data, '%d/%m/%Y')
+                if periodo == 'hoje' and p.data == hoje.strftime('%d/%m/%Y'):
+                    partidas_filtradas.append(p)
+                elif periodo == 'semana' and (hoje - data_p).days <= 7:
+                    partidas_filtradas.append(p)
+                elif periodo == 'mes' and (hoje - data_p).days <= 30:
+                    partidas_filtradas.append(p)
+                else:
+                    partidas_filtradas.append(p)
+            except:
+                if periodo == 'todas':
+                    partidas_filtradas.append(p)
+        partidas = partidas_filtradas
+    
+    # Filtrar por busca
     if search:
         search_lower = search.lower()
         partidas_filtradas = []
@@ -488,9 +592,6 @@ def estatisticas():
                 if search_lower in part.warname.lower():
                     partidas_filtradas.append(p)
                     break
-                elif p.modo and search_lower in p.modo.lower():
-                    partidas_filtradas.append(p)
-                    break
         partidas = partidas_filtradas
     
     return render_template('estatisticas/index.html',
@@ -500,6 +601,7 @@ def estatisticas():
                          aba_ativa=aba_ativa,
                          tipo_partida=tipo_partida,
                          search=search,
+                         periodo=periodo,
                          search_operador=search_operador,
                          ordenar_por=ordenar_por,
                          ordem=ordem,
@@ -511,15 +613,16 @@ def estatisticas():
 @login_required
 @requer_permissao('estatisticas')
 def ver_estatisticas_operador(id):
-    """Visualiza as estatísticas detalhadas de um operador"""
+    """Visualiza as estatísticas detalhadas de um operador com filtros"""
     operador = Operador.query.get_or_404(id)
     
-    # Pegar filtros
+    # Pegar filtros da URL
     periodo = request.args.get('periodo', 'Todas')
     search = request.args.get('search', '')
+    resultado_filtro = request.args.get('resultado', 'todos')
     
     # Pegar todas as partidas do operador
-    participacoes = PartidaParticipante.query.filter_by(operador_id=id).all()
+    participacoes = PartidaParticipante.query.filter_by(operador_id=id).join(Partida).filter(Partida.finalizada==True).all()
     
     # Calcular estatísticas totais
     stats = {
@@ -541,60 +644,64 @@ def ver_estatisticas_operador(id):
     # Calcular K/D
     stats['kd'] = stats['total_kills'] / stats['total_deaths'] if stats['total_deaths'] > 0 else stats['total_kills']
     
-    # Ordenar participações por data mais recente
+    # Processar histórico
     partidas_historico = []
     hoje = datetime.now()
     
     for part in participacoes:
-        partidas_historico.append({
-            'partida_id': part.partida_id,
-            'nome_partida': part.partida.nome,
-            'modo': part.partida.modo,
-            'data': part.partida.data,
-            'kills': part.kills or 0,
-            'deaths': part.deaths or 0,
-            'resultado': part.resultado or '-',
-            'mvp': part.mvp or False
-        })
-    
-    # Aplicar filtros
-    partidas_filtradas = []
-    
-    for partida in partidas_historico:
-        # Filtro de busca por nome
-        if search and search.lower() not in partida['nome_partida'].lower():
-            continue
-        
-        # Filtro de período
-        if periodo != 'Todas':
-            try:
-                data_partida = datetime.strptime(partida['data'], "%d/%m/%Y")
-                dias_atras = (hoje - data_partida).days
-                
-                if periodo == 'Hoje':
-                    data_hoje_str = hoje.strftime("%d/%m/%Y")
-                    if partida['data'] != data_hoje_str:
-                        continue
-                elif periodo == '7d':
-                    if dias_atras > 7:
-                        continue
-                elif periodo == '30d':
-                    if dias_atras > 30:
-                        continue
-            except ValueError:
+        if part.partida and part.partida.finalizada:
+            # Aplicar filtro de busca
+            if search and search.lower() not in part.partida.nome.lower():
                 continue
-        
-        partidas_filtradas.append(partida)
+            
+            # Aplicar filtro de resultado
+            if resultado_filtro != 'todos' and part.resultado != resultado_filtro:
+                continue
+            
+            # Aplicar filtro de período
+            if periodo != 'Todas':
+                try:
+                    data_partida = datetime.strptime(part.partida.data, '%d/%m/%Y')
+                    dias_atras = (hoje - data_partida).days
+                    
+                    if periodo == 'Hoje' and part.partida.data != hoje.strftime('%d/%m/%Y'):
+                        continue
+                    elif periodo == '7d' and dias_atras > 7:
+                        continue
+                    elif periodo == '30d' and dias_atras > 30:
+                        continue
+                    elif periodo == '3m' and dias_atras > 90:
+                        continue
+                except ValueError:
+                    continue
+            
+            partidas_historico.append({
+                'partida_id': part.partida_id,
+                'nome_partida': part.partida.nome,
+                'modo': part.partida.modo,
+                'data': part.partida.data,
+                'horario': part.partida.horario,
+                'kills': part.kills or 0,
+                'deaths': part.deaths or 0,
+                'capturas': part.capturas or 0,
+                'plantas': part.plantou_bomba or 0,
+                'desarmes': part.desarmou_bomba or 0,
+                'refens': part.refens or 0,
+                'cacadas': part.cacou or 0,
+                'resultado': part.resultado or '-',
+                'mvp': part.mvp or False
+            })
     
     # Ordenar por data mais recente
-    partidas_filtradas.sort(key=lambda x: x['data'], reverse=True)
+    partidas_historico.sort(key=lambda x: datetime.strptime(x['data'], '%d/%m/%Y') if x['data'] else datetime.now(), reverse=True)
     
     return render_template('estatisticas/operador.html',
                          operador=operador,
                          stats=stats,
-                         partidas_historico=partidas_filtradas,
+                         partidas_historico=partidas_historico,
                          periodo=periodo,
-                         search=search)
+                         search=search,
+                         resultado_filtro=resultado_filtro)
 
 @app.route('/partidas/<int:id>/finalizar', methods=['GET'])
 @login_required
@@ -602,16 +709,31 @@ def ver_estatisticas_operador(id):
 def formulario_finalizar_partida(id):
     """Exibe o formulário para finalizar partida (GET)"""
     partida = Partida.query.get_or_404(id)
-    return render_template('partidas/finalizar.html', partida=partida)
-
-
-
+    
+    # Se for modo equipe, extrair as equipes reais que participaram
+    equipes_partida = []
+    if partida.tipo_participacao == 'equipe':
+        # Pegar todas as equipes únicas da partida
+        equipes_unicas = set()
+        for p in partida.participantes:
+            if p.equipe:
+                equipes_unicas.add(p.equipe)
+        equipes_partida = sorted(list(equipes_unicas))
+    
+    return render_template('partidas/finalizar.html', 
+                         partida=partida,
+                         equipes_partida=equipes_partida)
 
 @app.route('/operadores/<int:id>/perfil')
 @login_required
 def perfil_operador(id):
-    """Página de perfil do operador"""
+    """Página de perfil do operador com filtros"""
     operador = Operador.query.get_or_404(id)
+    
+    # Pegar filtros da URL
+    search = request.args.get('search', '')
+    resultado_filtro = request.args.get('resultado', 'todos')
+    periodo = request.args.get('periodo', 'Todas')
     
     # Verificar se é o próprio operador ou admin
     é_proprio = (current_user.nivel == 'operador' and 
@@ -620,6 +742,43 @@ def perfil_operador(id):
     
     # Buscar participações em partidas
     participacoes = PartidaParticipante.query.filter_by(operador_id=id).all()
+    
+    # Filtrar partidas
+    partidas_filtradas = []
+    hoje = datetime.now()
+    
+    for p in participacoes:
+        if p.partida and p.partida.finalizada:
+            incluir = True
+            
+            # Filtro de busca por nome ou modo
+            if search:
+                search_lower = search.lower()
+                if (search_lower not in p.partida.nome.lower() and 
+                    search_lower not in p.partida.modo.lower()):
+                    incluir = False
+            
+            # Filtro de resultado
+            if resultado_filtro != 'todos' and p.resultado != resultado_filtro:
+                incluir = False
+            
+            # Filtro de período
+            if periodo != 'Todas':
+                try:
+                    data_partida = datetime.strptime(p.partida.data, '%d/%m/%Y')
+                    dias_atras = (hoje - data_partida).days
+                    
+                    if periodo == 'Hoje' and p.partida.data != hoje.strftime('%d/%m/%Y'):
+                        incluir = False
+                    elif periodo == '7d' and dias_atras > 7:
+                        incluir = False
+                    elif periodo == '30d' and dias_atras > 30:
+                        incluir = False
+                except:
+                    pass
+            
+            if incluir:
+                partidas_filtradas.append(p)
     
     # Buscar compras (vendas) - apenas se for o próprio operador ou admin
     compras = []
@@ -652,6 +811,7 @@ def perfil_operador(id):
     return render_template('operadores/perfil.html',
                          operador=operador,
                          partidas=participacoes,
+                         partidas_filtradas=partidas_filtradas,
                          compras=compras,
                          é_proprio=é_proprio,
                          é_admin=é_admin,
@@ -661,14 +821,15 @@ def perfil_operador(id):
                          total_partidas=total_partidas,
                          vitorias=vitorias,
                          derrotas=derrotas,
-                         empates=empates)
-
+                         empates=empates,
+                         search=search,
+                         resultado_filtro=resultado_filtro,
+                         periodo=periodo)
+                         
 @app.route('/')
 def index():
     """Página inicial pública"""
     try:
-        from datetime import datetime
-        from models import Partida
         
         agora = datetime.now()
         data_hoje = agora.strftime("%d/%m/%Y")
@@ -737,15 +898,18 @@ def salvar_resultado_partida(id):
             flash('[OK] Partida Redline finalizada com sucesso!', 'success')
             return redirect(url_for('ver_partida', id=id))
         
-        # Variáveis para somar kills por equipe
-        kills_gta = 0
-        kills_spartas = 0
+        # Dicionário para somar kills por equipe (dinâmico - suporta qualquer equipe)
+        kills_por_equipe = {}
         
         # Se for modo equipe, processar resultado da partida
         if partida.tipo_participacao == 'equipe':
             partida.equipe_vencedora = request.form.get('equipe_vencedora')
-            # NOTA: placar_equipe1 e placar_equipe2 serão calculados automaticamente
-            # baseado nas kills dos jogadores de cada equipe
+            # Extrair equipes únicas que participam
+            for p in partida.participantes:
+                if p.equipe:
+                    equipe_lower = p.equipe.lower()
+                    if equipe_lower not in kills_por_equipe:
+                        kills_por_equipe[equipe_lower] = 0
         
         # Processar estatísticas de cada participante
         for participante in partida.participantes:
@@ -762,12 +926,12 @@ def salvar_resultado_partida(id):
             participante.kills = kills
             participante.deaths = deaths
             
-            # Somar kills por equipe (para modo equipe)
+            # Somar kills por equipe (para modo equipe - dinâmico para ANY equipe)
             if partida.tipo_participacao == 'equipe' and participante.equipe:
-                if participante.equipe == 'GTA':
-                    kills_gta += kills
-                elif participante.equipe == 'SPARTAS':
-                    kills_spartas += kills
+                equipe_lower = participante.equipe.lower()
+                if equipe_lower not in kills_por_equipe:
+                    kills_por_equipe[equipe_lower] = 0
+                kills_por_equipe[equipe_lower] += kills
             
             # Novas estatísticas
             participante.capturas = int(request.form.get(f'capturas_{participante.id}', 0))
@@ -830,10 +994,13 @@ def salvar_resultado_partida(id):
                 if participante.mvp:
                     operador.total_mvps += 1
         
-        # Se for modo equipe, definir o placar baseado nas kills somadas
-        if partida.tipo_participacao == 'equipe':
-            partida.placar_equipe1 = kills_gta
-            partida.placar_equipe2 = kills_spartas
+        # Se for modo equipe, definir o placar baseado nas kills somadas (dinâmico)
+        if partida.tipo_participacao == 'equipe' and kills_por_equipe:
+            equipes_sorted = sorted(kills_por_equipe.keys())
+            if len(equipes_sorted) >= 1:
+                partida.placar_equipe1 = kills_por_equipe.get(equipes_sorted[0], 0)
+            if len(equipes_sorted) >= 2:
+                partida.placar_equipe2 = kills_por_equipe.get(equipes_sorted[1], 0)
         
         partida.status = 'Finalizada'
         partida.finalizada = True
@@ -851,55 +1018,75 @@ def salvar_resultado_partida(id):
 @login_required
 @requer_permissao('operadores')
 def novo_operador():
-    """Cria novo operador"""
+    """Cria novo operador com validação especial de CPF"""
     form = OperadorForm()
     
-    # DEBUG: Ver o que está chegando
-    print("\n" + "="*50)
-    print("🔍 DEBUG - Novo Operador")
-    print(f"Método: {request.method}")
-    print(f"POST? {request.method == 'POST'}")
-    
     if request.method == 'POST':
-        print(f"Form data: {dict(request.form)}")
-        print(f"Form validate: {form.validate_on_submit()}")
-        
-        if form.errors:
-            print(f"❌ Erros de validação: {form.errors}")
-            for field, errors in form.errors.items():
-                for error in errors:
-                    flash(f"{field}: {error}", 'danger')
-        
         if form.validate_on_submit():
             try:
-                # Verificar se warname já existe
+                # Verificações básicas
                 if Operador.query.filter_by(warname=form.warname.data).first():
-                    flash('Warname já existe!', 'danger')
+                    flash('❌ Warname já existe!', 'danger')
                     return render_template('operadores/form.html', form=form, titulo='Novo Operador')
                 
-                # Criar operador
+                if Operador.query.filter_by(email=form.email.data).first():
+                    flash('❌ Email já existe!', 'danger')
+                    return render_template('operadores/form.html', form=form, titulo='Novo Operador')
+                
+                if Operador.query.filter_by(nome=form.nome.data).first():
+                    flash('❌ Nome já existe!', 'danger')
+                    return render_template('operadores/form.html', form=form, titulo='Novo Operador')
+                
+                # VERIFICAÇÃO ESPECIAL DE CPF
+                operador_cpf = Operador.query.filter_by(cpf=form.cpf.data).first()
+                
+                if operador_cpf:
+                    # CPF já existe em outro operador
+                    usuario_cpf = User.query.filter_by(username=operador_cpf.warname).first()
+                    
+                    if usuario_cpf:
+                        # CPF já pertence a um operador COM usuário
+                        flash('⚠️ Este CPF já pertence a outro operador. Entre em contato com a BATTLEZONE para resolver!', 'warning')
+                        return render_template('operadores/form.html', form=form, titulo='Novo Operador')
+                    else:
+                        # CPF pertence a operador SEM usuário - vamos vincular
+                        flash('ℹ️ CPF encontrado em operador sem usuário. Vinculando automaticamente...', 'info')
+                        
+                        # Atualizar dados do operador existente
+                        operador_cpf.nome = form.nome.data
+                        operador_cpf.warname = form.warname.data
+                        operador_cpf.email = form.email.data
+                        operador_cpf.telefone = form.telefone.data
+                        operador_cpf.data_nascimento = form.data_nascimento.data
+                        operador_cpf.idade = form.idade.data
+                        operador_cpf.battlepass = form.battlepass.data
+                        
+                        db.session.commit()
+                        
+                        flash(f'✅ Operador {operador_cpf.nome} atualizado e vinculado!', 'success')
+                        return redirect(url_for('listar_operadores'))
+                
+                # Se chegou aqui, pode criar novo operador
                 operador = Operador(
                     nome=form.nome.data,
                     warname=form.warname.data,
-                    cpf=form.cpf.data or '',
-                    email=form.email.data or '',
-                    telefone=form.telefone.data or '',
-                    data_nascimento=form.data_nascimento.data or '',
-                    idade=form.idade.data or '',
+                    cpf=form.cpf.data,
+                    email=form.email.data,
+                    telefone=form.telefone.data,
+                    data_nascimento=form.data_nascimento.data,
+                    idade=form.idade.data,
                     battlepass=form.battlepass.data
                 )
                 
                 db.session.add(operador)
                 db.session.commit()
                 
-                print(f"✅ Operador salvo: {operador.nome}")
-                flash('Operador criado com sucesso!', 'success')
+                flash('✅ Operador criado com sucesso!', 'success')
                 return redirect(url_for('listar_operadores'))
                 
             except Exception as e:
                 db.session.rollback()
-                print(f"❌ Erro ao salvar: {str(e)}")
-                flash(f'Erro ao salvar: {str(e)}', 'danger')
+                flash(f'❌ Erro ao salvar: {str(e)}', 'danger')
     
     return render_template('operadores/form.html', form=form, titulo='Novo Operador')
 
@@ -919,22 +1106,33 @@ def editar_operador(id):
     operador = Operador.query.get_or_404(id)
     form = OperadorForm(obj=operador)
     
-    if form.validate_on_submit():
-        # Verificar warname único
-        existente = Operador.query.filter(
-            Operador.warname == form.warname.data,
-            Operador.id != id
-        ).first()
+    # Passar o ID para o formulário
+    form.id = id
+    
+    if request.method == 'POST':
+        print("\n" + "="*50)
+        print("🔍 EDITANDO OPERADOR")
+        print(f"ID: {id}")
+        print(f"Form data: {dict(request.form)}")
+        print("="*50)
         
-        if existente:
-            flash('Warname já existe para outro operador!', 'danger')
-            return render_template('operadores/form.html', form=form, titulo='Editar Operador')
-        
-        form.populate_obj(operador)
-        db.session.commit()
-        
-        flash('Operador atualizado!', 'success')
-        return redirect(url_for('listar_operadores'))
+        if form.validate_on_submit():
+            try:
+                # Atualizar operador
+                form.populate_obj(operador)
+                db.session.commit()
+                
+                flash('✅ Operador atualizado com sucesso!', 'success')
+                return redirect(url_for('listar_operadores'))
+                
+            except Exception as e:
+                db.session.rollback()
+                flash(f'❌ Erro ao atualizar: {str(e)}', 'danger')
+        else:
+            print(f"❌ Erros de validação: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"{field}: {error}", 'danger')
     
     return render_template('operadores/form.html', form=form, titulo='Editar Operador')
 
@@ -946,55 +1144,95 @@ def deletar_operador(id):
     try:
         operador = Operador.query.get_or_404(id)
         
-        # Buscar usuário associado (pelo warname = username)
-        usuario = User.query.filter_by(username=operador.warname).first()
+        # Buscar usuário associado (pelo warname ou pelo operador_id)
+        usuario = User.query.filter(
+            (User.username == operador.warname) | 
+            (User.operador_id == operador.id)
+        ).first()
         
-        # Verificar se está em alguma equipe
+        # Nome para mensagem
+        nome_operador = operador.nome
+        warname = operador.warname
+        
+        print("\n" + "="*50)
+        print("🔍 DELETANDO OPERADOR")
+        print(f"Operador: {nome_operador} (ID: {id})")
+        print(f"Warname: {warname}")
+        print(f"Usuário encontrado: {usuario.username if usuario else 'Nenhum'}")
+        print("="*50)
+        
+        # ===== REMOVER DE EQUIPES =====
         if operador.membro_equipes:
             for equipe in operador.membro_equipes:
                 equipe.membros.remove(operador)
-            db.session.commit()
+                print(f"  ✅ Removido da equipe: {equipe.nome}")
         
-        # Verificar se está em alguma partida
+        # ===== REMOVER DE PARTIDAS =====
+        from models import PartidaParticipante
         partidas = PartidaParticipante.query.filter_by(operador_id=id).all()
-        if partidas:
-            for part in partidas:
-                db.session.delete(part)
-            db.session.commit()
+        for part in partidas:
+            db.session.delete(part)
+            print(f"  ✅ Removido da partida ID: {part.partida_id}")
         
-        nome = operador.nome
-        warname = operador.warname
-        
-        # DELETAR OPERADOR
-        db.session.delete(operador)
-        
-        # DELETAR USUÁRIO ASSOCIADO (SE EXISTIR)
+        # ===== DELETAR USUÁRIO ASSOCIADO (SE EXISTIR) =====
         if usuario:
             db.session.delete(usuario)
+            print(f"  ✅ Usuário {usuario.username} deletado")
             mensagem_usuario = f" e usuário {usuario.username}"
         else:
             mensagem_usuario = ""
         
+        # ===== DELETAR OPERADOR =====
+        db.session.delete(operador)
+        
+        # ===== COMMIT FINAL =====
         db.session.commit()
         
-        # Registrar log
+        # ===== REGISTRAR LOG =====
         log = Log(
             usuario=current_user.username,
             acao='OPERADOR_DELETADO',
-            detalhes=f"Operador: {nome} (ID: {id}){mensagem_usuario}"
+            detalhes=f"Operador: {nome_operador} (ID: {id}){mensagem_usuario}"
         )
         db.session.add(log)
         db.session.commit()
         
-        flash(f'Operador {nome}{mensagem_usuario} deletado!', 'success')
-        return redirect(url_for('listar_operadores'))
-    
+        flash(f'✅ Operador {nome_operador}{mensagem_usuario} deletado com sucesso!', 'success')
+        
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f'Erro ao deletar operador: {str(e)}')
-        flash(f'Erro ao deletar operador: {str(e)}', 'danger')
-        return redirect(url_for('listar_operadores'))
+        app.logger.error(f'❌ Erro ao deletar operador: {str(e)}')
+        flash(f'❌ Erro ao deletar operador: {str(e)}', 'danger')
     
+    return redirect(url_for('listar_operadores'))
+    
+@app.route('/debug-permissoes')
+@login_required
+def debug_permissoes():
+    """Página de debug para verificar permissões"""
+    from models import User
+    
+    user = User.query.get(current_user.id)
+    
+    recursos = ['operadores', 'partidas', 'equipes', 'vendas', 'caixa', 'estoque']
+    permissoes = {}
+    
+    for recurso in recursos:
+        permissoes[recurso] = user.tem_permissao(recurso)
+    
+    return f"""
+    <h1>Debug de Permissões</h1>
+    <p>Usuário: {user.username}</p>
+    <p>Nível: {user.nivel}</p>
+    <p>Status: {user.status}</p>
+    <h2>Permissões:</h2>
+    <ul>
+        {''.join(f'<li>{r}: {"✅" if p else "❌"}</li>' for r, p in permissoes.items())}
+    </ul>
+    <p><a href="/operadores">Tentar acessar Operadores</a></p>
+    <p><a href="/partidas">Tentar acessar Partidas</a></p>
+    """
+
 # ==================== ROTAS DE EQUIPES ====================
 @app.route('/equipes')
 @login_required
@@ -1038,28 +1276,30 @@ def nova_equipe():
         if capitao_id == '0':
             capitao_id = None
         
-        # Processar foto
+        # Processar foto (ATUALIZADO PARA SEGURANÇA)
         foto_filename = None
         if 'foto' in request.files:
             file = request.files['foto']
-            print(f"Arquivo recebido: {file.filename}")
+            
             if file and file.filename != '':
-                # Salvar com nome seguro
-                from werkzeug.utils import secure_filename
-                filename = secure_filename(file.filename)
-                # Garantir que tem extensão
-                if '.' in filename:
-                    ext = filename.rsplit('.', 1)[1].lower()
-                    foto_filename = f"equipe_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
+                # Validar arquivo (NOVO)
+                is_valid, msg = allowed_file_secure(
+                    filename=file.filename,
+                    max_size=app.config['MAX_CONTENT_LENGTH'],
+                    file_obj=file
+                )
+                
+                if is_valid:
+                    # Gerar nome seguro com timestamp (NOVO)
+                    foto_filename = safe_filename_with_timestamp(file.filename)
+                    
+                    # Salvar arquivo
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], foto_filename))
+                    print(f"✅ Foto salva como: {foto_filename}")
                 else:
-                    foto_filename = f"equipe_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-                
-                # Garantir que pasta existe
-                os.makedirs('static/uploads', exist_ok=True)
-                
-                # Salvar arquivo
-                file.save(os.path.join('static/uploads', foto_filename))
-                print(f"✅ Foto salva como: {foto_filename}")
+                    # Log de tentativa de upload malicioso
+                    logger.warning(f"Upload rejeitado para equipe: {msg} - IP: {request.remote_addr}")
+                    flash(f"❌ Arquivo rejeitado: {msg}", 'danger')
         
         # Criar equipe
         equipe = Equipe(
@@ -1106,17 +1346,25 @@ def editar_equipe(id):
         equipe.battlepass = form.battlepass.data
         equipe.capitao_id = form.capitao_id.data if form.capitao_id.data != 0 else None
         
-        # ===== CORREÇÃO: Processar nova foto SOMENTE se enviada =====
+        # Processar nova foto SOMENTE se enviada (ATUALIZADO)
         if 'foto' in request.files:
             file = request.files['foto']
             if file and file.filename != '':
-                # Se enviou uma nova foto, salva
-                if file and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    ext = filename.rsplit('.', 1)[1].lower()
-                    foto_filename = f"equipe_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
+                # Validar arquivo (NOVO)
+                is_valid, msg = allowed_file_secure(
+                    filename=file.filename,
+                    max_size=app.config['MAX_CONTENT_LENGTH'],
+                    file_obj=file
+                )
+                
+                if is_valid:
+                    # Gerar nome seguro (NOVO)
+                    foto_filename = safe_filename_with_timestamp(file.filename)
                     file.save(os.path.join(app.config['UPLOAD_FOLDER'], foto_filename))
                     equipe.foto = foto_filename
+                else:
+                    logger.warning(f"Upload rejeitado para editar equipe: {msg} - IP: {request.remote_addr}")
+                    flash(f"❌ Arquivo rejeitado: {msg}", 'danger')
             # Se não enviou foto, mantém a foto existente (não faz nada)
         
         db.session.commit()
@@ -1188,59 +1436,90 @@ def deletar_equipe(id):
 @requer_permissao('partidas')
 @operador_session_required
 def listar_partidas():
-    """Lista todas as partidas"""
-    print("\n" + "="*50)
-    print("🔍 DEBUG - listar_partidas")
-    print(f"Usuário: {current_user.username}")
-    print(f"Nível: {current_user.nivel}")
-    print(f"Autenticado: {current_user.is_authenticated}")
-    print("="*50)
-    
+    """Lista todas as partidas - VERSÃO SEGURA"""
     try:
+        print("\n" + "="*50)
+        print("🔍 DEBUG - listar_partidas")
+        print(f"Usuário: {current_user.username}")
+        print(f"Nível: {current_user.nivel}")
+        print(f"Autenticado: {current_user.is_authenticated}")
+        print("="*50)
+        
+        # Pegar filtros da URL
         status = request.args.get('status', 'Todos')
         periodo = request.args.get('periodo', 'Todas')
         search = request.args.get('search', '')
         
         print(f"Filtros - status: {status}, periodo: {periodo}, search: {search}")
         
+        # Query base - MAIS SEGURA
         query = Partida.query
         
-        if search:
+        # Aplicar filtros de forma segura
+        if search and search.strip():
             query = query.filter(Partida.nome.ilike(f'%{search}%'))
         
         if status != 'Todos':
             query = query.filter_by(status=status)
         
+        # Buscar todas as partidas
+        todas_partidas = query.all()
+        
+        # Ordenar por ID descendente (mais recentes primeiro)
+        todas_partidas.sort(key=lambda p: p.id, reverse=True)
+        
+        print(f"DEBUG: Total de partidas: {len(todas_partidas)}")
+        if todas_partidas:
+            for i, p in enumerate(todas_partidas[:3]):
+                print(f"  {i+1}. ID={p.id} | {p.data} {p.horario} - {p.nome}")
+        
+        # Aplicar filtro de período MANUALMENTE (evita erros de conversão)
         if periodo != 'Todas':
             hoje = datetime.now()
-            data_hoje_str = hoje.strftime("%d/%m/%Y")
+            partidas_filtradas = []
             
-            if periodo == 'Hoje':
-                query = query.filter(Partida.data == data_hoje_str)
-            elif periodo == '7d':
-                # Filtrar últimos 7 dias
-                partidas_temp = query.all()
-                partidas_filtradas = []
-                for p in partidas_temp:
-                    try:
-                        data_p = datetime.strptime(p.data, "%d/%m/%Y")
-                        if (hoje - data_p).days <= 7:
+            for p in todas_partidas:
+                try:
+                    data_p = datetime.strptime(p.data, '%d/%m/%Y')
+                    
+                    if periodo == 'Hoje':
+                        if p.data == hoje.strftime('%d/%m/%Y'):
                             partidas_filtradas.append(p)
-                    except ValueError:
-                        continue
-                partidas = partidas_filtradas
-                print(f"Encontradas {len(partidas)} partidas nos últimos 7 dias")
-                return render_template('partidas/listar.html', partidas=partidas)
+                    
+                    elif periodo == '7d':
+                        dias_diff = (hoje - data_p).days
+                        if 0 <= dias_diff <= 7:
+                            partidas_filtradas.append(p)
+                    
+                    elif periodo == '30d':
+                        dias_diff = (hoje - data_p).days
+                        if 0 <= dias_diff <= 30:
+                            partidas_filtradas.append(p)
+                    
+                    else:  # 'Todas'
+                        partidas_filtradas.append(p)
+                        
+                except Exception as e:
+                    print(f"Erro ao processar data {p.data}: {e}")
+                    # Se der erro na data, inclui mesmo assim
+                    if periodo == 'Todas':
+                        partidas_filtradas.append(p)
+            
+            partidas = partidas_filtradas
+        else:
+            partidas = todas_partidas
         
-        partidas = query.order_by(Partida.data.desc(), Partida.horario.desc()).all()
-        print(f"Total de partidas encontradas: {len(partidas)}")
+        print(f"✅ Total de partidas encontradas: {len(partidas)}")
         
-        return render_template('partidas/listar.html', partidas=partidas)
+        # Renderizar template com as partidas
+        return render_template('partidas/listar.html', partidas=partidas, status=status, periodo=periodo, search=search)
         
     except Exception as e:
-        print(f"❌ ERRO: {str(e)}")
+        print(f"❌ ERRO CRÍTICO em listar_partidas: {str(e)}")
         import traceback
         traceback.print_exc()
+        
+        # Em vez de dar erro, mostra uma mensagem amigável
         flash(f'Erro ao carregar partidas: {str(e)}', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -1366,6 +1645,12 @@ def nova_partida():
     Cria nova partida com validações completas e transação atômica
     Versão otimizada - 2024
     """
+    from datetime import datetime
+    
+    # ===== VARIÁVEIS DO TEMPLATE =====
+    titulo = 'Nova Partida'
+    now = datetime.now()
+    
     # ===== INÍCIO - LOG E DEBUG =====
     app.logger.info(f"📝 Usuário {current_user.username} acessando nova partida")
     
@@ -1390,71 +1675,67 @@ def nova_partida():
             nome = request.form.get('nome', '').strip()
             if not nome or len(nome) < 3:
                 flash('❌ Nome da partida deve ter pelo menos 3 caracteres!', 'danger')
-                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
             
             # Validar data
             data = request.form.get('data', '')
-            if not data or len(data) != 10:
-                flash('❌ Data inválida!', 'danger')
-                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+            # Formato esperado: DD/MM/YYYY (10 caracteres)
+            if not data:
+                flash('❌ Data é obrigatória!', 'danger')
+                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
             
             # Validar horário
             horario = request.form.get('horario', '')
-            if not horario or ':' not in horario:
-                flash('❌ Horário inválido!', 'danger')
-                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+            if not horario:
+                flash('❌ Horário é obrigatório!', 'danger')
+                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
+            
+            if ':' not in horario:
+                flash('❌ Horário deve estar no formato HH:MM!', 'danger')
+                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
             
             campo = request.form.get('campo', '')
             if campo not in ['Warfield', 'Redline']:
                 flash('❌ Campo inválido!', 'danger')
-                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
             
-            plano = request.form.get('plano', '')
-            tempo = request.form.get('tempo', '')
-            modo = request.form.get('modo', '')
             tipo_participacao = request.form.get('tipo_participacao', 'individual')
             
+            # Ler plano, tempo, modo based on modo
+            if tipo_participacao == 'equipe':
+                plano = request.form.get('plano_equipe', '')
+                tempo = request.form.get('tempo_equipe', '')
+                modo = request.form.get('modo_equipe', '')
+                pagamento = request.form.get('pagamento_equipe', 'Pendente')
+            else:
+                plano = request.form.get('plano', '')
+                tempo = request.form.get('tempo', '')
+                modo = request.form.get('modo', '')
+                pagamento = request.form.get('pagamento', 'Pendente')
+            
             # ===== VALIDAÇÃO ESPECIAL PARA CAÇADA NOTURNA =====
-            if modo == 'CAÇADA NOTURNA':
-                cacada_tipo = request.form.get('cacada_tipo')
-                if not cacada_tipo or cacada_tipo not in ['3', '30']:
+            # CAÇADA NOTURNA é indicada pelo preenchimento de cacada_tipo
+            cacada_tipo = request.form.get('cacada_tipo', '')
+            is_cacada_noturna = bool(cacada_tipo)  # Se cacada_tipo for preenchido, é CAÇADA NOTURNA
+            
+            if is_cacada_noturna:
+                if cacada_tipo not in ['3', '30']:
                     flash('❌ Selecione o tipo de Caçada Noturna (R$3 ou R$30)!', 'danger')
-                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
                 
-                valor_total = float(cacada_tipo)
-                bbs_por_pessoa = 0
-                tempo = 'CAÇADA'  # Valor especial para caçada noturna
+                bbs_por_pessoa = 0  # Sem custo de BBS na caçada
+                tempo = '10 min'  # Sempre 10 minutos na caçada
+                modo = 'CAÇADA NOTURNA'  # Modo padrão para caçada
             else:
                 # Buscar valores do plano
                 valor_total, bbs_por_pessoa = get_valores_plano(campo, plano, tempo)
                 if valor_total <= 0:
                     flash('❌ Valores de plano inválidos!', 'danger')
-                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
             
-            # ===== PROCESSAR PARTICIPANTES =====
-            participantes_ids = request.form.getlist('participantes')
-            
-            if not participantes_ids:
-                flash('❌ Selecione pelo menos um participante!', 'danger')
-                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
-            
-            # Validar participantes duplicados
-            if len(participantes_ids) != len(set(participantes_ids)):
-                flash('❌ Participantes duplicados não são permitidos!', 'danger')
-                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
-            
-            num_participantes = len(participantes_ids)
-            
-            # Validar número de participantes baseado no modo
-            if tipo_participacao == 'individual':
-                num_esperado = int(request.form.get('num_participantes', 0))
-                if num_participantes != num_esperado:
-                    flash(f'❌ Selecione exatamente {num_esperado} participantes!', 'danger')
-                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
-            
-            # ===== VALIDAÇÃO DE EQUIPES (MODO EQUIPE) =====
-            equipe1_membros_ids = set()
-            equipe2_membros_ids = set()
+            # ===== VALIDAÇÃO DE EQUIPES (MODO EQUIPE) - ANTES DE PROCESSAR PARTICIPANTES =====
+            equipe1 = None
+            equipe2 = None
             
             if tipo_participacao == 'equipe':
                 equipe1_id = request.form.get('equipe1_id')
@@ -1462,45 +1743,105 @@ def nova_partida():
                 
                 if not equipe1_id or not equipe2_id:
                     flash('❌ Selecione as duas equipes!', 'danger')
-                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
                 
                 if equipe1_id == equipe2_id:
                     flash('❌ As equipes devem ser diferentes!', 'danger')
-                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
                 
                 equipe1 = db.session.get(Equipe, int(equipe1_id))
                 equipe2 = db.session.get(Equipe, int(equipe2_id))
                 
                 if not equipe1 or not equipe2:
                     flash('❌ Equipes não encontradas!', 'danger')
-                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
+            
+            # ===== PROCESSAR PARTICIPANTES =====
+            # Para modo equipe, ler separadamente por equipe
+            # Para modo individual, ler do campo único
+            if tipo_participacao == 'equipe':
+                # Ler participantes de cada equipe (vêm como strings separadas por vírgula)
+                participantes_eq1_str = request.form.get('participantes-eq1', '')
+                participantes_eq2_str = request.form.get('participantes-eq2', '')
                 
-                # Carregar membros das equipes
-                equipe1_membros_ids = set(str(m.id) for m in equipe1.membros.all())
-                equipe2_membros_ids = set(str(m.id) for m in equipe2.membros.all())
+                # Dividir e converter para lista
+                participantes_eq1_ids = [id.strip() for id in participantes_eq1_str.split(',') if id.strip()]
+                participantes_eq2_ids = [id.strip() for id in participantes_eq2_str.split(',') if id.strip()]
+                
+                # Combinar para contagem total
+                participantes_ids = participantes_eq1_ids + participantes_eq2_ids
+                
+                # Mapa de equipe para cada participante - USAR OS NOMES REAIS DAS EQUIPES SELECIONADAS
+                map_participante_equipe = {
+                    **{id: equipe1.nome for id in participantes_eq1_ids},
+                    **{id: equipe2.nome for id in participantes_eq2_ids}
+                }
+                
+                print(f"DEBUG: Equipe 1: {equipe1.nome} (ID: {equipe1_id}), Equipe 2: {equipe2.nome} (ID: {equipe2_id})")
+                print(f"DEBUG: Mapa de participantes: {map_participante_equipe}")
+            else:
+                # Modo individual - ler do campo único (também vem como string com vírgulas)
+                participantes_str = request.form.get('participantes', '')
+                participantes_ids = [id.strip() for id in participantes_str.split(',') if id.strip()]
+                map_participante_equipe = {}  # Não há equipe em modo individual
+            
+            if not participantes_ids:
+                flash('❌ Selecione pelo menos um participante!', 'danger')
+                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
+            
+            print(f"DEBUG nova_partida: Tipo {tipo_participacao}, Participantes: {participantes_ids}")
+            print(f"DEBUG nova_partida: Mapa de equipes: {map_participante_equipe}")
+            
+            # Validar participantes duplicados
+            if len(participantes_ids) != len(set(participantes_ids)):
+                flash('❌ Participantes duplicados não são permitidos!', 'danger')
+                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
+            
+            num_participantes = len(participantes_ids)
             
             # ===== CALCULAR VALORES =====
-            if modo == 'CAÇADA NOTURNA' and cacada_tipo == '3':
-                # Caçada individual - cada um paga R$3
-                valor_por_participante = 3.0
-                valor_total = 3.0 * num_participantes
-            elif modo == 'CAÇADA NOTURNA' and cacada_tipo == '30':
-                # Caçada em grupo - R$30 dividido
-                valor_por_participante = 30.0 / num_participantes
-                valor_total = 30.0
+            if is_cacada_noturna:
+                # CAÇADA NOTURNA - mantém lógica especial
+                if cacada_tipo == '3':
+                    # Caçada individual - cada um paga R$3
+                    valor_por_participante = 3.0
+                    valor_total = 3.0 * num_participantes
+                elif cacada_tipo == '30':
+                    # Caçada em grupo - R$30 dividido
+                    valor_por_participante = 30.0 / num_participantes
+                    valor_total = 30.0
             else:
-                valor_por_participante = valor_total / num_participantes if num_participantes > 0 else valor_total
+                # LÓGICA GERAL (não é CAÇADA NOTURNA)
+                if valor_total < 80:
+                    # Valor < R$ 80: cada operador paga o valor total (taxa de entrada)
+                    valor_por_participante = valor_total
+                else:
+                    # Valor >= R$ 80: divide entre os operadores
+                    valor_por_participante = valor_total / num_participantes if num_participantes > 0 else valor_total
             
             total_bbs = bbs_por_pessoa * num_participantes
             
+            # DEBUG - mostrar cálculo de valores
+            print(f"\n💰 DEBUG - Cálculo de Valores:")
+            print(f"  Partida: {nome}")
+            print(f"  Valor Total: R$ {valor_total:.2f}")
+            print(f"  Operadores: {num_participantes}")
+            print(f"  Valor por Participante: R$ {valor_por_participante:.2f}")
+            print(f"  Total de Vendas: {num_participantes} x R$ {valor_por_participante:.2f} = R$ {valor_por_participante * num_participantes:.2f}")
+            
+            if is_cacada_noturna:
+                print(f"  👉 MODO: CAÇADA NOTURNA (R$ {cacada_tipo})")
+            else:
+                print(f"  👉 MODO: REGULAR - {'Taxa de entrada' if valor_total < 80 else 'Dividido por cabeça'}")
+            print()
+            
             # ===== VERIFICAR ESTOQUE DE BBS =====
-            if bbs_por_pessoa > 0:
-                item_bbs = Estoque.query.filter(Estoque.nome.ilike('%BBs%')).first()
-                if not item_bbs:
-                    flash('⚠️ Item "BBs" não encontrado no estoque! Cadastre primeiro.', 'warning')
-                elif item_bbs.quantidade < total_bbs:
-                    flash(f'❌ Estoque insuficiente de BBs! Disponível: {item_bbs.quantidade} unidades', 'danger')
-                    return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes)
+            item_bbs = Estoque.query.filter(Estoque.nome.ilike('%BBs%')).first()
+            if not item_bbs:
+                flash('⚠️ Item "BBs" não encontrado no estoque! Cadastre primeiro.', 'warning')
+            elif item_bbs.quantidade < total_bbs:
+                flash(f'❌ Estoque insuficiente de BBs! Disponível: {item_bbs.quantidade} unidades', 'danger')
+                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
             
             # ===== PAGAMENTO =====
             pagamento = request.form.get('pagamento', 'Pendente')
@@ -1545,10 +1886,8 @@ def nova_partida():
                         # Determinar equipe do participante (modo equipe)
                         equipe_participante = None
                         if tipo_participacao == 'equipe':
-                            if pid in equipe1_membros_ids:
-                                equipe_participante = 'GTA'
-                            elif pid in equipe2_membros_ids:
-                                equipe_participante = 'SPARTAS'
+                            # Usar o mapa preparado anteriormente
+                            equipe_participante = map_participante_equipe.get(pid)
                         
                         # Adicionar participante
                         participante = PartidaParticipante(
@@ -1566,9 +1905,9 @@ def nova_partida():
                             warname=operador.warname,
                             nome_operador=operador.nome,
                             nome_partida=partida.nome,
-                            produto=f"{campo} - {modo}",
-                            cliente=operador.nome,
-                            descricao=f"Partida: {nome} - {data}",
+                            produto=f"{campo} - {plano}",
+                            cliente=operador.nome,  # Mantém para compatibilidade, mas o nome é do operador
+                            descricao=f"Partida: {nome} - {data} - {tempo}",
                             valor=round(valor_por_participante, 2),
                             status='Pendente',
                             tipo='Partida',
@@ -1632,7 +1971,9 @@ def nova_partida():
                 return render_template('partidas/form.html', 
                                      form=form, 
                                      operadores=operadores, 
-                                     equipes=equipes)
+                                     equipes=equipes,
+                                     titulo=titulo,
+                                     now=now)
         
         except Exception as e:
             app.logger.error(f'❌ Erro no processamento: {str(e)}')
@@ -1640,21 +1981,208 @@ def nova_partida():
             return render_template('partidas/form.html', 
                                  form=form, 
                                  operadores=operadores, 
-                                 equipes=equipes)
+                                 equipes=equipes,
+                                 titulo=titulo,
+                                 now=now)
     
     # ===== GET - mostrar formulário =====
     return render_template('partidas/form.html', 
                          form=form, 
                          operadores=operadores, 
-                         equipes=equipes)
+                         equipes=equipes,
+                         titulo=titulo,
+                         now=now)
+
+@app.route('/estatisticas/equipe/<int:id>')
+@login_required
+@requer_permissao('estatisticas')
+def ver_estatisticas_equipe(id):
+    """Visualiza estatísticas detalhadas de uma equipe com filtros"""
+    
+    equipe = Equipe.query.get_or_404(id)
+    
+    # Pegar filtros
+    search = request.args.get('search', '')
+    resultado_filtro = request.args.get('resultado', 'todos')
+    periodo = request.args.get('periodo', 'todas')
+    
+    # Buscar partidas em modo equipe
+    partidas_equipe = Partida.query.filter_by(
+        tipo_participacao='equipe',
+        finalizada=True
+    ).order_by(Partida.data.desc(), Partida.horario.desc()).all()
+    
+    partidas = []
+    total_vitorias = 0
+    total_derrotas = 0
+    total_empates = 0
+    total_kills = 0
+    total_deaths = 0
+    hoje = datetime.now()
+    
+    for partida in partidas_equipe:
+        # Verificar se a equipe participou (case-insensitive comparison)
+        participantes_equipe = [p for p in partida.participantes if p.equipe and p.equipe.lower() == equipe.nome.lower()]
+        
+        if participantes_equipe:
+            # Calcular kills da equipe
+            kills_time = sum(p.kills or 0 for p in participantes_equipe)
+            deaths_time = sum(p.deaths or 0 for p in participantes_equipe)
+            
+            # Determinar resultado (case-insensitive comparison)
+            equipe_vencedora_lower = partida.equipe_vencedora.lower() if partida.equipe_vencedora else None
+            equipe_nome_lower = equipe.nome.lower()
+            
+            if equipe_vencedora_lower == equipe_nome_lower:
+                resultado = 'vitoria'
+                total_vitorias += 1
+            elif partida.equipe_vencedora and equipe_vencedora_lower != equipe_nome_lower:
+                resultado = 'derrota'
+                total_derrotas += 1
+            else:
+                resultado = 'empate'
+                total_empates += 1
+            
+            total_kills += kills_time
+            total_deaths += deaths_time
+            
+            # Aplicar filtros
+            incluir = True
+            
+            # Filtro de busca
+            if search and search.lower() not in partida.nome.lower():
+                incluir = False
+            
+            # Filtro de resultado
+            if resultado_filtro != 'todos' and resultado != resultado_filtro:
+                incluir = False
+            
+            # Filtro de período
+            if periodo != 'todas':
+                try:
+                    data_p = datetime.strptime(partida.data, '%d/%m/%Y')
+                    if periodo == 'hoje' and partida.data != hoje.strftime('%d/%m/%Y'):
+                        incluir = False
+                    elif periodo == 'semana' and (hoje - data_p).days > 7:
+                        incluir = False
+                    elif periodo == 'mes' and (hoje - data_p).days > 30:
+                        incluir = False
+                except:
+                    pass
+            
+            if incluir:
+                partidas.append({
+                    'id': partida.id,
+                    'nome': partida.nome,
+                    'data': partida.data,
+                    'horario': partida.horario,
+                    'campo': partida.campo,
+                    'modo': partida.modo,
+                    'resultado': resultado,
+                    'kills_time': kills_time,
+                    'deaths_time': deaths_time,
+                    'participantes': participantes_equipe,
+                    'equipe_vencedora': partida.equipe_vencedora
+                })
+    
+    # Membros da equipe
+    membros = equipe.membros.all()
+    total_partidas = total_vitorias + total_derrotas + total_empates
+    
+    return render_template('estatisticas/equipe.html',
+                         equipe=equipe,
+                         membros=membros,
+                         partidas=partidas,
+                         total_partidas=total_partidas,
+                         vitorias=total_vitorias,
+                         derrotas=total_derrotas,
+                         empates=total_empates,
+                         total_kills=total_kills,
+                         total_deaths=total_deaths,
+                         search=search,
+                         resultado_filtro=resultado_filtro,
+                         periodo=periodo)
 
 @app.route('/partidas/<int:id>')
 @login_required
 @requer_permissao('partidas')
+@operador_session_required
 def ver_partida(id):
-    """Visualiza detalhes da partida"""
+    """Visualiza detalhes da partida com dados processados"""
     partida = Partida.query.get_or_404(id)
-    return render_template('partidas/ver.html', partida=partida)
+    
+    # RESTRIÇÃO: Se for OPERADOR, não pode fazer ações
+    é_operador = current_user.nivel == 'operador'
+    
+    # Processar dados da partida
+    dados_partida = {
+        'id': partida.id,
+        'nome': partida.nome,
+        'data': partida.data,
+        'horario': partida.horario,
+        'campo': partida.campo,
+        'plano': partida.plano,
+        'tempo': partida.tempo,
+        'modo': partida.modo,
+        'tipo_participacao': partida.tipo_participacao,
+        'valor_total': partida.valor_total,
+        'valor_por_participante': partida.valor_por_participante,
+        'bbs_por_pessoa': partida.bbs_por_pessoa,
+        'status': 'Finalizada' if partida.finalizada else 'Agendada',
+        'finalizada': partida.finalizada,
+        'participantes': []
+    }
+    
+    # Processar participantes
+    if partida.participantes:
+        for p in partida.participantes:
+            dados_partida['participantes'].append({
+                'id': p.id,
+                'operador_id': p.operador_id,
+                'nome_operador': p.nome_operador,
+                'warname': p.warname,
+                'equipe': p.equipe,
+                'kills': p.kills or 0,
+                'deaths': p.deaths or 0,
+                'kd': (p.kills or 0) / (p.deaths or 1) if p.deaths else (p.kills or 0),
+                'mvp': p.mvp or False,
+                'resultado': p.resultado or '-'
+            })
+    
+    # Estatísticas por equipe (se modo equipe) - DINÂMICO para ANY equipe
+    stats_equipe = {}
+    if partida.tipo_participacao == 'equipe' and partida.participantes:
+        for p in partida.participantes:
+            if p.equipe:
+                # Usar a equipe com case original
+                equipe_key = p.equipe  # Manter case original para dict
+                if equipe_key not in stats_equipe:
+                    stats_equipe[equipe_key] = {
+                        'nome': equipe_key,
+                        'kills': 0,
+                        'deaths': 0,
+                        'participantes': 0,
+                        'mvps': 0
+                    }
+                stats_equipe[equipe_key]['kills'] += p.kills or 0
+                stats_equipe[equipe_key]['deaths'] += p.deaths or 0
+                stats_equipe[equipe_key]['participantes'] += 1
+                if p.mvp:
+                    stats_equipe[equipe_key]['mvps'] += 1
+    
+    # Se partida tem equipe_vencedora gravada, usar ela
+    equipe_vencedora = partida.equipe_vencedora if partida.equipe_vencedora else None
+    
+    # Buscar vendas associadas (OPERADOR NÃO VÊ)
+    vendas = Venda.query.filter_by(partida_id=partida.id).all() if not é_operador else []
+    
+    return render_template('partidas/ver.html',
+                         partida=partida,
+                         dados_partida=dados_partida,
+                         stats_equipe=stats_equipe,
+                         equipe_vencedora=equipe_vencedora,
+                         vendas=vendas,
+                         é_operador=é_operador)
 
 
 
@@ -1662,20 +2190,42 @@ def ver_partida(id):
 @login_required
 @requer_permissao('partidas')
 def deletar_partida(id):
-    """Deleta uma partida e devolve BBs"""
-    partida = Partida.query.get_or_404(id)
-    
-    # Devolver BBs ao estoque
-    item_bbs = Estoque.query.filter(Estoque.nome.ilike('%BBs%')).first()
-    if item_bbs:
-        item_bbs.quantidade += partida.total_bbs
-    
-    # Deletar (cascade remove participantes e vendas)
-    db.session.delete(partida)
-    db.session.commit()
-    
-    flash('Partida deletada!', 'success')
-    return redirect(url_for('listar_partidas'))
+    """Deleta uma partida, devolve BBs, remove vendas e remove estatísticas dos operadores"""
+    try:
+        from utils import remover_estadisticas_partida
+        
+        partida = Partida.query.get_or_404(id)
+        
+        # 1. REMOVER ESTATÍSTICAS DOS OPERADORES (SE PARTIDA FINALIZADA)
+        if partida.finalizada:
+            remover_estadisticas_partida(partida)
+            app.logger.info(f"📊 Estatísticas da partida {partida.nome} removidas dos operadores")
+        
+        # 2. DEVOLVER BBs AO ESTOQUE
+        if partida.total_bbs > 0:
+            item_bbs = Estoque.query.filter(Estoque.nome.ilike('%BBs%')).first()
+            if item_bbs:
+                item_bbs.quantidade += partida.total_bbs
+                app.logger.info(f"✅ Devolvidos {partida.total_bbs} BBs ao estoque")
+        
+        # 3. REMOVER TODAS AS VENDAS ASSOCIADAS À PARTIDA
+        vendas = Venda.query.filter_by(partida_id=partida.id).all()
+        for venda in vendas:
+            app.logger.info(f"🗑️ Removendo venda ${venda.valor} - {venda.nome_operador}")
+            db.session.delete(venda)
+        
+        # 4. DELETAR A PARTIDA (cascade remove participantes)
+        db.session.delete(partida)
+        db.session.commit()
+        
+        flash(f'✅ Partida deletada! {len(vendas)} venda(s) removida(s) e BBs devolvidos ao estoque.', 'success')
+        return redirect(url_for('listar_partidas'))
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'❌ Erro ao deletar partida: {str(e)}')
+        flash(f'❌ Erro ao deletar partida: {str(e)}', 'danger')
+        return redirect(url_for('listar_partidas'))
 
 # ==================== ROTAS DE VENDAS ====================
 @app.route('/vendas')
@@ -2019,9 +2569,9 @@ def deletar_item(id):
 @app.route('/calendario')
 @login_required
 @requer_permissao('calendario')
+@operador_session_required
 def calendario():
     """Visualização em calendário"""
-    from datetime import datetime
     import calendar
     import json
     
@@ -2035,6 +2585,10 @@ def calendario():
     if ano < 2000 or ano > 2100:
         ano = datetime.now().year
     
+    # RESTRIÇÃO: Se for OPERADOR, só mostra as partidas de HOJE
+    é_operador = current_user.nivel == 'operador'
+    hoje_str = datetime.now().strftime('%d/%m/%Y')
+    
     # Buscar partidas do mês
     todas_partidas = Partida.query.all()
     partidas = []
@@ -2043,39 +2597,31 @@ def calendario():
     for p in todas_partidas:
         try:
             data_p = datetime.strptime(p.data, '%d/%m/%Y')
+            
+            # Se for operador, só mostra partidas de hoje
+            if é_operador and p.data != hoje_str:
+                continue
+            
             if data_p.month == mes and data_p.year == ano:
                 partidas.append(p)
                 dia = data_p.day
                 if dia not in partidas_por_dia:
                     partidas_por_dia[dia] = []
                 
-                # Adicionar dados completos para o modal
-                partidas_por_dia[dia].append({
-                    'id': p.id,
-                    'nome': p.nome,
-                    'data': p.data,
-                    'horario': p.horario,
-                    'campo': p.campo,
-                    'modo': p.modo,
-                    'status': p.status,
-                    'valor_total': p.valor_total
-                })
+                # Adicionar objeto da partida
+                partidas_por_dia[dia].append(p)
         except:
             continue
     
     # Gerar calendário
     cal = calendar.monthcalendar(ano, mes)
     
-    # Converter para JSON para passar ao template
-    partidas_por_dia_json = json.dumps(partidas_por_dia)
-    
     return render_template('calendario.html',
                          cal=cal,
                          mes=mes,
                          ano=ano,
                          mes_nome=calendar.month_name[mes],
-                         partidas_por_dia=partidas_por_dia,
-                         partidas_por_dia_json=partidas_por_dia_json)
+                         partidas_por_dia=partidas_por_dia)
 
 @app.route('/api/partida/<int:id>')
 @login_required
@@ -2210,7 +2756,33 @@ def sincronizar_agora():
     return redirect(url_for('admin_backups'))
 
 
-# ==================== ROTA DE PERFIL DO USUÁRIO LOGADO ====================
+# ==================== SINCRONIZAÇÃO DE ESTATÍSTICAS ====================
+@app.route('/admin/sincronizar-estatisticas', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def sincronizar_estatisticas_admin():
+    """
+    Sincroniza as estatísticas dos operadores.
+    Remove registros órfãos e recalcula stats de todos os operadores.
+    """
+    if request.method == 'GET':
+        # Mostrar página de confirmação
+        return render_template('admin/sincronizar_estatisticas.html')
+    
+    # POST: executar sincronização
+    from utils import sincronizar_estatisticas_operadores
+    
+    resultado = sincronizar_estatisticas_operadores()
+    
+    if resultado['sucesso']:
+        flash(resultado['mensagem'], 'success')
+    else:
+        flash(resultado['mensagem'], 'danger')
+    
+    return redirect(url_for('admin_usuarios'))
+
+
+
 @app.route('/meu-perfil')
 @login_required
 def meu_perfil():
@@ -2292,8 +2864,57 @@ def api_valores():
 @app.route('/api/modos')
 def api_modos():
     tempo = request.args.get('tempo', '')
-    modos = get_modos_permitidos(tempo)
+    plano = request.args.get('plano', '')
+    modos = get_modos_permitidos(tempo, plano)
     return jsonify(modos)
+
+
+# ==================== NOVOS ENDPOINTS DE API ====================
+
+@app.route('/api/operadores/search')
+def api_operadores_search():
+    """Busca operadores por nome ou warname - para autocomplete"""
+    q = request.args.get('q', '').lower()
+    limite = int(request.args.get('limit', 10))
+    
+    if q and len(q) < 2:
+        return jsonify([])
+    
+    query = Operador.query
+    
+    if q:
+        query = query.filter(
+            (Operador.nome.ilike(f'%{q}%')) | 
+            (Operador.warname.ilike(f'%{q}%'))
+        )
+    
+    operadores = query.limit(limite).all()
+    
+    return jsonify([{
+        'id': op.id,
+        'nome': op.nome,
+        'warname': op.warname,
+        'texto': f"{op.nome} (@{op.warname})"
+    } for op in operadores])
+
+
+@app.route('/api/equipes/<int:equipe_id>/membros/search')
+def api_equipe_membros_search(equipe_id):
+    """Busca membros de uma equipe específica"""
+    q = request.args.get('q', '').lower()
+    
+    equipe = Equipe.query.get_or_404(equipe_id)
+    membros = equipe.membros.all()
+    
+    if q:
+        membros = [m for m in membros if q in m.nome.lower() or q in m.warname.lower()]
+    
+    return jsonify([{
+        'id': m.id,
+        'nome': m.nome,
+        'warname': m.warname,
+        'texto': f"{m.nome} (@{m.warname})"
+    } for m in membros])
 
 
 # ==================== INICIALIZAÇÃO ====================

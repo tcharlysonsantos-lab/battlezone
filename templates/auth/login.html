@@ -14,8 +14,9 @@
                     {{ form.hidden_tag() }}
                     
                     <div class="mb-3">
-                        {{ form.username.label(class="form-label") }}
-                        {{ form.username(class="form-control", placeholder="Digite seu usuário") }}
+                        <!-- TROCADO DE "Usuário" para "Warname" -->
+                        {{ form.username.label(class="form-label", text="Warname") }}
+                        {{ form.username(class="form-control", placeholder="Digite seu warname") }}
                         {% for error in form.username.errors %}
                             <small class="text-danger">{{ error }}</small>
                         {% endfor %}
@@ -38,6 +39,8 @@
             </div>
             <div class="card-footer text-center">
                 <a href="{{ url_for('auth.solicitar_acesso') }}" style="color: #FF6B00;">Não tem conta? Solicitar acesso</a>
+                <br>
+                <a href="{{ url_for('auth.forgot_password') }}" style="color: #FF6B00; font-size: 0.9em;">Esqueceu a senha?</a>
             </div>
         </div>
     </div>

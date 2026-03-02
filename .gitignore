@@ -1,0 +1,38 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Banco de dados
+instance/*.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Ambiente virtual
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE e editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Arquivos de configuração local
+.env
+*.env
+config.local.py
+
+# Backups e arquivos temporários
+backups/
+*.bak
+*.tmp

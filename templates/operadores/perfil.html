@@ -3,6 +3,120 @@
 {% block title %}Perfil de {{ operador.warname }}{% endblock %}
 
 {% block content %}
+<style>
+    .filter-section {
+        background: linear-gradient(145deg, var(--cinza-escuro), var(--preto));
+        border: 1px solid var(--laranja);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .filter-label {
+        color: var(--laranja);
+        font-weight: bold;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .stat-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--laranja);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(255, 107, 0, 0.3);
+    }
+    
+    .match-row {
+        transition: all 0.2s ease;
+        cursor: pointer;
+        background-color: var(--cinza-escuro);
+        border: 1px solid var(--cinza-claro);
+        margin-bottom: 8px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+    
+    .match-row:hover {
+        background-color: rgba(255, 107, 0, 0.2) !important;
+        transform: translateX(5px);
+        border-color: var(--laranja);
+    }
+    
+    .result-badge {
+        padding: 5px 15px;
+        border-radius: 50px;
+        font-weight: bold;
+        font-size: 0.9rem;
+        display: inline-block;
+    }
+    
+    .result-vitoria {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .result-derrota {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .result-empate {
+        background-color: #ffc107;
+        color: black;
+    }
+    
+    .mvp-star {
+        color: gold;
+        font-size: 1.2rem;
+        margin-left: 5px;
+    }
+    
+    .result-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .result-badge i {
+        line-height: 1;
+    }
+    
+    .avatar-circle {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--laranja);
+        color: white;
+        font-size: 48px;
+        font-weight: bold;
+        margin: 0 auto;
+    }
+    
+    .info-card {
+        background-color: var(--preto);
+        border-radius: 10px;
+        padding: 15px;
+        height: 100%;
+    }
+</style>
+
+<!-- Botão de Voltar -->
+<div class="mb-3">
+    <a href="{{ url_for('estatisticas') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar para Estatísticas
+    </a>
+</div>
+
 <div class="row">
     <!-- Coluna da esquerda - Informações do Operador -->
     <div class="col-md-4">
@@ -12,7 +126,7 @@
             </div>
             <div class="card-body text-center">
                 <!-- Avatar com inicial -->
-                <div class="avatar-circle mx-auto mb-3" style="width: 100px; height: 100px; font-size: 48px;">
+                <div class="avatar-circle mx-auto mb-3">
                     {{ operador.nome[0]|upper }}
                 </div>
                 
@@ -24,13 +138,11 @@
                 <!-- Informações de contato -->
                 <div class="text-start">
                     {% if é_proprio %}
-                    <!-- Mostrar todas as informações se for o próprio operador -->
                     <p><i class="fas fa-envelope me-2 text-laranja"></i> {{ operador.email or 'Não informado' }}</p>
                     <p><i class="fas fa-phone me-2 text-laranja"></i> {{ operador.telefone or 'Não informado' }}</p>
                     <p><i class="fas fa-id-card me-2 text-laranja"></i> {{ operador.cpf or 'Não informado' }}</p>
                     <p><i class="fas fa-birthday-cake me-2 text-laranja"></i> {{ operador.data_nascimento or 'Não informado' }} ({{ operador.idade or '?' }} anos)</p>
                     {% else %}
-                    <!-- Mostrar apenas informações públicas para outros usuários -->
                     <p><i class="fas fa-birthday-cake me-2 text-laranja"></i> {{ operador.idade or '?' }} anos</p>
                     {% endif %}
                     <p>
@@ -54,25 +166,25 @@
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-6 mb-3">
-                        <div class="bg-preto p-3 rounded">
+                        <div class="info-card">
                             <h6 class="text-laranja">Kills</h6>
                             <h3 class="text-success">{{ total_kills }}</h3>
                         </div>
                     </div>
                     <div class="col-6 mb-3">
-                        <div class="bg-preto p-3 rounded">
+                        <div class="info-card">
                             <h6 class="text-laranja">Deaths</h6>
                             <h3 class="text-danger">{{ total_deaths }}</h3>
                         </div>
                     </div>
                     <div class="col-6 mb-3">
-                        <div class="bg-preto p-3 rounded">
+                        <div class="info-card">
                             <h6 class="text-laranja">K/D</h6>
                             <h3 class="text-info">{{ "%.2f"|format(kd_ratio) }}</h3>
                         </div>
                     </div>
                     <div class="col-6 mb-3">
-                        <div class="bg-preto p-3 rounded">
+                        <div class="info-card">
                             <h6 class="text-laranja">Partidas</h6>
                             <h3>{{ total_partidas }}</h3>
                         </div>
@@ -81,19 +193,19 @@
                 
                 <div class="row text-center mt-2">
                     <div class="col-4">
-                        <div class="bg-preto p-2 rounded">
+                        <div class="info-card">
                             <span class="text-success">{{ vitorias }}</span>
                             <br><small>Vitórias</small>
                         </div>
                     </div>
                     <div class="col-4">
-                        <div class="bg-preto p-2 rounded">
+                        <div class="info-card">
                             <span class="text-danger">{{ derrotas }}</span>
                             <br><small>Derrotas</small>
                         </div>
                     </div>
                     <div class="col-4">
-                        <div class="bg-preto p-2 rounded">
+                        <div class="info-card">
                             <span class="text-warning">{{ empates }}</span>
                             <br><small>Empates</small>
                         </div>
@@ -103,14 +215,17 @@
                 {% if total_partidas > 0 %}
                 <div class="mt-3">
                     <div class="progress" style="height: 25px;">
-                        <div class="progress-bar bg-success" style="width: {{ (vitorias / total_partidas * 100)|round }}%">
-                            {{ (vitorias / total_partidas * 100)|round }}%
+                        {% set vitorias_pct = (vitorias / total_partidas * 100)|round %}
+                        {% set derrotas_pct = (derrotas / total_partidas * 100)|round %}
+                        {% set empates_pct = (empates / total_partidas * 100)|round %}
+                        <div class="progress-bar bg-success" style="width: {{ vitorias_pct }}%;">
+                            {{ vitorias_pct }}%
                         </div>
-                        <div class="progress-bar bg-danger" style="width: {{ (derrotas / total_partidas * 100)|round }}%">
-                            {{ (derrotas / total_partidas * 100)|round }}%
+                        <div class="progress-bar bg-danger" style="width: {{ derrotas_pct }}%;">
+                            {{ derrotas_pct }}%
                         </div>
-                        <div class="progress-bar bg-warning" style="width: {{ (empates / total_partidas * 100)|round }}%">
-                            {{ (empates / total_partidas * 100)|round }}%
+                        <div class="progress-bar bg-warning" style="width: {{ empates_pct }}%;">
+                            {{ empates_pct }}%
                         </div>
                     </div>
                     <small class="text-muted">Aproveitamento</small>
@@ -120,7 +235,7 @@
         </div>
     </div>
     
-    <!-- Coluna da direita - Históricos -->
+    <!-- Coluna da direita -->
     <div class="col-md-8">
         <!-- Abas de navegação -->
         <ul class="nav nav-tabs mb-4" id="perfilTab" role="tablist">
@@ -148,12 +263,70 @@
                         <h5 class="mb-0"><i class="fas fa-history me-2"></i>Histórico de Partidas</h5>
                     </div>
                     <div class="card-body">
-                        {% if partidas %}
-                            {% for p in partidas %}
-                            <div class="card mb-3 bg-preto" style="cursor: pointer;" onclick="window.location.href='{{ url_for('ver_partida', id=p.partida.id) }}'">
+                        
+                        <!-- SEÇÃO DE FILTROS -->
+                        <div class="filter-section">
+                            <div class="filter-label">
+                                <i class="fas fa-filter me-2"></i>FILTRAR PARTIDAS
+                            </div>
+                            <form method="GET" class="row g-3" id="filtroPartidas">
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-preto text-laranja border-laranja">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" 
+                                               name="search" 
+                                               class="form-control" 
+                                               placeholder="Buscar por nome ou modo..." 
+                                               value="{{ search or '' }}"
+                                               style="background-color: var(--preto); color: white; border: 1px solid var(--laranja);">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <select name="resultado" class="form-select" style="background-color: var(--preto); color: white; border: 1px solid var(--laranja);">
+                                        <option value="todos" {% if resultado_filtro == 'todos' %}selected{% endif %}>📊 Todos</option>
+                                        <option value="vitoria" {% if resultado_filtro == 'vitoria' %}selected{% endif %}>🏆 Vitórias</option>
+                                        <option value="derrota" {% if resultado_filtro == 'derrota' %}selected{% endif %}>💀 Derrotas</option>
+                                        <option value="empate" {% if resultado_filtro == 'empate' %}selected{% endif %}>🤝 Empates</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select name="periodo" class="form-select" style="background-color: var(--preto); color: white; border: 1px solid var(--laranja);">
+                                        <option value="Todas" {% if periodo == 'Todas' %}selected{% endif %}>📅 Todas</option>
+                                        <option value="Hoje" {% if periodo == 'Hoje' %}selected{% endif %}>Hoje</option>
+                                        <option value="7d" {% if periodo == '7d' %}selected{% endif %}>7 dias</option>
+                                        <option value="30d" {% if periodo == '30d' %}selected{% endif %}>30 dias</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn w-100" style="background-color: #FF6B00; color: white;">
+                                        <i class="fas fa-filter me-2"></i>Filtrar
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <!-- Badges com estatísticas dos filtros -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1 text-laranja"></i>
+                                        Mostrando {{ partidas_filtradas|length }} partidas 
+                                        {% if search %}com "{{ search }}"{% endif %}
+                                        {% if resultado_filtro != 'todos' %}com resultado {{ resultado_filtro }}{% endif %}
+                                        {% if periodo != 'Todas' %}no período selecionado{% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- LISTA DE PARTIDAS -->
+                        {% if partidas_filtradas %}
+                            {% for p in partidas_filtradas %}
+                            <div class="card mb-3 bg-preto match-row" data-href="{{ url_for('ver_partida', id=p.partida.id) }}" onclick="window.location.href=this.getAttribute('data-href')">
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-md-8">
+                                        <div class="col-md-7">
                                             <h6 class="text-laranja">{{ p.partida.nome }}</h6>
                                             <small class="text-muted">
                                                 <i class="fas fa-calendar me-1"></i> {{ p.partida.data }} às {{ p.partida.horario }}
@@ -161,15 +334,34 @@
                                                 <i class="fas fa-map-marker-alt me-1"></i> {{ p.partida.campo }} - {{ p.partida.modo }}
                                             </small>
                                         </div>
-                                        <div class="col-md-4 text-end">
+                                        <div class="col-md-3 text-center">
                                             <div class="mb-1">
                                                 <span class="badge" style="background-color: #FF6B00;">{{ p.partida.status }}</span>
                                             </div>
                                             {% if p.partida.finalizada %}
                                             <div>
                                                 <small>Kills: <span class="text-success">{{ p.kills or 0 }}</span></small><br>
-                                                <small>Deaths: <span class="text-danger">{{ p.deaths or 0 }}</span></small>
+                                                <small>Deaths: <span class="text-danger">{{ p.deaths or 0 }}</span></small><br>
+                                                <small>Capturas: <span class="text-info">{{ p.capturas or 0 }}</span></small>
                                             </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2 text-end">
+                                            {% if p.resultado == 'vitoria' %}
+                                                <span class="result-badge result-vitoria">
+                                                    <i class="fas fa-trophy"></i> VITÓRIA
+                                                </span>
+                                            {% elif p.resultado == 'derrota' %}
+                                                <span class="result-badge result-derrota">
+                                                    <i class="fas fa-skull"></i> DERROTA
+                                                </span>
+                                            {% elif p.resultado == 'empate' %}
+                                                <span class="result-badge result-empate">
+                                                    <i class="fas fa-handshake"></i> EMPATE
+                                                </span>
+                                            {% endif %}
+                                            {% if p.mvp %}
+                                                <span class="mvp-star" title="MVP">👑</span>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -177,7 +369,7 @@
                             </div>
                             {% endfor %}
                         {% else %}
-                            <p class="text-center text-muted my-5">Nenhuma partida encontrada</p>
+                            <p class="text-center text-muted my-5">Nenhuma partida encontrada com os filtros selecionados</p>
                         {% endif %}
                     </div>
                 </div>
@@ -234,4 +426,19 @@
         </div>
     </div>
 </div>
+
+<script>
+// Auto-submit quando mudar selects
+document.addEventListener('DOMContentLoaded', function() {
+    const filtroPartidas = document.getElementById('filtroPartidas');
+    if (filtroPartidas) {
+        const selects = filtroPartidas.querySelectorAll('select[name="resultado"], select[name="periodo"]');
+        selects.forEach(function(select) {
+            select.addEventListener('change', function() {
+                filtroPartidas.submit();
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

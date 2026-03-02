@@ -1,5 +1,5 @@
 from app import app, db
-from models import Equipe
+from models import Equipe, User, Operador  # ← IMPORT ADICIONADO!
 from sqlalchemy import inspect, text
 
 with app.app_context():
@@ -21,11 +21,9 @@ with app.app_context():
     except Exception as e:
         print(f"[ERRO] Erro ao atualizar equipes: {e}")
     
-    # update_db.py - ADICIONAR ESTE CÓDIGO
-
-def adicionar_operador_id():
-    """Adiciona coluna operador_id à tabela users"""
-    with app.app_context():
+    # =============== ADICIONAR COLUNA OPERADOR_ID ===============
+    print("\n[INFO] Verificando tabela users...")
+    try:
         inspector = inspect(db.engine)
         columns = [col['name'] for col in inspector.get_columns('users')]
         
@@ -37,16 +35,22 @@ def adicionar_operador_id():
             
             # Atualizar usuários existentes
             users = User.query.filter_by(status='aprovado').all()
+            count = 0
             for user in users:
                 operador = Operador.query.filter_by(warname=user.username).first()
                 if operador:
                     user.operador_id = operador.id
+                    count += 1
                     print(f"  ✅ Vinculado {user.username} -> {operador.warname}")
             
             db.session.commit()
-            print(f"[OK] {len(users)} usuários atualizados!")
+            print(f"[OK] {count} usuários atualizados!")
         else:
-            print("[OK] Coluna 'operador_id' já existe!")
+            print("[OK] Coluna 'operador_id' já existe em users!")
+            
+    except Exception as e:
+        print(f"[ERRO] Erro ao adicionar operador_id: {e}")
+        db.session.rollback()
 
     # =============== ATUALIZAR TABELA: partida_participantes ===============
     print("\n[INFO] Verificando tabela partida_participantes...")
@@ -88,6 +92,7 @@ def adicionar_operador_id():
         
     except Exception as e:
         print(f"[ERRO] Erro ao atualizar partida_participantes: {e}")
+        db.session.rollback()
     
     # =============== ATUALIZAR TABELA: operadores ===============
     print("\n[INFO] Verificando tabela operadores...")
@@ -110,6 +115,7 @@ def adicionar_operador_id():
         
     except Exception as e:
         print(f"[ERRO] Erro ao atualizar operadores: {e}")
+        db.session.rollback()
 
     # =============== ATUALIZAR TABELA: solicitacoes ===============
     print("\n[INFO] Verificando tabela solicitacoes...")
@@ -134,5 +140,6 @@ def adicionar_operador_id():
         
     except Exception as e:
         print(f"[ERRO] Erro ao atualizar solicitacoes: {e}")
+        db.session.rollback()
 
 print("\n[OK] Atualização concluída!")

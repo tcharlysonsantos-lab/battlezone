@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Verificação 2FA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card" style="border-top: 3px solid #FF6B00;">
+            <div class="card-header" style="background-color: #2D2D2D; border-bottom: 1px solid #FF6B00;">
+                <h4 class="mb-0" style="color: #FF6B00;">
+                    <i class="fas fa-shield-alt me-2"></i>Verificação de Dois Fatores
+                </h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Insira o código de 6 dígitos do seu autenticador ou use um backup code.
+                </p>
+
+                <form method="POST">
+                    <!-- Abas para Código TOTP vs Backup Code -->
+                    <ul class="nav nav-tabs mb-3" id="methodTabs" role="tablist" style="border-color: #FF6B00;">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="totp-tab" data-bs-toggle="tab" 
+                                data-bs-target="#totp-method" type="button" role="tab" 
+                                style="color: #FF6B00;" aria-selected="true">
+                                <i class="fas fa-mobile-alt me-2"></i>Código TOTP
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="backup-tab" data-bs-toggle="tab" 
+                                data-bs-target="#backup-method" type="button" role="tab" 
+                                style="color: #999;" aria-selected="false">
+                                <i class="fas fa-key me-2"></i>Backup Code
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="methodTabsContent">
+                        <!-- Método TOTP (Padrão) -->
+                        <div class="tab-pane fade show active" id="totp-method" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label" style="color: #FF6B00;">
+                                    <i class="fas fa-code me-2"></i>Código do Autenticador
+                                </label>
+                                <input type="text" name="codigo" class="form-control form-control-lg text-center" 
+                                    placeholder="000000" maxlength="6" pattern="[0-9]{6}" 
+                                    inputmode="numeric" required autocomplete="off"
+                                    style="background-color: #3D3D3D; color: white; border: 1px solid #FF6B00; font-size: 24px; letter-spacing: 5px;">
+                                <small class="text-muted d-block mt-2">
+                                    Digite o código de 6 dígitos do seu aplicativo autenticador
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Método Backup Code -->
+                        <div class="tab-pane fade" id="backup-method" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label" style="color: #FF6B00;">
+                                    <i class="fas fa-key me-2"></i>Código de Recuperação
+                                </label>
+                                <input type="text" name="codigo" class="form-control form-control-lg" 
+                                    placeholder="XXXX-XXXX-XXXX" maxlength="14"
+                                    style="background-color: #3D3D3D; color: white; border: 1px solid #FF6B00;">
+                                <small class="text-muted d-block mt-2">
+                                    Use um de seus backup codes se não conseguir acessar seu autenticador
+                                </small>
+                            </div>
+                            <input type="hidden" name="usar_backup" value="on">
+                        </div>
+                    </div>
+
+                    <!-- Botão Submit -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-lg" style="background-color: #FF6B00; color: white; font-weight: bold;">
+                            <i class="fas fa-check me-2"></i>Verificar Código
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Mensagens de Erro/Sucesso -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} mt-3" role="alert">
+                                <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+            <div class="card-footer text-center" style="background-color: #2D2D2D; border-top: 1px solid #FF6B00;">
+                <small class="text-muted">
+                    <i class="fas fa-lock me-1"></i>Comunicação segura - Nenhum dado será transmitido sem criptografia
+                </small>
+            </div>
+        </div>
+
+        <!-- FAQ Cards -->
+        <div class="mt-4">
+            <div class="accordion" style="border: 1px solid #FF6B00;">
+                <div class="accordion-item" style="background-color: #2D2D2D; border: 0;">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                            style="background-color: #2D2D2D; color: #FF6B00;">
+                            <i class="fas fa-question-circle me-2"></i>Não consigo encontrar o código?
+                        </button>
+                    </h2>
+                    <div class="accordion-collapse collapse" data-bs-parent=".accordion">
+                        <div class="accordion-body" style="background-color: #1A1A1A; color: #ddd;">
+                            <ul>
+                                <li>Abra seu aplicativo autenticador (Google Authenticator, Authy, Microsoft Authenticator)</li>
+                                <li>Procure pelo código de 6 dígitos para "BattleZone"</li>
+                                <li>O código muda a cada 30 segundos</li>
+                                <li>Se não conseguir, use um backup code</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item" style="background-color: #2D2D2D; border: 0; border-top: 1px solid #FF6B00;">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                            style="background-color: #2D2D2D; color: #FF6B00;">
+                            <i class="fas fa-life-ring me-2"></i>Perdi meu autenticador!
+                        </button>
+                    </h2>
+                    <div class="accordion-collapse collapse" data-bs-parent=".accordion">
+                        <div class="accordion-body" style="background-color: #1A1A1A; color: #ddd;">
+                            <p>Use um backup code para fazer login. Após entrar, você poderá:</p>
+                            <ul>
+                                <li>Desativar 2FA se necessário</li>
+                                <li>Reconfigurar 2FA com um novo autenticador</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-mudar para backup se clicar na aba
+document.getElementById('backup-tab').addEventListener('click', function() {
+    // Limpar o campo de código quando muda de aba
+    document.querySelector('input[name="codigo"]').value = '';
+});
+
+document.getElementById('totp-tab').addEventListener('click', function() {
+    // Validação automática se digitar 6 dígitos
+    const input = document.querySelector('input[name="codigo"]');
+    if (input.value.length === 6) {
+        // Auto-submeter se tiver 6 dígitos
+    }
+});
+
+// Validação em tempo real do campo TOTP
+document.querySelector('input[name="codigo"]').addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+});
+</script>
+
+{% endblock %}

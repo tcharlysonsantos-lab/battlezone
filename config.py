@@ -1,0 +1,104 @@
+# config.py - CONFIGURAÇÃO CENTRALIZADA E SEGURA
+import os
+from pathlib import Path
+from datetime import timedelta
+from dotenv import load_dotenv
+
+# ==================== CARREGAR VARIÁVEIS DE AMBIENTE ====================
+# Carrega o arquivo seguranca.env
+load_dotenv('seguranca.env')
+
+# ==================== CRIAR PASTA INSTANCE ====================
+# Criar pasta instance se não existir (necessário para banco de dados)
+BASE_DIR = Path(__file__).parent
+INSTANCE_PATH = BASE_DIR / 'instance'
+INSTANCE_PATH.mkdir(exist_ok=True)
+
+# ==================== VALIDAÇÃO OBRIGATÓRIA ====================
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY or len(SECRET_KEY) < 32:
+    raise ValueError(
+        "❌ ERRO CRÍTICO: SECRET_KEY não configurada ou muito curta!\n"
+        "Instruções:\n"
+        "1. Copie seguranca.env.example para seguranca.env\n"
+        "2. Gere uma chave segura: python -c \"import secrets; print(secrets.token_hex(32))\"\n"
+        "3. Coloque o valor em SECRET_KEY no seguranca.env"
+    )
+
+# ==================== CONFIGURAÇÃO GERAL ====================
+class Config:
+    # Segurança
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    
+    # Banco de dados (usar caminho absoluto para SQLite no Windows)
+    _db_path = INSTANCE_PATH / 'database.db'
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{_db_path}'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Sessões
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
+    SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
+    SESSION_COOKIE_HTTPONLY = True  # Protege contra XSS
+    SESSION_COOKIE_SAMESITE = 'Lax'  # Protege contra CSRF
+    REMEMBER_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
+    REMEMBER_COOKIE_HTTPONLY = True
+    
+    # Upload
+    UPLOAD_FOLDER = 'static/uploads'
+    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_UPLOAD_SIZE', 16 * 1024 * 1024))  # 16MB padrão
+    
+    # Email
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'localhost')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', 25))
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    
+    # Rate Limiting
+    RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'true').lower() == 'true'
+    RATELIMIT_LOGIN_ATTEMPTS = int(os.environ.get('RATELIMIT_LOGIN_ATTEMPTS', 5))
+    RATELIMIT_LOGIN_WINDOW = int(os.environ.get('RATELIMIT_LOGIN_WINDOW', 900))  # 15 minutos
+    
+    # 2FA
+    TWO_FACTOR_ENABLED = os.environ.get('TWO_FACTOR_ENABLED', 'false').lower() == 'true'
+    OTP_ISSUER_NAME = os.environ.get('OTP_ISSUER_NAME', 'BattleZone')
+    
+    # Logging
+    LOG_TO_FILE = os.environ.get('LOG_TO_FILE', 'true').lower() == 'true'
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    
+    # Sentry (monitoramento de erros)
+    SENTRY_DSN = os.environ.get('SENTRY_DSN')
+
+class DevelopmentConfig(Config):
+    """Configuração para desenvolvimento"""
+    DEBUG = True
+    TESTING = False
+    SESSION_COOKIE_SECURE = False  # HTTP permitido em dev
+
+class ProductionConfig(Config):
+    """Configuração para produção - MAIS RESTRITIVA"""
+    DEBUG = False
+    TESTING = False
+    SESSION_COOKIE_SECURE = True  # HTTPS obrigatório
+    
+    # Se não tiver SECRET_KEY em produção, falha
+    if not os.environ.get('SECRET_KEY'):
+        raise ValueError("SECRET_KEY é obrigatória em produção!")
+
+class TestingConfig(Config):
+    """Configuração para testes"""
+    DEBUG = True
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False
+
+# Selecionar configuração baseado em FLASK_ENV
+FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
+
+if FLASK_ENV == 'production':
+    config = ProductionConfig()
+elif FLASK_ENV == 'testing':
+    config = TestingConfig()
+else:
+    config = DevelopmentConfig()

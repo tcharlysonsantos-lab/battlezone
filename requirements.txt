@@ -1,0 +1,40 @@
+# requirements.txt - DEPENDÊNCIAS DO BATTLEZONE
+# Instale com: pip install -r requirements.txt
+
+# Core Flask
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-WTF==1.2.1
+WTForms==3.1.1
+Flask-Limiter==3.5.0
+
+# Segurança (NOVO)
+Flask-Talisman==1.1.0
+python-dotenv==1.0.0
+cryptography==41.0.7
+
+# Validação e Sanitização
+email-validator==2.1.0
+
+# MIME Type Detection (para validar upload)
+python-magic-bin==0.4.14
+
+# Werkzeug (já vem com Flask, mas especificar versão)
+Werkzeug==3.0.1
+
+# Utilidades
+python-dateutil==2.8.2
+requests==2.31.0
+
+# Logging e Monitoramento (opcional para mais tarde)
+# sentry-sdk==1.38.0
+
+# Testes (opcional)
+pytest==7.4.3
+pytest-cov==4.1.0
+
+# Desenvolvimento (opcional)
+# black==23.12.1
+# flake8==6.1.0
+# pylint==3.0.3

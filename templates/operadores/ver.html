@@ -73,7 +73,9 @@
                 <p class="text-danger"><small>Esta ação não pode ser desfeita!</small></p>
             </div>
             <div class="modal-footer" style="border-top: 1px solid #FF6B00;">
-                <form id="deletarForm" method="POST" action="{{ url_for('deletar_operador', id=operador.id) }}">
+                <form id="deletarForm" method="POST">
+                    <!-- ✅ CSRF TOKEN OBRIGATÓRIO -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-danger">Deletar</button>
                 </form>
@@ -82,13 +84,14 @@
     </div>
 </div>
 
-{% block scripts %}
 <script>
 function deletarOperador(id, nome) {
     document.getElementById('operadorNome').textContent = nome;
+    var url = "{{ url_for('deletar_operador', id=0) }}";
+    document.getElementById('deletarForm').action = url.replace('0', id);
     new bootstrap.Modal(document.getElementById('deletarModal')).show();
 }
 </script>
-{% endblock %}
 
-{% endblock %}  {# FECHA O BLOCK CONTENT #}
+<!-- ✅ FIM DO CONTEÚDO - APENAS UM ENDBLOCK -->
+{% endblock %}

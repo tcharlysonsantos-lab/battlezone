@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Configurar 2FA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card" style="border-top: 3px solid #FF6B00;">
+            <div class="card-header" style="background-color: #2D2D2D; border-bottom: 1px solid #FF6B00;">
+                <h4 class="mb-0" style="color: #FF6B00;">
+                    <i class="fas fa-lock me-2"></i>Configurar Autenticação em Dois Fatores
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>O que é 2FA?</strong> Autenticação em dois fatores adiciona uma camada extra de segurança 
+                    ao exigir um código de seu celular além da senha.
+                </div>
+
+                {% if not backup_codes %}
+                    <!-- Passo 1: Exibir QR Code e Secret -->
+                    <div class="text-center mb-4">
+                        <h5 class="mb-3" style="color: #FF6B00;">
+                            <span class="badge" style="background-color: #FF6B00;">Passo 1</span>
+                            Escanear Código QR
+                        </h5>
+                        
+                        <!-- QR Code Image -->
+                        {% if qr_code %}
+                            <div style="background: white; padding: 20px; border-radius: 10px; display: inline-block; margin-bottom: 20px;">
+                                <img src="{{ qr_code }}" alt="QR Code 2FA" style="width: 250px; height: 250px;">
+                            </div>
+                        {% endif %}
+
+                        <p class="text-muted">
+                            Use um aplicativo autenticador para escanear o código QR acima
+                        </p>
+
+                        <!-- Aplicativos Recomendados -->
+                        <div class="mt-3">
+                            <p class="mb-2"><strong>Aplicativos Recomendados:</strong></p>
+                            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                                <a href="#" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fab fa-google me-1"></i>Google Authenticator
+                                </a>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-key me-1"></i>Authy
+                                </a>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fab fa-microsoft me-1"></i>Microsoft Authenticator
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="border-color: #FF6B00;">
+
+                    <!-- Passo 2: Verificar Código -->
+                    <div class="text-center mb-4">
+                        <h5 class="mb-3" style="color: #FF6B00;">
+                            <span class="badge" style="background-color: #FF6B00;">Passo 2</span>
+                            Verificar Código
+                        </h5>
+
+                        <form method="POST" class="text-start">
+                            <div class="mb-3">
+                                <label class="form-label" style="color: #FF6B00;">
+                                    <i class="fas fa-code me-2"></i>Digite o Código de 6 Dígitos
+                                </label>
+                                <input type="text" name="codigo" class="form-control form-control-lg text-center" 
+                                    placeholder="000000" maxlength="6" pattern="[0-9]{6}" 
+                                    inputmode="numeric" required autocomplete="off"
+                                    style="background-color: #3D3D3D; color: white; border: 1px solid #FF6B00; font-size: 24px; letter-spacing: 5px;">
+                                <small class="text-muted d-block mt-2">
+                                    Insira o código do aplicativo autenticador
+                                </small>
+                            </div>
+
+                            <!-- Mensagens de Erro/Sucesso -->
+                            {% with messages = get_flashed_messages(with_categories=true) %}
+                                {% if messages %}
+                                    {% for category, message in messages %}
+                                        <div class="alert alert-{{ category }} mb-3" role="alert">
+                                            <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endwith %}
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-lg" style="background-color: #FF6B00; color: white; font-weight: bold;">
+                                    <i class="fas fa-check me-2"></i>Verificar e Ativar 2FA
+                                </button>
+                                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-2"></i>Cancelar
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+
+                {% else %}
+                    <!-- Passo 3: Backup Codes Gerados -->
+                    <div class="alert alert-success" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>2FA Ativado com Sucesso!</strong>
+                    </div>
+
+                    <h5 class="mb-3" style="color: #FF6B00;">
+                        <span class="badge" style="background-color: #FF6B00;">Passo 3</span>
+                        Salvar Códigos de Recuperação
+                    </h5>
+
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>IMPORTANTE:</strong> Salve esses códigos em local seguro. Você precisará deles 
+                        se perder acesso ao seu autenticador.
+                    </div>
+
+                    <!-- Backup Codes List -->
+                    <div style="background-color: #1A1A1A; border: 1px solid #FF6B00; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+                        <h6 class="mb-3" style="color: #FF6B00;">Códigos de Recuperação:</h6>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            {% for code in backup_codes %}
+                                <div style="background-color: #2D2D2D; padding: 10px; border-radius: 3px; font-family: monospace; color: #0f0; font-size: 14px;">
+                                    <i class="fas fa-key me-2" style="color: #FF6B00;"></i>{{ code }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Download/Copy Options -->
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-primary w-100 mb-2" onclick="copiarCodigos()">
+                            <i class="fas fa-copy me-2"></i>Copiar Códigos
+                        </button>
+                        <button type="button" class="btn btn-outline-success w-100" onclick="downloadarCodigos()">
+                            <i class="fas fa-download me-2"></i>Baixar Códigos (TXT)
+                        </button>
+                    </div>
+
+                    <!-- Opções Finais -->
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-lg" style="background-color: #FF6B00; color: white; font-weight: bold;">
+                            <i class="fas fa-home me-2"></i>Voltar ao Dashboard
+                        </a>
+                    </div>
+
+                {% endif %}
+            </div>
+            <div class="card-footer text-center" style="background-color: #2D2D2D; border-top: 1px solid #FF6B00;">
+                <small class="text-muted">
+                    <i class="fas fa-lock me-1"></i>Seus dados estão seguros e criptografados
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validação em tempo real do campo
+document.querySelectorAll('input[name="codigo"]').forEach(input => {
+    input.addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+});
+
+function copiarCodigos() {
+    const codigos = Array.from(document.querySelectorAll('[style*="font-family: monospace"]'))
+        .map(el => el.textContent.trim())
+        .join('\n');
+    
+    navigator.clipboard.writeText(codigos).then(() => {
+        alert('Códigos copiados para a área de transferência!');
+    });
+}
+
+function downloadarCodigos() {
+    const codigos = Array.from(document.querySelectorAll('[style*="font-family: monospace"]'))
+        .map(el => el.textContent.trim())
+        .join('\n');
+    
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(codigos));
+    element.setAttribute('download', 'battlezone_backup_codes.txt');
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+}
+</script>
+
+{% endblock %}

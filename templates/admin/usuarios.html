@@ -117,6 +117,25 @@
         </div>
     </div>
     
+    <!-- Card de Sincronização -->
+    <div class="card mt-4 border-warning">
+        <div class="card-header bg-warning text-dark">
+            <h6 class="mb-0">
+                <i class="fas fa-sync-alt me-2"></i>Ferramentas de Sincronização
+            </h6>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">Use essa ferramenta se você deletou partidas diretamente no banco de dados e as estatísticas dos operadores ficaram inconsistentes.</p>
+            
+            <a href="{{ url_for('sincronizar_estatisticas_admin') }}" class="btn btn-warning">
+                <i class="fas fa-refresh me-2"></i>Sincronizar Estatísticas dos Operadores
+            </a>
+            <small class="d-block mt-2 text-muted">
+                ℹ️ Remove registros órfãos e recalcula as estatísticas dos operadores baseado no que existe.
+            </small>
+        </div>
+    </div>
+    
     <!-- Solicitações Pendentes -->
     <div class="tab-pane fade" id="solicitacoes" role="tabpanel">
         <div class="card">

@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Códigos de Recuperação - 2FA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card" style="border-top: 3px solid #00C851;">
+            <div class="card-header" style="background-color: #2D2D2D; border-bottom: 1px solid #00C851;">
+                <h4 class="mb-0" style="color: #00C851;">
+                    <i class="fas fa-shield-check me-2"></i>Códigos de Recuperação 2FA
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>2FA Ativado com Sucesso!</strong>
+                    <p class="mb-0 mt-2">Sua conta agora está protegida com autenticação em dois fatores.</p>
+                </div>
+
+                <h5 class="mb-3" style="color: #00C851;">
+                    <i class="fas fa-key me-2"></i>Códigos de Recuperação
+                </h5>
+
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>IMPORTANTE:</strong> Salve esses códigos em local seguro (não-digital se possível).
+                    <br>Você precisará deles se perder acesso ao seu autenticador.
+                </div>
+
+                <!-- Backup Codes List -->
+                <div style="background-color: #1A1A1A; border: 2px solid #00C851; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        {% for code in backup_codes %}
+                            <div class="backup-code" style="background-color: #2D2D2D; padding: 12px; border-radius: 5px; border-left: 3px solid #FF6B00;">
+                                <div style="font-family: 'Courier New', monospace; color: #00C851; font-size: 14px; font-weight: bold; letter-spacing: 2px;">
+                                    <i class="fas fa-key me-2" style="color: #FF6B00;"></i>{{ code.upper() }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Instruções de Uso -->
+                <div class="accordion mb-4" id="instructionsAccordion">
+                    <div class="accordion-item" style="background-color: #2D2D2D; border: 1px solid #00C851;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#collapseInstructions" style="background-color: #2D2D2D; color: #00C851;">
+                                <i class="fas fa-info-circle me-2"></i>Como Usar os Códigos de Recuperação
+                            </button>
+                        </h2>
+                        <div id="collapseInstructions" class="accordion-collapse collapse" data-bs-parent="#instructionsAccordion">
+                            <div class="accordion-body" style="background-color: #1A1A1A; color: #ddd;">
+                                <ol>
+                                    <li><strong>Se você perder seu autenticador:</strong>
+                                        <ul>
+                                            <li>Use um dos códigos acima para fazer login normalmente</li>
+                                            <li>O código será marcado como usado e não poderá ser reutilizado</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Guarde em local seguro:</strong>
+                                        <ul>
+                                            <li>Imprima e guarde em um cofre ou local seguro</li>
+                                            <li>Ou salve em um gerenciador de senhas (recomendado)</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Não compartilhe:</strong>
+                                        <ul>
+                                            <li>Estes códigos são equivalentes à sua senha</li>
+                                            <li>Qualquer pessoa com acesso pode fazer login</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="row gap-2">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-primary w-100" onclick="copiarCodigos()" title="Copiar todos os códigos para clipboard">
+                            <i class="fas fa-copy me-2"></i><span class="d-none d-md-inline">Copiar</span>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-info w-100" onclick="downloadarCodigos()" title="Baixar códigos em arquivo de texto">
+                            <i class="fas fa-download me-2"></i><span class="d-none d-md-inline">Baixar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status de Segurança -->
+                <div class="alert alert-info mt-4 mb-0" style="border-left: 4px solid #00C851;">
+                    <i class="fas fa-lock me-2"></i>
+                    <strong>Status de Segurança:</strong>
+                    <ul class="mb-0 mt-2" style="font-size: 14px;">
+                        <li><i class="fas fa-check-circle" style="color: #00C851;"></i> 2FA com TOTP habilitado</li>
+                        <li><i class="fas fa-check-circle" style="color: #00C851;"></i> {{ backup_codes|length }} códigos de recuperação gerados</li>
+                        <li><i class="fas fa-check-circle" style="color: #00C851;"></i> Taxa limite em login (5 tentativas / 15 minutos)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-footer text-center" style="background-color: #2D2D2D; border-top: 1px solid #00C851;">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-sm" style="background-color: #00C851; color: white;">
+                    <i class="fas fa-arrow-right me-2"></i>Continuar para o Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Security Tips -->
+        <div class="card mt-4" style="border-left: 4px solid #FF6B00;">
+            <div class="card-header" style="background-color: #2D2D2D;">
+                <h6 class="mb-0" style="color: #FF6B00;">
+                    <i class="fas fa-lightbulb me-2"></i>Dicas de Segurança
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li class="mb-2"><strong>Backup dos Codes:</strong> Crie 2-3 cópias dos seus códigos</li>
+                    <li class="mb-2"><strong>Gerenciador de Senhas:</strong> Use um gerenciador para armazená-los com segurança</li>
+                    <li class="mb-2"><strong>Nunca Compartilhe:</strong> Não compartilhe estes codigos com ninguém</li>
+                    <li><strong>Substitua Periodicamente:</strong> Você pode gerar novos códigos a qualquer momento</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copiarCodigos() {
+    const codigos = Array.from(document.querySelectorAll('.backup-code'))
+        .map(el => el.textContent.trim().replace(/[^A-Z0-9]/g, '').replace(/(.{4})/g, '$1-').slice(0, -1))
+        .join('\n');
+    
+    navigator.clipboard.writeText(codigos).then(() => {
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-2"></i><span class="d-none d-md-inline">Copiado!</span>';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-primary');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-primary');
+        }, 2000);
+    }).catch(() => {
+        alert('Erro ao copiar! Tente novamente.');
+    });
+}
+
+function downloadarCodigos() {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const codigos = Array.from(document.querySelectorAll('.backup-code'))
+        .map(el => el.textContent.trim().replace(/[^A-Z0-9]/g, '').replace(/(.{4})/g, '$1-').slice(0, -1))
+        .join('\n');
+    
+    const conteudo = `BattleZone - Códigos de Recuperação 2FA
+Gerado em: ${timestamp}
+====================================
+
+${codigos}
+
+====================================
+IMPORTANTE:
+- Salve este arquivo em local seguro
+- Não compartilhe com ninguém
+- Cada código pode ser usado apenas 1 vez
+- Você possui ${codigos.split('\n').length} códigos de recuperação`;
+    
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(conteudo));
+    element.setAttribute('download', `battlezone_backup_codes_${timestamp}.txt`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check me-2"></i><span class="d-none d-md-inline">Baixado!</span>';
+    btn.classList.add('btn-success');
+    btn.classList.remove('btn-outline-info');
+    
+    setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-info');
+    }, 2000);
+}
+</script>
+
+{% endblock %}

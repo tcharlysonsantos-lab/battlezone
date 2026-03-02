@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}{{ partida.nome }}{% endblock %}
+
+{% block content %}
+<style>
+    .stat-badge {
+        font-size: 1rem;
+        padding: 8px 15px;
+        border-radius: 8px;
+        display: inline-block;
+        margin: 5px;
+    }
+    
+    .equipe-card {
+        border-left: 5px solid;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        background-color: var(--cinza-escuro);
+    }
+    
+    .equipe-gta {
+        border-left-color: #FF6B00;
+    }
+    
+    .equipe-spartas {
+        border-left-color: #dc3545;
+    }
+    
+    .participant-row {
+        transition: all 0.2s ease;
+        border-bottom: 1px solid var(--cinza-claro);
+        padding: 12px 0;
+    }
+    
+    .participant-row:hover {
+        background-color: rgba(255, 107, 0, 0.1);
+        padding-left: 8px;
+    }
+</style>
+
+<div class="mb-4">
+    <a href="{{ url_for('listar_partidas') }}" class="btn btn-outline-secondary mb-3">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<!-- CABEÇALHO DA PARTIDA -->
+<div class="card mb-4" style="background: linear-gradient(145deg, var(--cinza-escuro), var(--preto)); border-top: 3px solid #FF6B00;">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="text-laranja mb-3">{{ partida.nome }}</h2>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-2"><i class="fas fa-calendar me-2 text-laranja"></i><strong>{{ partida.data }}</strong> às <strong>{{ partida.horario }}</strong></p>
+                        <p class="mb-2"><i class="fas fa-cube me-2 text-info"></i><strong>{{ partida.campo }}</strong></p>
+                        <p class="mb-0"><i class="fas fa-crosshairs me-2 text-warning"></i><strong>{{ partida.modo }}</strong></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2"><i class="fas fa-bookmark me-2 text-success"></i><strong>{{ partida.plano }}</strong> - {{ partida.tempo }}</p>
+                        <p class="mb-2"><i class="fas fa-users me-2 text-laranja"></i><strong>{{ partida.tipo_participacao|upper }}</strong></p>
+                        <p class="mb-0">
+                            <strong>Status:</strong> 
+                            {% if partida.finalizada %}
+                                <span class="badge bg-success">✓ Finalizada</span>
+                            {% else %}
+                                <span class="badge bg-primary">⏳ Agendada</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center">
+                    <div style="font-size: 2.5rem; color: #FF6B00; margin-bottom: 10px;">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <p class="text-muted mb-1">Valor Total</p>
+                    <h3 class="text-laranja">R$ {{ "%.2f"|format(partida.valor_total) }}</h3>
+                    <small class="text-muted">R$ {{ "%.2f"|format(partida.valor_por_participante) }}/pessoa</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- MODO EQUIPE: Cards de Equipes -->
+        {% if partida.tipo_participacao == 'equipe' and stats_equipe %}
+        <div class="mb-4">
+            <h5 class="text-laranja mb-3"><i class="fas fa-chart-bar me-2"></i>Desempenho das Equipes</h5>
+            <div class="row">
+                {% for equipe_nome, stats in stats_equipe.items() %}
+                <div class="col-md-6">
+                    <div class="equipe-card" style="border-left: 5px solid #FF6B00;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="text-laranja mb-0">{{ equipe_nome|upper }}</h5>
+                            {% if equipe_vencedora and equipe_vencedora|lower == equipe_nome|lower %}
+                                <span class="badge bg-success p-2">🏆 VENCEDOR</span>
+                            {% elif equipe_vencedora == 'Empate' %}
+                                <span class="badge bg-warning p-2">🤝 EMPATE</span>
+                            {% else %}
+                                <span class="badge bg-danger p-2">💀 DERROTA</span>
+                            {% endif %}
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="bg-preto p-2 rounded text-center">
+                                    <small class="text-muted">Kills</small>
+                                    <h4 class="text-success mb-0">{{ stats.kills }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="bg-preto p-2 rounded text-center">
+                                    <small class="text-muted">Deaths</small>
+                                    <h4 class="text-danger mb-0">{{ stats.deaths }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="bg-preto p-2 rounded text-center">
+                                    <small class="text-muted">K/D</small>
+                                    <h4 class="text-info mb-0">{{ "%.2f"|format(stats.kills / (stats.deaths or 1)) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- PARTICIPANTES -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Participantes ({{ dados_partida.participantes|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if dados_partida.participantes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--laranja);">
+                                    <th>Jogador</th>
+                                    <th>Warname</th>
+                                    {% if partida.tipo_participacao == 'equipe' %}
+                                    <th>Equipe</th>
+                                    {% endif %}
+                                    {% if partida.finalizada %}
+                                    <th>Kills</th>
+                                    <th>Deaths</th>
+                                    <th>K/D</th>
+                                    <th>Destaque</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in dados_partida.participantes %}
+                                <tr class="participant-row">
+                                    <td>
+                                        <strong>{{ p.nome_operador }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">@{{ p.warname }}</span>
+                                    </td>
+                                    {% if partida.tipo_participacao == 'equipe' %}
+                                    <td>
+                                        {% if p.equipe == 'GTA' %}
+                                            <span class="badge bg-laranja">⚔️ GTA</span>
+                                        {% elif p.equipe == 'SPARTAS' %}
+                                            <span class="badge bg-danger">☠️ SPARTAS</span>
+                                        {% elif p.equipe %}
+                                            <span class="badge bg-laranja" style="background-color: rgba(255, 107, 0, 0.6) !important;">{{ p.equipe|upper }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">👤 Avulso</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
+                                    {% if partida.finalizada %}
+                                    <td>
+                                        <span class="text-success fw-bold">{{ p.kills }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-danger">{{ p.deaths }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-info fw-bold">{{ "%.2f"|format(p.kd) }}</span>
+                                    </td>
+                                    <td>
+                                        {% if p.mvp %}
+                                            <span class="badge bg-warning">👑 MVP</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-user-slash fa-3x mb-3"></i>
+                        <p>Nenhum participante adicionado</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- SIDEBAR -->
+    <div class="col-md-4">
+        {% if not partida.finalizada and not é_operador %}
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-flag-checkered me-2"></i>Ações</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('formulario_finalizar_partida', id=partida.id) }}" class="btn btn-success w-100 mb-2">
+                    <i class="fas fa-flag-checkered me-2"></i>Finalizar Partida
+                </a>
+                <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#confirmarDelecao">
+                    <i class="fas fa-trash me-2"></i>Deletar
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- INFORMAÇÕES ADICIONAIS -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Total de Participantes:</strong><br>
+                    <span class="text-laranja">{{ dados_partida.participantes|length }}</span>
+                </p>
+                <p class="mb-2">
+                    <strong>BBs por Pessoa:</strong><br>
+                    <span class="text-info">{{ partida.bbs_por_pessoa }}</span>
+                </p>
+                <p class="mb-0">
+                    <strong>Total BBs:</strong><br>
+                    <span class="text-warning">{{ partida.total_bbs }}</span>
+                </p>
+            </div>
+        </div>
+        
+        <!-- VENDAS (não mostra para operadores) -->
+        {% if not é_operador %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Vendas ({{ vendas|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if vendas %}
+                    {% for venda in vendas %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
+                        <div>
+                            <strong>{{ venda.warname }}</strong>
+                            <br>
+                            <small class="text-muted">{{ venda.cliente }}</small>
+                        </div>
+                        <div>
+                            <span class="badge {% if venda.status == 'Pago' %}bg-success{% else %}bg-warning{% endif %}">
+                                R$ {{ "%.2f"|format(venda.valor) }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center mb-0">Nenhuma venda</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MODAL DE CONFIRMAÇÃO DE DELEÇÃO (não mostra para operadores) -->
+{% if not é_operador %}
+<div class="modal fade" id="confirmarDelecao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Deletar Partida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar esta partida?</p>
+                <p class="text-muted">Os BBs serão devolvidos ao estoque automaticamente.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ url_for('deletar_partida', id=partida.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Deletar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

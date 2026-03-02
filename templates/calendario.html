@@ -14,8 +14,13 @@
             <h5 class="mb-0">
                 <i class="fas fa-calendar me-2 text-laranja"></i>
                 {{ mes_nome }} {{ ano }}
+                {% if current_user.nivel == 'operador' %}
+                <span class="badge bg-laranja ms-2">Apenas hoje</span>
+                {% endif %}
             </h5>
             <div>
+                <!-- OPERADORES não podem navegar entre meses -->
+                {% if current_user.nivel != 'operador' %}
                 <a href="{{ url_for('calendario', mes=mes-1, ano=ano if mes > 1 else ano-1) }}" class="btn btn-sm btn-outline-laranja">
                     <i class="fas fa-chevron-left"></i> Anterior
                 </a>
@@ -25,6 +30,12 @@
                 <a href="{{ url_for('calendario', mes=mes+1, ano=ano if mes < 12 else ano+1) }}" class="btn btn-sm btn-outline-laranja">
                     Próximo <i class="fas fa-chevron-right"></i>
                 </a>
+                {% else %}
+                <!-- Operador vê apenas botão para voltar a hoje -->
+                <a href="{{ url_for('calendario') }}" class="btn btn-sm btn-outline-laranja">
+                    <i class="fas fa-calendar-day"></i> Hoje
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -89,7 +100,6 @@
     </div>
 </div>
 
-<!-- Modal para mostrar detalhes da partida -->
 <div class="modal fade" id="partidaModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -131,8 +141,41 @@
 
 {% block scripts %}
 <script>
+// Formatador de data de hoje para operadores
+document.addEventListener('DOMContentLoaded', function() {
+    const dataHojeEl = document.getElementById('dataHoje');
+    if (dataHojeEl) {
+        const hoje = new Date();
+        const dias = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+        const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 
+                      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        
+        const diaSemana = dias[hoje.getDay()];
+        const dia = hoje.getDate();
+        const mes = meses[hoje.getMonth()];
+        const ano = hoje.getFullYear();
+        
+        dataHojeEl.textContent = `${diaSemana}, ${dia} de ${mes} de ${ano}`;
+    }
+});
+
 // Dados das partidas por dia (passados do backend)
-const partidasPorDia = {{ partidas_por_dia_json|safe }};
+const partidasPorDia = {};
+{% for dia, partidas in partidas_por_dia.items() %}
+    partidasPorDia[{{ dia }}] = [
+    {%- for partida in partidas %}
+        {
+            id: {{ partida.id }},
+            nome: '{{ partida.nome }}',
+            horario: '{{ partida.horario }}',
+            campo: '{{ partida.campo }}',
+            modo: '{{ partida.modo }}',
+            data: '{{ partida.data }}',
+            status: '{{ partida.status }}'
+        }{{ "," if not loop.last else "" }}
+    {%- endfor %}
+    ];
+{% endfor %}
 
 function verPartida(id) {
     fetch(`/api/partida/${id}`)

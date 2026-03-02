@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitar Acesso{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4><i class="fas fa-user-plus me-2"></i>Solicitar Acesso</h4>
+            </div>
+            <div class="card-body">
+                
+                <!-- MENSAGEM DE ATENÇÃO -->
+                <div class="alert alert-warning text-center mb-4" style="border-left: 4px solid #FF6B00;">
+                    <i class="fas fa-clock fa-3x mb-3" style="color: #FF6B00;"></i>
+                    <h5 class="fw-bold">⚠️ ATENÇÃO ⚠️</h5>
+                    <p class="mb-2">
+                        Após enviar sua solicitação, aguarde a aprovação do estabelecimento.
+                    </p>
+                    <p class="mb-0 fw-bold" style="color: #FF6B00;">
+                        Para que seja mais rápido, entre em contato conosco!
+                    </p>
+                </div>
+                
+                <!-- CARD DE CONTATO RÁPIDO -->
+                <div class="card mb-4" style="background-color: var(--cinza-escuro);">
+                    <div class="card-body text-center">
+                        <h6 class="text-laranja mb-3"><i class="fab fa-whatsapp me-2"></i>CONTATO DIRETO</h6>
+                        <a href="https://wa.me/5583993563759" target="_blank" class="btn btn-success btn-lg w-100 mb-2">
+                            <i class="fab fa-whatsapp me-2"></i>Falar no WhatsApp
+                        </a>
+                        <p class="text-muted small mb-0">(83) 99356-3759</p>
+                    </div>
+                </div>
+                
+                <form method="POST">
+                    {{ form.hidden_tag() }}  <!-- ← LINHA OBRIGATÓRIA! -->
+                    
+                    <div class="mb-3">
+                        {{ form.nome.label(class="form-label") }}
+                        {{ form.nome(class="form-control", placeholder="Seu nome completo") }}
+                        {% if form.nome.errors %}
+                            <small class="text-danger">{{ form.nome.errors[0] }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control", placeholder="seu@email.com") }}
+                        {% if form.email.errors %}
+                            <small class="text-danger">{{ form.email.errors[0] }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <!-- TROCADO DE "Usuário" para "Warname" -->
+                        <label class="form-label">Warname</label>
+                        {{ form.usuario(class="form-control", placeholder="Escolha seu warname (apelido no jogo)") }}
+                        {% if form.usuario.errors %}
+                            <small class="text-danger">{{ form.usuario.errors[0] }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.cpf.label(class="form-label") }}
+                            {{ form.cpf(class="form-control", placeholder="000.000.000-00") }}
+                            {% if form.cpf.errors %}
+                                <small class="text-danger">{{ form.cpf.errors[0] }}</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.telefone.label(class="form-label") }}
+                            {{ form.telefone(class="form-control", placeholder="(83) 99999-9999") }}
+                            {% if form.telefone.errors %}
+                                <small class="text-danger">{{ form.telefone.errors[0] }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.data_nascimento.label(class="form-label") }}
+                            {{ form.data_nascimento(class="form-control", placeholder="DD/MM/AAAA") }}
+                            {% if form.data_nascimento.errors %}
+                                <small class="text-danger">{{ form.data_nascimento.errors[0] }}</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <!-- Espaço vazio para alinhamento -->
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.senha.label(class="form-label") }}
+                            {{ form.senha(class="form-control", placeholder="Mínimo 6 caracteres") }}
+                            {% if form.senha.errors %}
+                                <small class="text-danger">{{ form.senha.errors[0] }}</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.confirmar_senha.label(class="form-label") }}
+                            {{ form.confirmar_senha(class="form-control", placeholder="Digite novamente") }}
+                            {% if form.confirmar_senha.errors %}
+                                <small class="text-danger">{{ form.confirmar_senha.errors[0] }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar Solicitação
+                        </button>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Voltar ao Login</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para formatar CPF, Telefone e Data -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Formatação do CPF
+    const cpfInput = document.querySelector('input[name="cpf"]');
+    if (cpfInput) {
+        cpfInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                e.target.value = value;
+            }
+        });
+    }
+    
+    // Formatação do Telefone
+    const telInput = document.querySelector('input[name="telefone"]');
+    if (telInput) {
+        telInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                if (value.length > 2) {
+                    value = '(' + value.substring(0,2) + ') ' + value.substring(2);
+                }
+                if (value.length > 10) {
+                    value = value.substring(0,10) + '-' + value.substring(10);
+                } else if (value.length > 9) {
+                    value = value.substring(0,9) + '-' + value.substring(9);
+                }
+                e.target.value = value;
+            }
+        });
+    }
+    
+    // Formatação da Data
+    const dataInput = document.querySelector('input[name="data_nascimento"]');
+    if (dataInput) {
+        dataInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 8) {
+                if (value.length > 2) {
+                    value = value.substring(0,2) + '/' + value.substring(2);
+                }
+                if (value.length > 5) {
+                    value = value.substring(0,5) + '/' + value.substring(5);
+                }
+                e.target.value = value;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

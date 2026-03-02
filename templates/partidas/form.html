@@ -1,0 +1,849 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<style>
+    .info-box {
+        background: linear-gradient(145deg, var(--cinza-escuro), var(--preto));
+        border: 2px solid var(--laranja);
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        text-align: center;
+    }
+
+    .info-valor {
+        color: var(--laranja);
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .info-bbs {
+        color: #FFD700;
+        font-size: 1.3rem;
+        font-weight: bold;
+    }
+
+    .operador-item {
+        background: var(--cinza-escuro);
+        border: 2px solid var(--cinza-claro);
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .operador-item:hover {
+        border-color: var(--laranja);
+        background: rgba(255, 107, 0, 0.1);
+    }
+
+    .operador-item.selecionado {
+        background: rgba(255, 107, 0, 0.2);
+        border-color: var(--laranja);
+        box-shadow: 0 0 10px rgba(255, 107, 0, 0.4);
+    }
+
+    .operador-info {
+        flex: 1;
+    }
+
+    .operador-nome {
+        font-weight: bold;
+        color: white;
+    }
+
+    .operador-warname {
+        font-size: 0.9rem;
+        color: var(--laranja);
+    }
+
+    .operador-check {
+        color: var(--laranja);
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-left: 10px;
+    }
+
+    .operadores-container {
+        background: var(--preto);
+        border: 1px solid var(--cinza-claro);
+        border-radius: 8px;
+        padding: 15px;
+        max-height: 350px;
+        overflow-y: auto;
+        min-height: 150px;
+    }
+
+    .busca-operador {
+        margin-bottom: 15px;
+    }
+
+    .contador {
+        display: inline-block;
+        background: var(--laranja);
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        margin-left: 10px;
+    }
+
+    .equipes-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .equipe-box {
+        background: linear-gradient(145deg, var(--cinza-escuro), var(--preto));
+        border: 2px solid var(--laranja);
+        border-radius: 8px;
+        padding: 15px;
+    }
+
+    .equipe-titulo {
+        color: var(--laranja);
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .cacada-options {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .cacada-btn {
+        background: var(--cinza-escuro);
+        border: 2px solid var(--laranja);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1.1rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+
+    .cacada-btn-valor {
+        background: var(--cinza-escuro);
+        border: 2px solid #FFD700;
+        color: white;
+        padding: 25px 40px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1.1rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        text-align: center;
+        flex: 1;
+        max-width: 200px;
+    }
+
+    .cacada-btn-valor:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(255, 215, 0, 0.3);
+    }
+
+    .cacada-btn-valor.selecionado {
+        background: rgba(255, 215, 0, 0.2);
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+        border-color: #FFD700;
+    }
+
+    .msg-vazia {
+        text-align: center;
+        color: var(--cinza-claro);
+        padding: 20px;
+        font-style: italic;
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-md-11">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-gamepad me-2"></i>{{ titulo }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="partidaForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <!-- Dados básicos -->
+                    <div class="row">
+                        <div class="col-md-7 mb-3">
+                            <label class="form-label">Nome da Partida</label>
+                            <input type="text" name="nome" class="form-control" value="{{ request.form.get('nome', '') }}" required>
+                        </div>
+                        <div class="col-md-5 mb-3">
+                            <label class="form-label">Data</label>
+                            <input type="text" name="data" class="form-control" value="{{ request.form.get('data', now.strftime('%d/%m/%Y')) }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Horário</label>
+                            <input type="text" name="horario" class="form-control" value="{{ request.form.get('horario', now.strftime('%H:%M')) }}" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Campo</label>
+                            <select name="campo" id="campo" class="form-select" required>
+                                <option value="">Selecione</option>
+                                <option value="Warfield" {% if request.form.get('campo') == 'Warfield' %}selected{% endif %}>Warfield</option>
+                                <option value="Redline" {% if request.form.get('campo') == 'Redline' %}selected{% endif %}>Redline</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Tipo</label>
+                            <select name="tipo_participacao" id="tipo_participacao" class="form-select" required>
+                                <option value="individual" {% if request.form.get('tipo_participacao', 'individual') == 'individual' %}selected{% endif %}>Individual</option>
+                                <option value="equipe" {% if request.form.get('tipo_participacao') == 'equipe' %}selected{% endif %}>Equipe</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Pagamento</label>
+                            <select name="pagamento" id="pagamento" class="form-select">
+                                <option value="Pendente" {% if request.form.get('pagamento', 'Pendente') == 'Pendente' %}selected{% endif %}>Pendente</option>
+                                <option value="Dinheiro" {% if request.form.get('pagamento') == 'Dinheiro' %}selected{% endif %}>Dinheiro</option>
+                                <option value="PIX" {% if request.form.get('pagamento') == 'PIX' %}selected{% endif %}>PIX</option>
+                                <option value="Crédito" {% if request.form.get('pagamento') == 'Crédito' %}selected{% endif %}>Crédito</option>
+                                <option value="Débito" {% if request.form.get('pagamento') == 'Débito' %}selected{% endif %}>Débito</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- SEÇÃO INDIVIDUAL -->
+                    <div id="secao_individual">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Plano</label>
+                                <select name="plano" id="plano" class="form-select">
+                                    <option value="">Selecione campo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tempo</label>
+                                <select name="tempo" id="tempo" class="form-select">
+                                    <option value="">Selecione plano</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Modo</label>
+                                <select name="modo" id="modo" class="form-select">
+                                    <option value="">Selecione tempo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- SEÇÃO CAÇADA NOTURNA -->
+                        <div id="secao_cacada_selecionada" style="display: none; margin-bottom: 20px;">
+                            <div class="info-box" style="background: linear-gradient(145deg, #1a1a2e, #16213e); border-color: #FFD700;">
+                                <h5 style="color: #FFD700; margin-bottom: 15px;">🌙 CAÇADA NOTURNA - Selecione o Valor</h5>
+                                <div class="cacada-options">
+                                    <button type="button" class="cacada-btn-valor" data-valor="3">
+                                        <div style="font-size: 1.4rem; font-weight: bold;">💵 R$ 3</div>
+                                        <small>cada player paga individualmente</small>
+                                    </button>
+                                    <button type="button" class="cacada-btn-valor" data-valor="30">
+                                        <div style="font-size: 1.4rem; font-weight: bold;">💰 R$ 30</div>
+                                        <small>valor dividido entre todos</small>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="cacada_valor" name="cacada_tipo" value="{{ request.form.get('cacada_tipo', '') }}">
+                            </div>
+                        </div>
+
+                        <!-- Info Valor/BBS -->
+                        <div class="info-box">
+                            <div>💰 Valor por Participante: <span class="info-valor" id="valor-info">R$ 0</span></div>
+                            <div>📦 BBs por Participante: <span class="info-bbs" id="bbs-info">0</span></div>
+                        </div>
+
+                        <!-- Seleção de Operadores -->
+                        <label class="form-label">
+                            Selecione os Operadores
+                            <span class="contador" id="contador-individual">0</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="busca-individual" 
+                            class="form-control busca-operador" 
+                            placeholder="🔍 Buscar por nome...">
+                        <div class="operadores-container" id="operadores-individual"></div>
+                        <input type="hidden" id="participantes-individual" name="participantes" value="">
+                    </div>
+
+                    <!-- SEÇÃO EQUIPE -->
+                    <div id="secao_equipe" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Plano</label>
+                                <select name="plano_equipe" id="plano_equipe" class="form-select">
+                                    <option value="">Selecione campo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tempo</label>
+                                <select name="tempo_equipe" id="tempo_equipe" class="form-select">
+                                    <option value="">Selecione plano</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Modo</label>
+                                <select name="modo_equipe" id="modo_equipe" class="form-select">
+                                    <option value="">Selecione tempo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Info Valor/BBS -->
+                        <div class="info-box">
+                            <div>💰 Valor por Participante: <span class="info-valor" id="valor-info-eq">R$ 0</span></div>
+                            <div>📦 BBs por Participante: <span class="info-bbs" id="bbs-info-eq">0</span></div>
+                        </div>
+
+                        <!-- Seleção de Equipes -->
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Equipe 1</label>
+                                <select id="equipe1_id" name="equipe1_id" class="form-select">
+                                    <option value="">Selecione</option>
+                                    {% for eq in equipes %}
+                                    <option value="{{ eq.id }}">{{ eq.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Equipe 2</label>
+                                <select id="equipe2_id" name="equipe2_id" class="form-select">
+                                    <option value="">Selecione</option>
+                                    {% for eq in equipes %}
+                                    <option value="{{ eq.id }}">{{ eq.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Seleção de Operadores por Equipe -->
+                        <div class="equipes-container">
+                            <!-- EQUIPE 1 -->
+                            <div class="equipe-box">
+                                <div class="equipe-titulo" id="eq1-nome">Equipe 1</div>
+                                <input 
+                                    type="text" 
+                                    class="form-control busca-operador mb-2" 
+                                    id="busca-eq1" 
+                                    placeholder="🔍 Buscar...">
+                                <div class="operadores-container" id="operadores-eq1"></div>
+                                <div class="text-center mt-2">
+                                    <small>Selecionados: <strong id="count-eq1">0</strong></small>
+                                </div>
+                            </div>
+
+                            <!-- EQUIPE 2 -->
+                            <div class="equipe-box">
+                                <div class="equipe-titulo" id="eq2-nome">Equipe 2</div>
+                                <input 
+                                    type="text" 
+                                    class="form-control busca-operador mb-2" 
+                                    id="busca-eq2" 
+                                    placeholder="🔍 Buscar...">
+                                <div class="operadores-container" id="operadores-eq2"></div>
+                                <div class="text-center mt-2">
+                                    <small>Selecionados: <strong id="count-eq2">0</strong></small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="participantes-eq1" name="participantes-eq1" value="">
+                        <input type="hidden" id="participantes-eq2" name="participantes-eq2" value="">
+                        <input type="hidden" id="participantes-equipe" name="participantes" value="">
+                    </div>
+                    <!-- SEÇÃO CAÇADA NOTURNA foi movida para dentro da seção individual -->
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('listar_partidas') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
+                            <i class="fas fa-save me-2"></i>Criar Partida
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let operadores = [];
+const selectedOp = {
+    individual: new Set(),
+    eq1: new Set(),
+    eq2: new Set()
+};
+
+// ===== CARREGAR OPERADORES =====
+async function carregarOperadores() {
+    const res = await fetch('/api/operadores/search?limit=1000');
+    operadores = await res.json();
+    renderizarOperadores('individual');
+}
+
+// ===== RENDERIZAR OPERADORES =====
+function renderizarOperadores(modo) {
+    let containerId, buscaId, selected;
+    
+    if (modo === 'individual') {
+        containerId = 'operadores-individual';
+        buscaId = 'busca-individual';
+        selected = selectedOp.individual;
+    } else if (modo === 'eq1') {
+        containerId = 'operadores-eq1';
+        buscaId = 'busca-eq1';
+        selected = selectedOp.eq1;
+    } else {
+        containerId = 'operadores-eq2';
+        buscaId = 'busca-eq2';
+        selected = selectedOp.eq2;
+    }
+
+    const termo = document.getElementById(buscaId).value.toLowerCase();
+    const filtrados = operadores.filter(op =>
+        op.nome.toLowerCase().includes(termo) ||
+        op.warname.toLowerCase().includes(termo) ||
+        termo === ''
+    );
+
+    const container = document.getElementById(containerId);
+    
+    if (filtrados.length === 0) {
+        container.innerHTML = '<div class="msg-vazia">Nenhum operador encontrado</div>';
+        return;
+    }
+
+    container.innerHTML = filtrados.map(op => `
+        <div class="operador-item ${selected.has(op.id) ? 'selecionado' : ''}" 
+             onclick="selecionarOp(${op.id}, '${modo}')">
+            <div class="operador-info">
+                <div class="operador-nome">${op.nome}</div>
+                <div class="operador-warname">@${op.warname}</div>
+            </div>
+            <div class="operador-check">${selected.has(op.id) ? '✓' : ''}</div>
+        </div>
+    `).join('');
+}
+
+// ===== SELECIONAR OPERADOR =====
+function selecionarOp(id, modo) {
+    const set = selectedOp[modo];
+    if (set.has(id)) {
+        set.delete(id);
+    } else {
+        set.add(id);
+    }
+    atualizarUI(modo);
+}
+
+// ===== ATUALIZAR UI =====
+function atualizarUI(modo) {
+    renderizarOperadores(modo);
+
+    if (modo === 'individual') {
+        document.getElementById('contador-individual').textContent = selectedOp.individual.size;
+        document.getElementById('participantes-individual').value = Array.from(selectedOp.individual).join(',');
+    } else if (modo === 'eq1') {
+        document.getElementById('count-eq1').textContent = selectedOp.eq1.size;
+    } else {
+        document.getElementById('count-eq2').textContent = selectedOp.eq2.size;
+    }
+
+    // Atualizar campo oculto equipe
+    if (modo === 'eq1' || modo === 'eq2') {
+        // Preencher cada equipe separadamente
+        document.getElementById('participantes-eq1').value = Array.from(selectedOp.eq1).join(',');
+        document.getElementById('participantes-eq2').value = Array.from(selectedOp.eq2).join(',');
+        
+        // Também manter o campo antigo para compatibilidade
+        const total = selectedOp.eq1.size + selectedOp.eq2.size;
+        const ids = [...selectedOp.eq1, ...selectedOp.eq2];
+        document.getElementById('participantes-equipe').value = ids.join(',');
+    }
+}
+
+// ===== CAMBIO DE TIPO PARTICIPAÇÃO =====
+function cambiarTipoParticipacao(tipo) {
+    // Limpiar campos no utilizados
+    if (tipo === 'individual') {
+        document.getElementById('participantes-equipe').value = '';
+        selectedOp.eq1.clear();
+        selectedOp.eq2.clear();
+        renderizarOperadores('individual');
+    } else {
+        document.getElementById('participantes-individual').value = '';
+        selectedOp.individual.clear();
+        renderizarOperadores('eq1');
+        renderizarOperadores('eq2');
+    }
+}
+
+// ===== BUSCA =====
+document.addEventListener('DOMContentLoaded', function() {
+    carregarOperadores();
+        
+        // ===== RESTAURAR VALORES ANTERIORES (se houver erro) =====
+        const campoSelecionado = '{{ request.form.get("campo", "") }}';
+        const planoSelecionado = '{{ request.form.get("plano", "") }}';
+        const tempoSelecionado = '{{ request.form.get("tempo", "") }}';
+        const modoSelecionado = '{{ request.form.get("modo", "") }}';
+        
+        if (campoSelecionado) {
+            document.getElementById('campo').value = campoSelecionado;
+            
+            // Carregar planos após campo
+            setTimeout(() => {
+                fetch(`/api/planos/${campoSelecionado}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const html = '<option value="">Selecione</option>' + data.map(p => `<option value="${p}">${p}</option>`).join('');
+                        document.getElementById('plano').innerHTML = html;
+                        
+                        if (planoSelecionado) {
+                            document.getElementById('plano').value = planoSelecionado;
+                            
+                            // Carregar tempos após plano
+                            setTimeout(() => {
+                                fetch(`/api/tempos?campo=${campoSelecionado}&plano=${planoSelecionado}`)
+                                    .then(r => r.json())
+                                    .then(data => {
+                                        const html = '<option value="">Selecione tempo</option>' + data.map(t => `<option value="${t}">${t}</option>`).join('');
+                                        document.getElementById('tempo').innerHTML = html;
+                                        
+                                        if (tempoSelecionado) {
+                                            document.getElementById('tempo').value = tempoSelecionado;
+                                            
+                                            // Carregar modos após tempo
+                                            fetch(`/api/modos?tempo=${tempoSelecionado}&plano=${planoSelecionado}`)
+                                                .then(r => r.json())
+                                                .then(data => {
+                                                    const html = '<option value="">Selecione</option>' + data.map(m => `<option value="${m}">${m}</option>`).join('');
+                                                    document.getElementById('modo').innerHTML = html;
+                                                    
+                                                    if (modoSelecionado) {
+                                                        document.getElementById('modo').value = modoSelecionado;
+                                                    }
+                                                });
+                                        }
+                                    });
+                            }, 100);
+                        }
+                    });
+            }, 100);
+        }
+    document.getElementById('busca-eq2')?.addEventListener('input', () => renderizarOperadores('eq2'));
+    
+    // ===== VALIDAÇÃO DO SUBMIT =====
+    const form = document.getElementById('partidaForm');
+    form.addEventListener('submit', function(e) {
+        const tipo = document.getElementById('tipo_participacao').value;
+        
+        // Verificar qual seção está visível
+        const secaoIndividual = document.getElementById('secao_individual').style.display !== 'none';
+        const secaoEquipe = document.getElementById('secao_equipe').style.display !== 'none';
+        
+        // Validar campos baseado na seção visível
+        if (secaoIndividual) {
+            const plano = document.getElementById('plano').value;
+            const tempo = document.getElementById('tempo').value;
+            const modo = document.getElementById('modo').value;
+            
+            if (!plano) {
+                e.preventDefault();
+                alert('❌ Selecione um Plano!');
+                document.getElementById('plano').focus();
+                return false;
+            }
+            
+            if (!tempo) {
+                e.preventDefault();
+                alert('❌ Selecione um Tempo!');
+                document.getElementById('tempo').focus();
+                return false;
+            }
+            
+            // CAÇADA NOTURNA deve aparecer APENAS para Avulso + 10 min
+            const isCacada = plano === 'Avulso' && tempo === '10 min' && modo === 'CAÇADA NOTURNA';
+            
+            if (isCacada) {
+                const cacadaTipo = document.getElementById('cacada_valor').value;
+                if (!cacadaTipo) {
+                    e.preventDefault();
+                    alert('❌ Selecione o tipo de Caçada Noturna (R$3 ou R$30)!');
+                    return false;
+                }
+            } else {
+                // Modo é obrigatório se NÃO é CAÇADA
+                if (!modo) {
+                    e.preventDefault();
+                    alert('❌ Selecione um Modo!');
+                    document.getElementById('modo').focus();
+                    return false;
+                }
+            }
+        }
+        
+        if (secaoEquipe) {
+            const plano = document.getElementById('plano_equipe').value;
+            const tempo = document.getElementById('tempo_equipe').value;
+            const modo = document.getElementById('modo_equipe').value;
+            const equipe1 = document.getElementById('equipe1_id').value;
+            const equipe2 = document.getElementById('equipe2_id').value;
+            
+            if (!plano) {
+                e.preventDefault();
+                alert('❌ Selecione um Plano!');
+                document.getElementById('plano_equipe').focus();
+                return false;
+            }
+            
+            if (!tempo) {
+                e.preventDefault();
+                alert('❌ Selecione um Tempo!');
+                document.getElementById('tempo_equipe').focus();
+                return false;
+            }
+            
+            if (!modo) {
+                e.preventDefault();
+                alert('❌ Selecione um Modo!');
+                document.getElementById('modo_equipe').focus();
+                return false;
+            }
+            
+            if (!equipe1) {
+                e.preventDefault();
+                alert('❌ Selecione a Equipe 1!');
+                document.getElementById('equipe1_id').focus();
+                return false;
+            }
+            
+            if (!equipe2) {
+                e.preventDefault();
+                alert('❌ Selecione a Equipe 2!');
+                document.getElementById('equipe2_id').focus();
+                return false;
+            }
+        }
+        
+        // Validar participantes
+        const participantesField = document.getElementById('participantes-' + (secaoIndividual ? 'individual' : 'equipe'));
+        if (!participantesField || !participantesField.value) {
+            e.preventDefault();
+            alert('❌ Selecione pelo menos um participante!');
+            return false;
+        }
+    });
+    
+    // Listener para cambio de tipo participacao
+    const tipoParticipacao = document.getElementById('tipo_participacao');
+    if (tipoParticipacao) {
+        tipoParticipacao.addEventListener('change', function() {
+            cambiarTipoParticipacao(this.value);
+        });
+    }
+
+    // ===== TIPO PARTICIPACAO =====
+    document.getElementById('tipo_participacao').addEventListener('change', function() {
+        document.getElementById('secao_individual').style.display = this.value === 'individual' ? 'block' : 'none';
+        document.getElementById('secao_equipe').style.display = this.value === 'equipe' ? 'block' : 'none';
+    });
+
+    // ===== EQUIPES DIFERENTES =====
+    const eq1 = document.getElementById('equipe1_id');
+    const eq2 = document.getElementById('equipe2_id');
+
+    eq1?.addEventListener('change', function() {
+        if (this.value && eq2.value && this.value === eq2.value) {
+            alert('Selecione equipes diferentes!');
+            this.value = '';
+        }
+        document.getElementById('eq1-nome').textContent = this.options[this.selectedIndex].text || 'Equipe 1';
+        renderizarOperadores('eq1');
+    });
+
+    eq2?.addEventListener('change', function() {
+        if (this.value && eq1.value && this.value === eq1.value) {
+            alert('Selecione equipes diferentes!');
+            this.value = '';
+        }
+        document.getElementById('eq2-nome').textContent = this.options[this.selectedIndex].text || 'Equipe 2';
+        renderizarOperadores('eq2');
+    });
+
+    // ===== PLANOS =====
+    const campo = document.getElementById('campo');
+    const plano = document.getElementById('plano');
+    const planoEq = document.getElementById('plano_equipe');
+
+    campo.addEventListener('change', function() {
+        fetch(`/api/planos/${this.value}`)
+            .then(r => r.json())
+            .then(data => {
+                const html = '<option value="">Selecione</option>' + data.map(p => `<option value="${p}">${p}</option>`).join('');
+                plano.innerHTML = html;
+                if (planoEq) planoEq.innerHTML = html;
+            });
+    });
+
+    // ===== TEMPOS =====
+    plano.addEventListener('change', function() {
+        fetch(`/api/tempos?campo=${campo.value}&plano=${this.value}`)
+            .then(r => r.json())
+            .then(data => {
+                const html = '<option value="">Selecione</option>' + data.map(t => `<option value="${t}">${t}</option>`).join('');
+                document.getElementById('tempo').innerHTML = html;
+            });
+    });
+
+    if (planoEq) {
+        planoEq.addEventListener('change', function() {
+            fetch(`/api/tempos?campo=${campo.value}&plano=${this.value}`)
+                .then(r => r.json())
+                .then(data => {
+                    const html = '<option value="">Selecione</option>' + data.map(t => `<option value="${t}">${t}</option>`).join('');
+                    document.getElementById('tempo_equipe').innerHTML = html;
+                });
+        });
+    }
+
+    // ===== MODOS E VALORES =====
+    const tempo = document.getElementById('tempo');
+    const tempoEq = document.getElementById('tempo_equipe');
+
+    tempo?.addEventListener('change', function() {
+        const planoValue = plano.value;
+        const tempoValue = this.value;
+        
+        // Carregar valores normais
+        fetch(`/api/valores?campo=${campo.value}&plano=${planoValue}&tempo=${tempoValue}`)
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('valor-info').textContent = `R$ ${data.valor}`;
+                document.getElementById('bbs-info').textContent = data.bbs;
+            });
+
+        // Carregar modos
+        fetch(`/api/modos?tempo=${tempoValue}&plano=${planoValue}`)
+            .then(r => r.json())
+            .then(data => {
+                const html = '<option value="">Selecione</option>' + data.map(m => `<option value="${m}">${m}</option>`).join('');
+                document.getElementById('modo').innerHTML = html;
+            });
+    });
+
+    if (tempoEq) {
+        tempoEq.addEventListener('change', function() {
+            const planoValue = planoEq.value;
+            const tempoValue = this.value;
+            
+            // Carregar valores normais
+            fetch(`/api/valores?campo=${campo.value}&plano=${planoValue}&tempo=${tempoValue}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('valor-info-eq').textContent = `R$ ${data.valor}`;
+                    document.getElementById('bbs-info-eq').textContent = data.bbs;
+                });
+
+            // Carregar modos
+            fetch(`/api/modos?tempo=${tempoValue}&plano=${planoValue}`)
+                .then(r => r.json())
+                .then(data => {
+                    const html = '<option value="">Selecione</option>' + data.map(m => `<option value="${m}">${m}</option>`).join('');
+                    document.getElementById('modo_equipe').innerHTML = html;
+                });
+        });
+    }
+
+    // ===== LISTENER PARA MODO - Mostrar CAÇADA apenas se selecionado =====
+    const modo = document.getElementById('modo');
+    const modoEq = document.getElementById('modo_equipe');
+
+    modo?.addEventListener('change', function() {
+        const modoValue = this.value;
+        
+        // Mostrar seção CAÇADA apenas se modo selecionado for CAÇADA NOTURNA
+        document.getElementById('secao_cacada_selecionada').style.display = modoValue === 'CAÇADA NOTURNA' ? 'block' : 'none';
+        
+        // Se for CAÇADA, mostrar valores em R$
+        if (modoValue === 'CAÇADA NOTURNA') {
+            document.getElementById('valor-info').textContent = `R$ 0`;
+            document.getElementById('bbs-info').textContent = '0 BBs';
+        }
+    });
+
+    modoEq?.addEventListener('change', function() {
+        const modoValue = this.value;
+        
+        // Mostrar seção CAÇADA apenas se modo selecionado for CAÇADA NOTURNA
+        document.getElementById('secao_cacada_selecionada').style.display = modoValue === 'CAÇADA NOTURNA' ? 'block' : 'none';
+        
+        // Se for CAÇADA, mostrar valores em R$
+        if (modoValue === 'CAÇADA NOTURNA') {
+            document.getElementById('valor-info-eq').textContent = `R$ 0`;
+            document.getElementById('bbs-info-eq').textContent = '0 BBs';
+        }
+    });
+});
+
+    // ===== CAÇADA NOTURNA - Seleção de Valor =====
+    document.querySelectorAll('.cacada-btn-valor').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const valor = this.dataset.valor;
+            
+            // Remover seleção anterior
+            document.querySelectorAll('.cacada-btn-valor').forEach(b => b.classList.remove('selecionado'));
+            
+            // Selecionar este botão
+            this.classList.add('selecionado');
+            
+            // Atualizar valor oculto
+            document.getElementById('cacada_valor').value = valor;
+            
+            // Atualizar display conforme o valor
+            if (valor === '3') {
+                document.getElementById('valor-info').textContent = `R$ 3 (por pessoa)`;
+            } else if (valor === '30') {
+                document.getElementById('valor-info').textContent = `R$ 30 (dividido)`;
+            }
+        });
+        
+        // Se houver valor pré-selecionado, marcar o botão
+        if (btn.dataset.valor === document.getElementById('cacada_valor').value) {
+            btn.classList.add('selecionado');
+        }
+    });
+
+// ===== CAÇADA NOTURNA =====
+function selecionarCacada(event, valor) {
+    event.preventDefault();
+    document.querySelectorAll('.cacada-btn').forEach(btn => btn.classList.remove('selecionado'));
+    event.target.closest('.cacada-btn').classList.add('selecionado');
+    document.getElementById('cacada_valor').value = valor;
+}
+</script>
+{% endblock %}

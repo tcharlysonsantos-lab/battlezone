@@ -1,7 +1,6 @@
 # utils.py
 from datetime import datetime
 from models import Operador, db  # ← IMPORT CORRIGIDO
-from app import app  # ← IMPORT CORRIGIDO
 import logging
 
 # Cores do tema (para CSS)
@@ -54,14 +53,14 @@ MODOS_PARTIDA = [
 # Dicionário de modos permitidos por tempo
 MODOS_POR_TEMPO = {
     "10 min": ["PVP INFINITY", "CAÇADA NOTURNA"],
-    "20 min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA", "CAÇA AO VIP", "CAÇADA NOTURNA"],
-    "30 min": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "CAÇADA NOTURNA", "PLANTAÇÃO DE BOMBA"],
-    "60 min": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "CAÇADA NOTURNA", "PLANTAÇÃO DE BOMBA"],
-    "30 min*": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "CAÇADA NOTURNA", "PLANTAÇÃO DE BOMBA"],
-    "60 min*": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "CAÇADA NOTURNA", "PLANTAÇÃO DE BOMBA"],
-    "60¹ min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA", "CAÇADA NOTURNA"],
-    "60² min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA", "CAÇADA NOTURNA"],
-    "60³ min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA", "CAÇADA NOTURNA"],
+    "20 min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA", "CAÇA AO VIP"],
+    "30 min": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "PLANTAÇÃO DE BOMBA"],
+    "60 min": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "PLANTAÇÃO DE BOMBA"],
+    "30 min*": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "PLANTAÇÃO DE BOMBA"],
+    "60 min*": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "PLANTAÇÃO DE BOMBA"],
+    "60¹ min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
+    "60² min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
+    "60³ min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
     "120¹ min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
     "150 min": ["PVP INFINITY", "ONE LIFE"],
     "180¹ min": ["PVP INFINITY", "ONE LIFE"],
@@ -84,10 +83,20 @@ def get_valores_plano(campo, plano, tempo):
             return planos["valores"][idx], planos["bbs"][idx]
     return 0, 0
 
-def get_modos_permitidos(tempo):
-    """Retorna modos permitidos para um tempo"""
+def get_modos_permitidos(tempo, plano=None):
+    """Retorna modos permitidos para um tempo e plano
+    CAÇADA NOTURNA é exclusiva para Avulso/10 min
+    """
     tempo_base = tempo.replace("*", "").strip()
-    return MODOS_POR_TEMPO.get(tempo_base, MODOS_PARTIDA)
+    modos = MODOS_POR_TEMPO.get(tempo_base, MODOS_PARTIDA)
+    
+    # CAÇADA NOTURNA só aparece para Avulso com 10 min
+    if "CAÇADA NOTURNA" in modos:
+        # Se o plano é diferente de "Avulso" ou o tempo não é "10 min", remove CAÇADA NOTURNA
+        if plano != "Avulso" or tempo_base != "10 min":
+            modos = [m for m in modos if m != "CAÇADA NOTURNA"]
+    
+    return modos
 
 def format_brl(valor):
     """Formata valor em reais"""
@@ -99,7 +108,7 @@ def parse_brl(valor_str):
         return float(valor_str)
     return float(valor_str.replace('R$', '').replace('.', '').replace(',', '.').strip())
 
-# ==================== FUNÇÃO CORRIGIDA COM IMPORTS ====================
+# ==================== FUNÇÃO CORRIGIDA (SEM IMPORT DO APP) ====================
 def sincronizar_user_operador(user):
     """Garante que usuário e operador estejam sincronizados"""
     try:
@@ -108,7 +117,7 @@ def sincronizar_user_operador(user):
         
         if not operador:
             # Criar novo operador se não existir
-            app.logger.info(f"🔧 Criando operador para usuário {user.username}")
+            print(f"🔧 Criando operador para usuário {user.username}")
             
             operador = Operador(
                 nome=user.nome,
@@ -160,14 +169,14 @@ def sincronizar_user_operador(user):
                 precisa_atualizar = True
             
             if precisa_atualizar:
-                app.logger.info(f"🔄 Atualizando dados do operador {operador.warname}")
+                print(f"🔄 Atualizando dados do operador {operador.warname}")
         
         db.session.commit()
         return operador
         
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f'❌ Erro ao sincronizar user/operador: {str(e)}')
+        print(f'❌ Erro ao sincronizar user/operador: {str(e)}')
         return None
 
 # ==================== FUNÇÃO AUXILIAR PARA VERIFICAR CONSISTÊNCIA ====================
@@ -208,3 +217,152 @@ def verificar_consistencia_user_operador():
                 })
     
     return inconsistencias
+
+# ==================== SINCRONIZAÇÃO DE ESTATÍSTICAS ====================
+def sincronizar_estatisticas_operadores():
+    """
+    Sincroniza as estatísticas dos operadores removendo registros órfãos
+    e recalculando as estatísticas baseado no que existe de verdade.
+    
+    Chamada quando partidas são deletadas diretamente do banco.
+    """
+    from models import PartidaParticipante, Partida, Operador
+    
+    try:
+        logging.info("🔄 Iniciando sincronização de estatísticas dos operadores...")
+        
+        # 1. ENCONTRAR E REMOVER PARTICIPANTES ÓRFÃOS
+        participantes_orfaos = PartidaParticipante.query.filter(
+            ~PartidaParticipante.partida_id.in_(
+                db.session.query(Partida.id)
+            )
+        ).all()
+        
+        orfaos_removidos = len(participantes_orfaos)
+        for pp in participantes_orfaos:
+            logging.info(f"🗑️ Removendo participante órfão (id={pp.id}, operador_id={pp.operador_id})")
+            db.session.delete(pp)
+        
+        if orfaos_removidos > 0:
+            db.session.commit()
+            logging.info(f"✅ {orfaos_removidos} participante(s) órfão(s) removido(s)")
+        
+        # 2. RECALCULAR ESTATÍSTICAS DE TODOS OS OPERADORES
+        operadores = Operador.query.all()
+        operadores_atualizados = 0
+        
+        for operador in operadores:
+            # Resetar todas as estatísticas
+            operador.total_kills = 0
+            operador.total_deaths = 0
+            operador.total_vitorias = 0
+            operador.total_derrotas = 0
+            operador.total_mvps = 0
+            operador.total_capturas = 0
+            operador.total_plantas_bomba = 0
+            operador.total_desarmes_bomba = 0
+            operador.total_refens = 0
+            operador.total_cacos = 0
+            operador.total_partidas = 0
+            
+            # Buscar TODOS os participantes válidos do operador
+            participantes = PartidaParticipante.query.filter_by(
+                operador_id=operador.id
+            ).all()
+            
+            # Somar estatísticas de cada participação
+            for pp in participantes:
+                # Verificar se a partida ainda existe (precaução extra)
+                partida = Partida.query.get(pp.partida_id)
+                if not partida:
+                    logging.warning(f"⚠️ Partida {pp.partida_id} do participante {pp.id} não existe, removendo...")
+                    db.session.delete(pp)
+                    continue
+                
+                # Se for partida finalizada, contar nas estatísticas
+                if partida.finalizada:
+                    operador.total_kills += pp.kills or 0
+                    operador.total_deaths += pp.deaths or 0
+                    operador.total_capturas += pp.capturas or 0
+                    operador.total_plantas_bomba += pp.plantou_bomba or 0
+                    operador.total_desarmes_bomba += pp.desarmou_bomba or 0
+                    operador.total_refens += pp.refens or 0
+                    operador.total_cacos += pp.cacou or 0
+                    operador.total_partidas += 1
+                    
+                    # Contar vitórias/derrotas
+                    if pp.resultado == 'vitoria':
+                        operador.total_vitorias += 1
+                    elif pp.resultado == 'derrota':
+                        operador.total_derrotas += 1
+                    
+                    # Contar MVPs
+                    if pp.mvp:
+                        operador.total_mvps += 1
+            
+            if operadores_atualizados % 10 == 0:
+                logging.info(f"  ✓ {operadores_atualizados} operador(es) recalculado(s)...")
+            
+            operadores_atualizados += 1
+        
+        db.session.commit()
+        logging.info(f"✅ Sincronização completa! {operadores_atualizados} operador(es) recalculado(s)")
+        
+        return {
+            'sucesso': True,
+            'orfaos_removidos': orfaos_removidos,
+            'operadores_recalculados': operadores_atualizados,
+            'mensagem': f'✅ Sincronização concluída: {orfaos_removidos} registros órfãos removidos, {operadores_atualizados} operadores recalculados'
+        }
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f'❌ Erro na sincronização: {str(e)}')
+        return {
+            'sucesso': False,
+            'mensagem': f'❌ Erro na sincronização: {str(e)}'
+        }
+
+def remover_estadisticas_partida(partida):
+    """
+    Remove as estatísticas de uma partida das estatísticas dos operadores.
+    Deve ser chamado ANTES de deletar a partida.
+    
+    Args:
+        partida: Objeto Partida a ter suas stats removidas
+    """
+    try:
+        for participante in partida.participantes:
+            operador = participante.operador
+            if operador:
+                # Remover kills/deaths
+                operador.total_kills = max(0, (operador.total_kills or 0) - (participante.kills or 0))
+                operador.total_deaths = max(0, (operador.total_deaths or 0) - (participante.deaths or 0))
+                
+                # Remover outras estatísticas
+                operador.total_capturas = max(0, (operador.total_capturas or 0) - (participante.capturas or 0))
+                operador.total_plantas_bomba = max(0, (operador.total_plantas_bomba or 0) - (participante.plantou_bomba or 0))
+                operador.total_desarmes_bomba = max(0, (operador.total_desarmes_bomba or 0) - (participante.desarmou_bomba or 0))
+                operador.total_refens = max(0, (operador.total_refens or 0) - (participante.refens or 0))
+                operador.total_cacos = max(0, (operador.total_cacos or 0) - (participante.cacou or 0))
+                operador.total_partidas = max(0, (operador.total_partidas or 0) - 1)
+                
+                # Remover vitória/derrota
+                if participante.resultado == 'vitoria':
+                    operador.total_vitorias = max(0, (operador.total_vitorias or 0) - 1)
+                elif participante.resultado == 'derrota':
+                    operador.total_derrotas = max(0, (operador.total_derrotas or 0) - 1)
+                
+                # Remover MVP
+                if participante.mvp:
+                    operador.total_mvps = max(0, (operador.total_mvps or 0) - 1)
+                
+                logging.info(f"📊 Estatísticas de {operador.warname} atualizadas (partida removida)")
+        
+        db.session.commit()
+        return True
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f'❌ Erro ao remover estatísticas da partida: {str(e)}')
+        return False

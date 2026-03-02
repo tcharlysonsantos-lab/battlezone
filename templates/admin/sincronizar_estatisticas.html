@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">⚠️ Sincronização de Estatísticas</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <h5>🔍 O que esta função faz:</h5>
+                        <ul class="mb-0">
+                            <li><strong>Remove registros órfãos:</strong> Deleta PartidaParticipante cujas partidas foram deletadas manualmente do banco</li>
+                            <li><strong>Recalcula estatísticas:</strong> Reseta e recalcula TODOS os dados (kills, deaths, vitórias, etc.) de cada operador</li>
+                            <li><strong>Conserta inconsistências:</strong> Se deletou partida diretamente no BD, corrige as estatísticas do operador</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-danger">
+                        <h5>⚠️ Aviso importante:</h5>
+                        <p class="mb-0">Esta operação é <strong>irreversível e reprocessará todos os dados</strong>. Certifique-se de que está pronto para executar.</p>
+                    </div>
+
+                    <form method="POST" class="mt-4">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1">
+                                🔄 Executar Sincronização
+                            </button>
+                            <a href="{{ url_for('admin_usuarios') }}" class="btn btn-secondary btn-lg flex-grow-1">
+                                ❌ Cancelar
+                            </a>
+                        </div>
+                    </form>
+
+                    <div class="alert alert-secondary mt-4">
+                        <h6>📋 Histórico de sincronizações:</h6>
+                        <p class="mb-0 text-muted">
+                            Verifique os logs do servidor para detalhes sobre sincronizações anteriores.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
