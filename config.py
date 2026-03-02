@@ -30,9 +30,19 @@ class Config:
     # Segurança
     SECRET_KEY = os.environ.get('SECRET_KEY')
     
-    # Banco de dados (usar caminho absoluto para SQLite no Windows)
+    # Banco de dados (compatível com SQLite local e PostgreSQL em produção)
+    # Railway passa DATABASE_URL automaticamente quando você adiciona PostgreSQL
     _db_path = INSTANCE_PATH / 'database.db'
-    SQLALCHEMY_DATABASE_URI = f'sqlite:///{_db_path}'
+    
+    # Se estiver em produção e há DATABASE_URL (Railway), usa PostgreSQL
+    # Caso contrário, usa SQLite local
+    if os.environ.get('DATABASE_URL'):
+        # Railway PostgreSQL
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    else:
+        # SQLite local (desenvolvimento e free tier Railway)
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{_db_path}'
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Sessões
