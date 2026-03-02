@@ -45,7 +45,7 @@ class SolicitacaoForm(FlaskForm):
     confirmar_senha = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('senha')])
     
     def validate_cpf(self, field):
-        from models import Operador, User, Solicitacao
+        from .models import Operador, User, Solicitacao
         
         if not validar_cpf(field.data):
             raise ValidationError('CPF inválido')
@@ -72,7 +72,7 @@ class SolicitacaoForm(FlaskForm):
             raise ValidationError('❌ Já existe uma solicitação pendente com este CPF')
     
     def validate_nome(self, field):
-        from models import Operador, User, Solicitacao
+        from .models import Operador, User, Solicitacao
         
         # Verificar se nome já existe em operador
         operador = Operador.query.filter_by(nome=field.data).first()
@@ -94,7 +94,7 @@ class SolicitacaoForm(FlaskForm):
             raise ValidationError('❌ Já existe uma solicitação pendente com este nome')
     
     def validate_usuario(self, field):
-        from models import Operador, User, Solicitacao
+        from .models import Operador, User, Solicitacao
         
         # Verificar se warname já existe em operador
         operador = Operador.query.filter_by(warname=field.data).first()
@@ -116,7 +116,7 @@ class SolicitacaoForm(FlaskForm):
             raise ValidationError('❌ Já existe uma solicitação pendente com este warname')
     
     def validate_email(self, field):
-        from models import Operador, User, Solicitacao
+        from .models import Operador, User, Solicitacao
         
         # Verificar se email já existe em operador
         operador = Operador.query.filter_by(email=field.data).first()
@@ -164,7 +164,7 @@ class SolicitacaoForm(FlaskForm):
         
         # VALIDAÇÃO GLOBAL: Verificar operador com dados exatos
         # Isso permite auto-criar usuário quando operador existe com mesmos 4 dados
-        from models import Operador
+        from .models import Operador
         
         operador_exato = Operador.query.filter_by(
             nome=self.nome.data,
@@ -198,7 +198,7 @@ class OperadorForm(FlaskForm):
             self.id = kwargs['obj'].id
     
     def validate_nome(self, field):
-        from models import Operador
+        from .models import Operador
         # Se for edição (tem id) e o nome não mudou, permite
         if hasattr(self, 'id') and self.id:
             operador = Operador.query.get(self.id)
@@ -209,7 +209,7 @@ class OperadorForm(FlaskForm):
             raise ValidationError('❌ Nome já cadastrado')
     
     def validate_warname(self, field):
-        from models import Operador
+        from .models import Operador
         # Se for edição (tem id) e o warname não mudou, permite
         if hasattr(self, 'id') and self.id:
             operador = Operador.query.get(self.id)
@@ -220,7 +220,7 @@ class OperadorForm(FlaskForm):
             raise ValidationError('❌ Warname já existe')
     
     def validate_email(self, field):
-        from models import Operador
+        from .models import Operador
         # Se for edição (tem id) e o email não mudou, permite
         if hasattr(self, 'id') and self.id:
             operador = Operador.query.get(self.id)
@@ -237,7 +237,7 @@ class OperadorForm(FlaskForm):
                 raise ValidationError('❌ Telefone inválido')
     
     def validate_cpf(self, field):
-        from models import Operador
+        from .models import Operador
         
         if not field.data:
             raise ValidationError('❌ CPF é obrigatório')

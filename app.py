@@ -13,21 +13,23 @@ import logging
 # Importar configuração (NOVO)
 from config import config as app_config
 
-# Importar módulos
-from models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao
-from auth import auth_bp
-from decorators import requer_permissao, operador_session_required, admin_required
-from utils import get_valores_plano, get_modos_permitidos, PLANOS_WARFIELD, PLANOS_REDLINE
-from cloud_manager import CloudManager
-from forms import OperadorForm, EquipeForm, PartidaForm, VendaForm, EstoqueForm
-from security_utils import allowed_file_secure, safe_filename_with_timestamp, create_upload_directory
+# Importar módulos do backend
+from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao
+from backend.auth import auth_bp
+from backend.decorators import requer_permissao, operador_session_required, admin_required
+from backend.utils import get_valores_plano, get_modos_permitidos, PLANOS_WARFIELD, PLANOS_REDLINE
+from backend.cloud_manager import CloudManager
+from backend.forms import OperadorForm, EquipeForm, PartidaForm, VendaForm, EstoqueForm
+from backend.security_utils import allowed_file_secure, safe_filename_with_timestamp, create_upload_directory
 
 # ==================== CONFIGURAR LOGGING ====================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ==================== INICIALIZAR APP ====================
-app = Flask(__name__)
+app = Flask(__name__, 
+            template_folder='frontend/templates',
+            static_folder='frontend/static')
 
 # CARREGAR CONFIGURAÇÃO DO config.py (NOVO)
 app.config.from_object(app_config)

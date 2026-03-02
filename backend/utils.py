@@ -1,6 +1,6 @@
 # utils.py
 from datetime import datetime
-from models import Operador, db  # ← IMPORT CORRIGIDO
+from .models import Operador, db
 import logging
 
 # Cores do tema (para CSS)
@@ -136,7 +136,7 @@ def sincronizar_user_operador(user):
             user.operador_id = operador.id
             
             # Registrar log (import aqui para evitar circular)
-            from models import Log
+            from .models import Log
             log = Log(
                 usuario=user.username,
                 acao='OPERADOR_CRIADO_AUTO',
@@ -184,7 +184,7 @@ def verificar_consistencia_user_operador():
     """
     Verifica se todos os usuários têm operadores correspondentes
     """
-    from models import User  # Import aqui para evitar circular
+    from .models import User  # Import aqui para evitar circular
     
     inconsistencias = []
     
@@ -226,7 +226,7 @@ def sincronizar_estatisticas_operadores():
     
     Chamada quando partidas são deletadas diretamente do banco.
     """
-    from models import PartidaParticipante, Partida, Operador
+    from .models import PartidaParticipante, Partida, Operador
     
     try:
         logging.info("🔄 Iniciando sincronização de estatísticas dos operadores...")

@@ -160,7 +160,7 @@ def log_security_event(user, event_type, details, ip_address=None):
     Returns:
         dict: Log formatado
     """
-    from models import Log, db
+    from .models import Log, db
     
     log = Log(
         usuario=user,

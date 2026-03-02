@@ -122,7 +122,7 @@ class User(UserMixin, db.Model):
     # ==================== 2FA METHODS ====================
     def setup_2fa(self):
         """Inicia setup de 2FA (gera secret)"""
-        from auth_security import gerar_secret_2fa, gerar_backup_codes
+        from .auth_security import gerar_secret_2fa, gerar_backup_codes
         
         self.two_factor_secret = gerar_secret_2fa()
         backup_codes = gerar_backup_codes()

@@ -4,7 +4,7 @@
 
 import sys
 from app import app, db
-from models import Partida, PartidaParticipante, Venda, Estoque
+from .models import Partida, PartidaParticipante, Venda, Estoque
 
 def delete_all_data():
     with app.app_context():

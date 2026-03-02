@@ -1,15 +1,15 @@
 # auth.py - ATUALIZADO COM SEGURANÇA
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from models import db, User, Solicitacao, Log, Operador
-from forms import LoginForm, SolicitacaoForm
+from .models import db, User, Solicitacao, Log, Operador
+from .forms import LoginForm, SolicitacaoForm
 from datetime import datetime
 import secrets
 import json
 from werkzeug.security import generate_password_hash
 
 # Importar funções de segurança
-from auth_security import (
+from .auth_security import (
     rate_limiter, 
     log_login_attempt,
     log_security_event,
@@ -260,7 +260,7 @@ def verify_2fa():
 @login_required
 def setup_2fa():
     """Setup inicial de 2FA"""
-    from auth_security import gerar_qr_code
+    from .auth_security import gerar_qr_code
     
     user = current_user
     

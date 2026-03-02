@@ -158,7 +158,7 @@ def log_security_event(event_type, username=None, ip_address=None, details=None)
         ip_address (str): IP do cliente
         details (dict): Detalhes adicionais
     """
-    from models import Log, db
+    from .models import Log, db
     
     try:
         log = Log(
