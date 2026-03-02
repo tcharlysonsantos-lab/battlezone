@@ -1,5 +1,5 @@
 from app import app, db
-from models import Equipe, User, Operador  # ← IMPORT ADICIONADO!
+from backend.models import Equipe, User, Operador  # ← IMPORT ADICIONADO!
 from sqlalchemy import inspect, text
 
 with app.app_context():

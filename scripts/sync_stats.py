@@ -8,7 +8,7 @@ Uso:
 """
 
 from app import app, db
-from models import Operador, PartidaParticipante, Partida
+from backend.models import Operador, PartidaParticipante, Partida
 import logging
 
 # Configurar logging

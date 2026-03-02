@@ -1,5 +1,12 @@
+import sys
+import os
+from pathlib import Path
+
+# Adicionar diretório pai ao path para importar app
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from app import app, db
-from models import User, EquipeMembros, Solicitacao, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log
+from backend.models import User, EquipeMembros, Solicitacao, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log
 from werkzeug.security import generate_password_hash
 import secrets
 
