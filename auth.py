@@ -88,13 +88,8 @@ def solicitar_acesso():
     
     if form.validate_on_submit():
         try:
-            # VERIFICAR SE JÁ EXISTE OPERADOR COM ESTES DADOS EXATOS
-            operador = Operador.query.filter_by(
-                nome=form.nome.data,
-                warname=form.usuario.data,
-                email=form.email.data,
-                cpf=form.cpf.data
-            ).first()
+            # A validação global do formulário já verificou se existe operador com os 4 dados iguais
+            operador = getattr(form, 'operador_encontrado', None)
             
             if operador:
                 # Já existe operador com todos os dados iguais

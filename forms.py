@@ -155,6 +155,31 @@ class SolicitacaoForm(FlaskForm):
             self.idade_calculada = idade
         except ValueError:
             raise ValidationError('Data inválida. Use DD/MM/AAAA')
+    
+    def validate(self, extra_validators=None):
+        """Validação global do formulário - roda APÓS validações individuais"""
+        # Chamar validação padrão primeiro
+        if not super().validate(extra_validators=extra_validators):
+            return False
+        
+        # VALIDAÇÃO GLOBAL: Verificar operador com dados exatos
+        # Isso permite auto-criar usuário quando operador existe com mesmos 4 dados
+        from models import Operador
+        
+        operador_exato = Operador.query.filter_by(
+            nome=self.nome.data,
+            warname=self.usuario.data,
+            email=self.email.data,
+            cpf=self.cpf.data
+        ).first()
+        
+        # Se operador exato existe, marcar para auto-criação (não erra aqui)
+        if operador_exato:
+            self.operador_encontrado = operador_exato
+        else:
+            self.operador_encontrado = None
+        
+        return True
 
 # ==================== FORMULÁRIO DE OPERADOR ====================
 class OperadorForm(FlaskForm):

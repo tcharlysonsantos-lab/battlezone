@@ -165,7 +165,7 @@ def main():
         # Iniciar app
         app.run(
             debug=config.DEBUG,
-            host='127.0.0.1',  # Apenas localhost (mais seguro)
+            host='0.0.0.0',  # Escuta em todas as interfaces (necessário para Ngrok)
             port=5000,
             use_reloader=config.DEBUG
         )

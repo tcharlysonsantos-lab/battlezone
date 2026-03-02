@@ -37,19 +37,32 @@ app.config.from_object(app_config)
 csrf = CSRFProtect(app)
 
 # 2. Headers de Segurança (NOVO)
-Talisman(app, 
-    force_https=app.config['SESSION_COOKIE_SECURE'],  # HTTPS apenas em produção
-    strict_transport_security=True,
-    strict_transport_security_max_age=31536000,  # 1 ano
-    content_security_policy={
-        'default-src': "'self'",
-        'script-src': ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
-        'style-src': ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "fonts.googleapis.com"],
-        'img-src': ["'self'", 'data:', 'https:'],
-        'font-src': ["'self'", 'data:', 'fonts.gstatic.com'],
-        'connect-src': ["'self'"],
-    }
-)
+# Configuração de CSP com todos os domínios necessários
+csp_config = {
+    'default-src': "'self'",
+    'script-src': ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "code.jquery.com"],
+    'style-src': ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "fonts.googleapis.com", "cdnjs.cloudflare.com"],
+    'img-src': ["'self'", 'data:', 'https:'],
+    'font-src': ["'self'", 'data:', 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'https:'],  # Permitir fontes HTTPS
+    'connect-src': ["'self'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],  # Permitir source maps
+}
+
+# Em desenvolvimento, desabilitar algumas proteções do Talisman para permitir HTTP
+if app.config['DEBUG']:
+    # Desenvolvimento: permitir HTTP
+    Talisman(app, 
+        force_https=False,  # Permitir HTTP em desenvolvimento
+        strict_transport_security=False,
+        content_security_policy=csp_config
+    )
+else:
+    # Produção: segurança completa com HTTPS
+    Talisman(app, 
+        force_https=True,
+        strict_transport_security=True,
+        strict_transport_security_max_age=31536000,  # 1 ano
+        content_security_policy=csp_config
+    )
 
 # 3. Rate Limiting (NOVO)
 limiter = Limiter(

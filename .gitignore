@@ -36,3 +36,8 @@ config.local.py
 backups/
 *.bak
 *.tmp
+
+# ==================== NGROK ====================
+.env.ngrok
+.ngrok/
+logs/ngrok*.log
