@@ -24,11 +24,11 @@ def init_mail(app):
     global mail
     
     if not HAS_FLASK_MAIL:
-        logger.warning("⚠️ Email service not available - Flask-Mail not installed")
+        logger.warning("[AVISO] Email service not available - Flask-Mail not installed")
         return
     
     mail = Mail(app)
-    logger.info("✅ Email service initialized")
+    logger.info("[OK] Email service initialized")
 
 
 def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = None) -> bool:

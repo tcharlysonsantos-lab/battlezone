@@ -41,7 +41,6 @@ def criar_pastas_necessarias():
     pastas = [
         'logs',
         'backups_local/metadata',
-        'frontend/static/uploads/videos',
         'frontend/static/uploads/galeria',
         'frontend/static/uploads/hero',
         'instance'
@@ -53,7 +52,7 @@ def criar_pastas_necessarias():
         except (OSError, FileExistsError) as e:
             # Se a pasta já existe, não é um erro
             if not os.path.isdir(pasta):
-                print(f"⚠️ Aviso: Não foi possível criar {pasta}: {e}")
+                print(f"[AVISO] Nao foi possivel criar {pasta}: {e}")
 
 # Criar pastas na inicialização
 criar_pastas_necessarias()
