@@ -303,6 +303,11 @@ def terms():
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     """Requisitar reset de senha"""
+    # DEBUG: Log de cookies e sessão
+    print(f"DEBUG - Method: {request.method}")
+    print(f"DEBUG - Cookies: {request.cookies}")
+    print(f"DEBUG - Form data: {request.form}")
+    
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     

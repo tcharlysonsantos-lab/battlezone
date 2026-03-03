@@ -93,6 +93,15 @@ if not app.config['DEBUG']:
 # 1. CSRF Protection
 csrf = CSRFProtect(app)
 
+# Handler para erros CSRF
+@app.errorhandler(400)
+def csrf_error(e):
+    """Tratar erros CSRF"""
+    print(f"[CSRF ERROR] {e}")
+    import traceback
+    traceback.print_exc()
+    return {'error': f'Request inválido: {str(e)}'}, 400
+
 # 2. Headers de Segurança (NOVO)
 # Configuração de CSP com todos os domínios necessários
 csp_config = {
