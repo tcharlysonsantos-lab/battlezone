@@ -32,6 +32,13 @@ from backend.security_middleware import (
 )
 from backend.security_config import SESSION_CONFIG, RATELIMIT
 
+# ==================== CRIAR PASTAS NECESSÁRIAS ====================
+os.makedirs('logs', exist_ok=True)
+os.makedirs('backups_local/metadata', exist_ok=True)
+os.makedirs('frontend/static/uploads/videos', exist_ok=True)
+os.makedirs('frontend/static/uploads/galeria', exist_ok=True)
+os.makedirs('frontend/static/uploads/hero', exist_ok=True)
+
 # ==================== CONFIGURAR LOGGING ====================
 logging.basicConfig(
     level=logging.INFO,
