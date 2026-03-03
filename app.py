@@ -22,8 +22,25 @@ from backend.cloud_manager import CloudManager
 from backend.forms import OperadorForm, EquipeForm, PartidaForm, VendaForm, EstoqueForm
 from backend.security_utils import allowed_file_secure, safe_filename_with_timestamp, create_upload_directory
 
+# Importar segurança (NOVO)
+from backend.security_middleware import (
+    add_security_headers, 
+    validar_entrada,
+    log_security_event,
+    verificar_rate_limit_login,
+    registrar_tentativa_login
+)
+from backend.security_config import SESSION_CONFIG, RATELIMIT
+
 # ==================== CONFIGURAR LOGGING ====================
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/app.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 # ==================== INICIALIZAR APP ====================
@@ -102,6 +119,11 @@ def before_request():
             flash('Sessão expirada por inatividade (5 minutos).', 'warning')
             return redirect(url_for('auth.login'))
         current_user.update_activity()
+
+@app.after_request
+def after_request(response):
+    """Adicionar headers de segurança a TODAS as respostas"""
+    return add_security_headers(response)
 
 # ==================== USER LOADER ====================
 @login_manager.user_loader
