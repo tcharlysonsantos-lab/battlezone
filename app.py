@@ -1755,7 +1755,6 @@ def nova_partida():
     Inclui validação de pagamento de operadores
     """
     from datetime import datetime
-    from backend.validadores_pagamento import validar_pagamentos_partida
     
     # ===== VARIÁVEIS DO TEMPLATE =====
     titulo = 'Nova Partida'
@@ -1951,24 +1950,6 @@ def nova_partida():
                 flash('⚠️ Item "BBs" não encontrado no estoque! Cadastre primeiro.', 'warning')
             elif item_bbs.quantidade < total_bbs:
                 flash(f'❌ Estoque insuficiente de BBs! Disponível: {item_bbs.quantidade} unidades', 'danger')
-                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
-            
-            # ===== VALIDAR PAGAMENTO DOS OPERADORES =====
-            validacao_pagamento = validar_pagamentos_partida(participantes_ids)
-            
-            if not validacao_pagamento['valido']:
-                # Bloquear criação da partida
-                mensagem_erro = (
-                    '<div class="alert alert-danger" style="text-align: left;">'
-                    '<h5>⚠️ <strong>Operadores com Pagamento Pendente</strong></h5>'
-                    '<p>A partida <strong>não pode ser agendada</strong> enquanto houver operadores com pagamento pendente ou vencido:</p>'
-                    '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #dc3545; margin: 10px 0;">' +
-                    validacao_pagamento['mensagem_erro'] +
-                    '</div>'
-                    '<p><strong>Ação:</strong> Registre o pagamento destes operadores antes de criar a partida.</p>'
-                    '</div>'
-                )
-                flash(mensagem_erro, 'danger')
                 return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
             
             # ===== PAGAMENTO =====
