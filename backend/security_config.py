@@ -31,14 +31,78 @@ SESSION_CONFIG = {
 # ==================== PASSWORD POLICY ====================
 
 PASSWORD_POLICY = {
-    'min_length': 8,
+    'min_length': 10,  # Aumentado de 8
     'require_uppercase': True,
     'require_lowercase': True,
     'require_numbers': True,
-    'require_special': False,  # Opcional baseado em UX
+    'require_special': True,  # Agora obrigatório para maior segurança
+    'no_sequential_chars': True,  # Não permitir 123, abc, xyz, etc.
+    'no_repeated_chars': True,  # Não permitir aaa, 111, @@@ etc.
     'max_age_days': 90,  # Expirar senha após 90 dias
     'history': 5,  # Não permitir últimas 5 senhas
 }
+
+# ==================== PASSWORD VALIDATORS ====================
+
+def validar_forca_senha(senha):
+    """
+    Valida a força da senha conforme PASSWORD_POLICY
+    
+    Retorna: (is_valid: bool, mensagens: list)
+    """
+    mensagens = []
+    policy = PASSWORD_POLICY
+    
+    # 1. Comprimento mínimo
+    if len(senha) < policy['min_length']:
+        mensagens.append(f"Mínimo de {policy['min_length']} caracteres")
+    
+    # 2. Letra maiúscula
+    if policy['require_uppercase'] and not any(c.isupper() for c in senha):
+        mensagens.append("Deve conter pelo menos uma letra MAIÚSCULA")
+    
+    # 3. Letra minúscula
+    if policy['require_lowercase'] and not any(c.islower() for c in senha):
+        mensagens.append("Deve conter pelo menos uma letra minúscula")
+    
+    # 4. Número
+    if policy['require_numbers'] and not any(c.isdigit() for c in senha):
+        mensagens.append("Deve conter pelo menos um número (0-9)")
+    
+    # 5. Caractere especial
+    if policy['require_special']:
+        especiais = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if not any(c in especiais for c in senha):
+            mensagens.append("Deve conter pelo menos um caractere especial (!@#$%^&*)")
+    
+    # 6. Sem caracteres sequenciais (123, abc, xyz, etc.)
+    if policy['no_sequential_chars']:
+        # Verificar sequências numéricas
+        for i in range(len(senha) - 2):
+            if senha[i:i+3].isdigit():
+                seq = int(senha[i:i+3])
+                # Verificar se é sequencial (123, 234, ... 789, 012)
+                if (ord(senha[i+1]) - ord(senha[i]) == 1 and 
+                    ord(senha[i+2]) - ord(senha[i+1]) == 1):
+                    mensagens.append("Não use sequências numéricas (123, 456, etc)")
+                    break
+            
+            # Verificar sequências alfabéticas
+            if senha[i:i+3].isalpha():
+                if (ord(senha[i+1].lower()) - ord(senha[i].lower()) == 1 and 
+                    ord(senha[i+2].lower()) - ord(senha[i+1].lower()) == 1):
+                    mensagens.append("Não use sequências alfabéticas (abc, xyz, etc)")
+                    break
+    
+    # 7. Sem caracteres repetidos excessivamente (aaa, 111, etc.)
+    if policy['no_repeated_chars']:
+        for i in range(len(senha) - 2):
+            if senha[i] == senha[i+1] == senha[i+2]:
+                mensagens.append("Não repita caracteres mais de 2 vezes (aaa, 111, etc)")
+                break
+    
+    return len(mensagens) == 0, mensagens
+
 
 # ==================== 2FA / MFA ====================
 

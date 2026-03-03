@@ -88,6 +88,11 @@ def solicitar_acesso():
     
     if form.validate_on_submit():
         try:
+            # Validar aceitação dos termos
+            if not form.terms_accepted.data:
+                flash('❌ Você deve aceitar os Termos de Serviço para continuar.', 'danger')
+                return render_template('auth/solicitar.html', form=form)
+            
             # A validação global do formulário já verificou se existe operador com os 4 dados iguais
             operador = getattr(form, 'operador_encontrado', None)
             
@@ -114,7 +119,9 @@ def solicitar_acesso():
                     status='aprovado',
                     salt=salt,
                     password_hash=generate_password_hash(form.senha.data + salt),
-                    operador_id=operador.id
+                    operador_id=operador.id,
+                    terms_accepted=True,
+                    terms_accepted_date=datetime.utcnow()
                 )
                 
                 db.session.add(user)
@@ -122,7 +129,7 @@ def solicitar_acesso():
                 log = Log(
                     usuario=form.usuario.data,
                     acao='USUARIO_CRIADO_VINCULADO',
-                    detalhes=f"Usuário vinculado ao operador {operador.warname}"
+                    detalhes=f"Usuário vinculado ao operador {operador.warname} - Termos aceitos"
                 )
                 db.session.add(log)
                 db.session.commit()
@@ -172,7 +179,9 @@ def solicitar_acesso():
                 nivel='operador',
                 password_hash=generate_password_hash(form.senha.data + salt),
                 salt=salt,
-                status='pendente'
+                status='pendente',
+                terms_accepted=True,
+                terms_accepted_date=datetime.utcnow()
             )
             
             db.session.add(solicitacao)
@@ -180,7 +189,7 @@ def solicitar_acesso():
             log = Log(
                 usuario=form.usuario.data,
                 acao='SOLICITACAO_CRIADA',
-                detalhes=f"Nome: {form.nome.data} | Email: {form.email.data}"
+                detalhes=f"Nome: {form.nome.data} | Email: {form.email.data} | Termos aceitos"
             )
             db.session.add(log)
             db.session.commit()
@@ -332,6 +341,14 @@ def logout():
     
     flash('Você saiu do sistema.', 'info')
     return redirect(url_for('auth.login'))
+
+
+# ==================== TERMS OF SERVICE ROUTE ====================
+
+@auth_bp.route('/terms')
+def terms():
+    """Exibe os Termos de Serviço"""
+    return render_template('auth/terms.html')
 
 
 # ==================== PASSWORD RESET ROUTES ====================

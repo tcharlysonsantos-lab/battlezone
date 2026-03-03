@@ -1,7 +1,7 @@
 # forms.py - ATUALIZADO
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SelectField, IntegerField
+from wtforms import StringField, PasswordField, SelectField, IntegerField, BooleanField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Optional
 from datetime import datetime
 import re
@@ -43,6 +43,7 @@ class SolicitacaoForm(FlaskForm):
     data_nascimento = StringField('Data de Nascimento', validators=[DataRequired()])
     senha = PasswordField('Senha', validators=[DataRequired(), Length(min=6)])
     confirmar_senha = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('senha')])
+    terms_accepted = BooleanField('Aceito os Termos de Serviço e Política de Privacidade', validators=[DataRequired()])
     
     def validate_cpf(self, field):
         from .models import Operador, User, Solicitacao
@@ -155,6 +156,16 @@ class SolicitacaoForm(FlaskForm):
             self.idade_calculada = idade
         except ValueError:
             raise ValidationError('Data inválida. Use DD/MM/AAAA')
+    
+    def validate_senha(self, field):
+        """Valida força da senha conforme PASSWORD_POLICY"""
+        from .security_config import validar_forca_senha
+        
+        is_valid, mensagens = validar_forca_senha(field.data)
+        if not is_valid:
+            # Criar mensagem amigável
+            msg_completa = "Senha fraca. Requisitos: " + " | ".join(mensagens)
+            raise ValidationError(msg_completa)
     
     def validate(self, extra_validators=None):
         """Validação global do formulário - roda APÓS validações individuais"""

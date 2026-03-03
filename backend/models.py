@@ -56,6 +56,10 @@ class User(UserMixin, db.Model):
     password_reset_token = db.Column(db.String(100), unique=True, nullable=True)
     password_reset_expires = db.Column(db.DateTime, nullable=True)
     
+    # ==================== TERMS OF SERVICE FIELDS ====================
+    terms_accepted = db.Column(db.Boolean, default=False)
+    terms_accepted_date = db.Column(db.DateTime, nullable=True)
+    
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
         if 'salt' not in kwargs:
@@ -238,6 +242,10 @@ class Solicitacao(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     approved_at = db.Column(db.DateTime, nullable=True)
     approved_by = db.Column(db.String(80), nullable=True)
+    
+    # ==================== TERMS OF SERVICE FIELDS ====================
+    terms_accepted = db.Column(db.Boolean, default=False)
+    terms_accepted_date = db.Column(db.DateTime, nullable=True)
 
 
 # ==================== MODELO DE OPERADOR ====================

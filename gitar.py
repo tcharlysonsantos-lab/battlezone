@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Gitar.py - Script para automatizar BACKUP + COMMIT + PUSH no GitHub
-Use: python gitar.py (após usar: python push.py)
+Use: python gitar.py (após usar: python pull.py)
 Etapas: Backup → Commit → Push
 """
 
