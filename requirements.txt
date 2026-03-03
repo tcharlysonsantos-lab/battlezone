@@ -18,13 +18,13 @@ cryptography==41.0.7
 email-validator==2.1.0
 
 # MIME Type Detection (para validar upload)
-python-magic-bin==0.4.14
+python-magic==0.4.27
 
 # Werkzeug (já vem com Flask, mas especificar versão)
 Werkzeug==3.0.1
 
 # Database (PostgreSQL para produção)
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.11
 
 # WSGI Server (para produção Railway)
 gunicorn==21.2.0
