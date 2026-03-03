@@ -146,6 +146,7 @@
                                     <form method="POST" action="{{ url_for('pagamentos.deletar_pagamento', id=pag.id) }}" 
                                           style="display: inline;" 
                                           onsubmit="return confirm('Tem certeza?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Deletar">
                                             <i class="fas fa-trash"></i>
                                         </button>
