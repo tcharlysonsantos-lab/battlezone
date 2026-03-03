@@ -33,11 +33,27 @@ from backend.security_middleware import (
 from backend.security_config import SESSION_CONFIG, RATELIMIT
 
 # ==================== CRIAR PASTAS NECESSÁRIAS ====================
-os.makedirs('logs', exist_ok=True)
-os.makedirs('backups_local/metadata', exist_ok=True)
-os.makedirs('frontend/static/uploads/videos', exist_ok=True)
-os.makedirs('frontend/static/uploads/galeria', exist_ok=True)
-os.makedirs('frontend/static/uploads/hero', exist_ok=True)
+def criar_pastas_necessarias():
+    """Cria pastas necessárias se não existirem"""
+    pastas = [
+        'logs',
+        'backups_local/metadata',
+        'frontend/static/uploads/videos',
+        'frontend/static/uploads/galeria',
+        'frontend/static/uploads/hero',
+        'instance'
+    ]
+    
+    for pasta in pastas:
+        try:
+            os.makedirs(pasta, exist_ok=True)
+        except (OSError, FileExistsError) as e:
+            # Se a pasta já existe, não é um erro
+            if not os.path.isdir(pasta):
+                print(f"⚠️ Aviso: Não foi possível criar {pasta}: {e}")
+
+# Criar pastas na inicialização
+criar_pastas_necessarias()
 
 # ==================== CONFIGURAR LOGGING ====================
 logging.basicConfig(
