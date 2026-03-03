@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Pagamentos de Operadores{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-5">
+    
+    <!-- CABEÇALHO -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-credit-card me-2" style="color: #FF6B00;"></i>Pagamentos de Operadores</h2>
+            <p class="text-muted">Registre e acompanhe os pagamentos para agendar partidas</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{{ url_for('pagamentos.registrar_pagamento') }}" class="btn btn-success btn-lg">
+                <i class="fas fa-plus me-2"></i>Registrar Novo Pagamento
+            </a>
+        </div>
+    </div>
+
+    <!-- ESTATÍSTICAS -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Total de Operadores</h5>
+                    <h2 style="color: #3498db;">{{ stats.total_operadores }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-success bg-opacity-10">
+                <div class="card-body">
+                    <h5 class="card-title text-success">Pagamento Ativo</h5>
+                    <h2 style="color: #28a745;">{{ stats.com_pagamento_ativo }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning bg-opacity-10">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">Vencido</h5>
+                    <h2 style="color: #ffc107;">{{ stats.com_pagamento_vencido }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-danger bg-opacity-10">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">Pendente</h5>
+                    <h2 style="color: #dc3545;">{{ stats.com_pendencia }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label"><i class="fas fa-user me-2"></i>Operador</label>
+                    <select name="operador_id" class="form-select">
+                        <option value="">-- Todos os Operadores --</option>
+                        {% for op in operadores %}
+                            <option value="{{ op.id }}" {% if operador_id_filtro == op.id|string %}selected{% endif %}>
+                                {{ op.warname }} ({{ op.nome }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label"><i class="fas fa-filter me-2"></i>Status</label>
+                    <select name="status" class="form-select">
+                        <option value="todos" {% if status_filtro == 'todos' %}selected{% endif %}>Todos</option>
+                        <option value="Pago" {% if status_filtro == 'Pago' %}selected{% endif %}>✅ Pago</option>
+                        <option value="Parcial" {% if status_filtro == 'Parcial' %}selected{% endif %}>⚠️ Parcial</option>
+                        <option value="Pendente" {% if status_filtro == 'Pendente' %}selected{% endif %}>❌ Pendente</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-2"></i>Filtrar
+                    </button>
+                    <a href="{{ url_for('pagamentos.listar_pagamentos') }}" class="btn btn-secondary">
+                        <i class="fas fa-redo me-2"></i>Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TABELA DE PAGAMENTOS -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                    <tr>
+                        <th><i class="fas fa-user me-2"></i>Operador</th>
+                        <th><i class="fas fa-tag me-2"></i>Warname</th>
+                        <th><i class="fas fa-money-bill me-2"></i>Valor</th>
+                        <th><i class="fas fa-check-circle me-2"></i>Status</th>
+                        <th><i class="fas fa-calendar me-2"></i>Data de Pagamento</th>
+                        <th><i class="fas fa-credit-card me-2"></i>Método</th>
+                        <th style="width: 150px;"><i class="fas fa-cog me-2"></i>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if pagamentos %}
+                        {% for pag in pagamentos %}
+                            {% set dias_passados = (now() - pag.data_pagamento).days if pag.data_pagamento else 999 %}
+                            {% set classe_status = 'success' if pag.status == 'Pago' and dias_passados <= 30 else 'warning' if pag.status == 'Parcial' else 'danger' %}
+                            {% set icone_status = '✅' if pag.status == 'Pago' and dias_passados <= 30 else '⏰' if dias_passados > 30 else '⚠️' %}
+                            
+                            <tr>
+                                <td><strong>{{ pag.operador.nome }}</strong></td>
+                                <td>{{ pag.operador.warname }}</td>
+                                <td><strong>R$ {{ "%.2f"|format(pag.valor_pago) }}</strong></td>
+                                <td>
+                                    <span class="badge bg-{{ classe_status }}">
+                                        {{ icone_status }} {{ pag.status }}
+                                        {% if pag.status == 'Pago' and dias_passados > 30 %}
+                                            <small>(vencido há {{ dias_passados - 30 }} dias)</small>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if pag.data_pagamento %}
+                                        {{ pag.data_pagamento.strftime('%d/%m/%Y às %H:%M') }}
+                                    {% else %}
+                                        <em class="text-muted">Não pago</em>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if pag.metodo_pagamento %}
+                                        {{ pag.metodo_pagamento }}
+                                    {% else %}
+                                        <em class="text-muted">-</em>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('pagamentos.editar_pagamento', id=pag.id) }}" 
+                                       class="btn btn-sm btn-outline-primary" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form method="POST" action="{{ url_for('pagamentos.deletar_pagamento', id=pag.id) }}" 
+                                          style="display: inline;" 
+                                          onsubmit="return confirm('Tem certeza?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Deletar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <p class="text-muted mb-0">
+                                    <i class="fas fa-inbox fa-2x mb-3 d-block"></i>
+                                    Nenhum pagamento registrado
+                                </p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+
+{% endblock %}

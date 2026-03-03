@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Pagamento{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header" style="background-color: #FF6B00; color: white;">
+                    <h4 class="mb-0">
+                        <i class="fas fa-credit-card me-2"></i>Registrar Novo Pagamento
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    
+                    <!-- Aviso explicativo -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Importante:</strong> O pagamento registrado aqui será válido para <strong>qualquer partida por 30 dias</strong>. 
+                        Após este período, o operador precisará fazer novo pagamento para participar.
+                    </div>
+
+                    <form method="POST">
+                        
+                        <!-- OPERADOR -->
+                        <div class="mb-3">
+                            <label for="operador_id" class="form-label">
+                                <i class="fas fa-user me-2"></i><strong>Operador</strong>
+                            </label>
+                            <select name="operador_id" id="operador_id" class="form-select form-select-lg" required>
+                                <option value="">-- Selecione um Operador --</option>
+                                {% for op in operadores %}
+                                    <option value="{{ op.id }}">
+                                        {{ op.warname }} - {{ op.nome }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Operador que está pagando</small>
+                        </div>
+
+                        <!-- VALOR -->
+                        <div class="mb-3">
+                            <label for="valor" class="form-label">
+                                <i class="fas fa-money-bill-wave me-2"></i><strong>Valor (R$)</strong>
+                            </label>
+                            <input type="number" name="valor" id="valor" class="form-control form-control-lg" 
+                                   placeholder="0.00" step="0.01" required>
+                            <small class="text-muted">Valor do pagamento realizado</small>
+                        </div>
+
+                        <!-- MÉTODO DE PAGAMENTO -->
+                        <div class="mb-3">
+                            <label for="metodo" class="form-label">
+                                <i class="fas fa-credit-card me-2"></i><strong>Método de Pagamento</strong>
+                            </label>
+                            <select name="metodo" id="metodo" class="form-select">
+                                <option value="">-- Selecione --</option>
+                                <option value="PIX">💳 PIX</option>
+                                <option value="Dinheiro">💰 Dinheiro</option>
+                                <option value="Débito">💳 Débito</option>
+                                <option value="Crédito">💳 Crédito</option>
+                                <option value="Transferência">🏦 Transferência</option>
+                            </select>
+                            <small class="text-muted">Como o operador pagou (opcional)</small>
+                        </div>
+
+                        <!-- OBSERVAÇÕES -->
+                        <div class="mb-4">
+                            <label for="observacoes" class="form-label">
+                                <i class="fas fa-sticky-note me-2"></i>Observações
+                            </label>
+                            <textarea name="observacoes" id="observacoes" class="form-control" rows="3" 
+                                      placeholder="Exemplo: Pagamento confirmado via PIX..."></textarea>
+                            <small class="text-muted">Adicione comentários sobre o pagamento (opcional)</small>
+                        </div>
+
+                        <!-- BOTÕES -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle me-2"></i>Registrar Pagamento
+                            </button>
+                            <a href="{{ url_for('pagamentos.listar_pagamentos') }}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-arrow-left me-2"></i>Voltar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

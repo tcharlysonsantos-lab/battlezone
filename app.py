@@ -5,6 +5,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
+from werkzeug.middleware.proxy_fix import ProxyFix
 from datetime import datetime, timedelta
 import os
 import json
@@ -14,13 +15,15 @@ import logging
 from config import config as app_config
 
 # Importar módulos do backend
-from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao
+from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao, PagamentoOperador
 from backend.auth import auth_bp
+from backend.pagamentos_routes import pagamento_bp
 from backend.decorators import requer_permissao, operador_session_required, admin_required
 from backend.utils import get_valores_plano, get_modos_permitidos, PLANOS_WARFIELD, PLANOS_REDLINE
 from backend.cloud_manager import CloudManager
 from backend.forms import OperadorForm, EquipeForm, PartidaForm, VendaForm, EstoqueForm
 from backend.security_utils import allowed_file_secure, safe_filename_with_timestamp, create_upload_directory
+from backend.email_service import init_mail
 
 # Importar segurança (NOVO)
 from backend.security_middleware import (
@@ -74,6 +77,19 @@ app = Flask(__name__,
 # CARREGAR CONFIGURAÇÃO DO config.py (NOVO)
 app.config.from_object(app_config)
 
+# ==================== CONFIGURAR PROXY FIX (RAILWAY/PRODUÇÃO) ====================
+# Quando app está atrás de um proxy (Railway, Heroku, etc), precisa confiar nos headers
+# X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host para obter IP e esquema corretos
+if not app.config['DEBUG']:
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=1,           # Número de proxies para X-Forwarded-For
+        x_proto=1,         # Número de proxies para X-Forwarded-Proto
+        x_host=1,          # Número de proxies para X-Forwarded-Host
+        x_port=1,          # Número de proxies para X-Forwarded-Port
+        x_prefix=1         # Número de proxies para X-Forwarded-Prefix
+    )
+
 # ==================== INICIALIZAR SEGURANÇA ====================
 # 1. CSRF Protection
 csrf = CSRFProtect(app)
@@ -124,24 +140,33 @@ login_manager.login_message_category = 'warning'
 # Inicializar Cloud Manager
 cloud_manager = CloudManager(app)
 
+# Inicializar Email Service (NOVO)
+init_mail(app)
+
 # Criar diretório de upload
 create_upload_directory(app.config['UPLOAD_FOLDER'])
 
 # Registrar blueprints
 app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(pagamento_bp, url_prefix='/pagamentos')
 
 # ==================== MIDDLEWARE ====================
 @app.before_request
 def before_request():
     """Middleware para verificar sessão de operadores"""
-    if current_user.is_authenticated and current_user.nivel == 'operador':
-        if not current_user.is_session_valid():
-            from flask_login import logout_user
-            logout_user()
-            session.clear()
-            flash('Sessão expirada por inatividade (5 minutos).', 'warning')
-            return redirect(url_for('auth.login'))
-        current_user.update_activity()
+    
+    # Marcar sessão como permanente para renovar o timeout a cada requisição
+    if current_user.is_authenticated:
+        session.permanent = True
+        
+        if current_user.nivel == 'operador':
+            if not current_user.is_session_valid():
+                from flask_login import logout_user
+                logout_user()
+                session.clear()
+                flash('Sessão expirada por inatividade (5 minutos).', 'warning')
+                return redirect(url_for('auth.login'))
+            current_user.update_activity()
 
 @app.after_request
 def after_request(response):
@@ -1711,8 +1736,10 @@ def nova_partida():
     """
     Cria nova partida com validações completas e transação atômica
     Versão otimizada - 2024
+    Inclui validação de pagamento de operadores
     """
     from datetime import datetime
+    from backend.validadores_pagamento import validar_pagamentos_partida
     
     # ===== VARIÁVEIS DO TEMPLATE =====
     titulo = 'Nova Partida'
@@ -1908,6 +1935,24 @@ def nova_partida():
                 flash('⚠️ Item "BBs" não encontrado no estoque! Cadastre primeiro.', 'warning')
             elif item_bbs.quantidade < total_bbs:
                 flash(f'❌ Estoque insuficiente de BBs! Disponível: {item_bbs.quantidade} unidades', 'danger')
+                return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
+            
+            # ===== VALIDAR PAGAMENTO DOS OPERADORES =====
+            validacao_pagamento = validar_pagamentos_partida(participantes_ids)
+            
+            if not validacao_pagamento['valido']:
+                # Bloquear criação da partida
+                mensagem_erro = (
+                    '<div class="alert alert-danger" style="text-align: left;">'
+                    '<h5>⚠️ <strong>Operadores com Pagamento Pendente</strong></h5>'
+                    '<p>A partida <strong>não pode ser agendada</strong> enquanto houver operadores com pagamento pendente ou vencido:</p>'
+                    '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #dc3545; margin: 10px 0;">' +
+                    validacao_pagamento['mensagem_erro'] +
+                    '</div>'
+                    '<p><strong>Ação:</strong> Registre o pagamento destes operadores antes de criar a partida.</p>'
+                    '</div>'
+                )
+                flash(mensagem_erro, 'danger')
                 return render_template('partidas/form.html', form=form, operadores=operadores, equipes=equipes, titulo=titulo, now=now)
             
             # ===== PAGAMENTO =====

@@ -1,72 +1,58 @@
 {% extends "base.html" %}
 
-{% block title %}Solicitar Acesso{% endblock %}
+{% block title %}Criar Conta{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center mt-5">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header text-center">
-                <h4><i class="fas fa-user-plus me-2"></i>Solicitar Acesso</h4>
+                <h4><i class="fas fa-user-plus me-2"></i>Criar Conta</h4>
+                <p class="text-muted mb-0" style="font-size: 0.9rem;">Preencha seus dados para criar sua conta na BattleZone</p>
             </div>
             <div class="card-body">
-                
-                <!-- MENSAGEM DE ATENÇÃO -->
-                <div class="alert alert-warning text-center mb-4" style="border-left: 4px solid #FF6B00;">
-                    <i class="fas fa-clock fa-3x mb-3" style="color: #FF6B00;"></i>
-                    <h5 class="fw-bold">⚠️ ATENÇÃO ⚠️</h5>
-                    <p class="mb-2">
-                        Após enviar sua solicitação, aguarde a aprovação do estabelecimento.
-                    </p>
-                    <p class="mb-0 fw-bold" style="color: #FF6B00;">
-                        Para que seja mais rápido, entre em contato conosco!
-                    </p>
-                </div>
-                
-                <!-- CARD DE CONTATO RÁPIDO -->
-                <div class="card mb-4" style="background-color: var(--cinza-escuro);">
-                    <div class="card-body text-center">
-                        <h6 class="text-laranja mb-3"><i class="fab fa-whatsapp me-2"></i>CONTATO DIRETO</h6>
-                        <a href="https://wa.me/5583993563759" target="_blank" class="btn btn-success btn-lg w-100 mb-2">
-                            <i class="fab fa-whatsapp me-2"></i>Falar no WhatsApp
-                        </a>
-                        <p class="text-muted small mb-0">(83) 99356-3759</p>
-                    </div>
-                </div>
                 
                 <form method="POST">
                     {{ form.hidden_tag() }}  <!-- ← LINHA OBRIGATÓRIA! -->
                     
-                    <div class="mb-3">
-                        {{ form.nome.label(class="form-label") }}
-                        {{ form.nome(class="form-control", placeholder="Seu nome completo") }}
-                        {% if form.nome.errors %}
-                            <small class="text-danger">{{ form.nome.errors[0] }}</small>
-                        {% endif %}
+                    <!-- PRIMEIRA LINHA: NOME E EMAIL -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.nome.label(class="form-label") }}
+                            {{ form.nome(class="form-control", placeholder="Seu nome completo") }}
+                            {% if form.nome.errors %}
+                                <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ form.nome.errors[0] }}</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control", placeholder="seu@email.com") }}
+                            {% if form.email.errors %}
+                                <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ form.email.errors[0] }}</small>
+                            {% endif %}
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        {{ form.email.label(class="form-label") }}
-                        {{ form.email(class="form-control", placeholder="seu@email.com") }}
-                        {% if form.email.errors %}
-                            <small class="text-danger">{{ form.email.errors[0] }}</small>
-                        {% endif %}
-                    </div>
-                    
+                    <!-- SEGUNDA LINHA: USUÁRIO -->
                     <div class="mb-3">
                         {{ form.usuario.label(class="form-label") }}
-                        {{ form.usuario(class="form-control", placeholder="Escolha um usuário") }}
+                        {{ form.usuario(class="form-control", placeholder="Escolha um nome de usuário único") }}
                         {% if form.usuario.errors %}
-                            <small class="text-danger">{{ form.usuario.errors[0] }}</small>
+                            <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ form.usuario.errors[0] }}</small>
                         {% endif %}
+                        <small class="text-muted d-block mt-1">
+                            <i class="fas fa-info-circle me-1"></i>Este será seu nome de usuário para fazer login
+                        </small>
                     </div>
                     
+                    <!-- TERCEIRA LINHA: CPF E TELEFONE -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             {{ form.cpf.label(class="form-label") }}
                             {{ form.cpf(class="form-control", placeholder="000.000.000-00") }}
                             {% if form.cpf.errors %}
-                                <small class="text-danger">{{ form.cpf.errors[0] }}</small>
+                                <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ form.cpf.errors[0] }}</small>
                             {% endif %}
                         </div>
                         
@@ -74,53 +60,53 @@
                             {{ form.telefone.label(class="form-label") }}
                             {{ form.telefone(class="form-control", placeholder="(83) 99999-9999") }}
                             {% if form.telefone.errors %}
-                                <small class="text-danger">{{ form.telefone.errors[0] }}</small>
+                                <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ form.telefone.errors[0] }}</small>
                             {% endif %}
                         </div>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            {{ form.data_nascimento.label(class="form-label") }}
-                            {{ form.data_nascimento(class="form-control", placeholder="DD/MM/AAAA") }}
-                            {% if form.data_nascimento.errors %}
-                                <small class="text-danger">{{ form.data_nascimento.errors[0] }}</small>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <!-- Espaço vazio para alinhamento -->
-                        </div>
+                    <!-- QUARTA LINHA: DATA DE NASCIMENTO -->
+                    <div class="mb-3">
+                        {{ form.data_nascimento.label(class="form-label") }}
+                        {{ form.data_nascimento(class="form-control", placeholder="DD/MM/AAAA") }}
+                        {% if form.data_nascimento.errors %}
+                            <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ form.data_nascimento.errors[0] }}</small>
+                        {% endif %}
                     </div>
                     
+                    <!-- QUINTA LINHA: SENHA -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             {{ form.senha.label(class="form-label") }}
                             {{ form.senha(class="form-control", placeholder="Mínimo 8 caracteres") }}
                             {% if form.senha.errors %}
-                                <small class="text-danger">{{ form.senha.errors[0] }}</small>
+                                <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ form.senha.errors[0] }}</small>
                             {% endif %}
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-key me-1"></i>
+                                Requerimentos: Mín. 8 caracteres, letras maiúsculas e minúsculas
+                            </small>
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             {{ form.confirmar_senha.label(class="form-label") }}
                             {{ form.confirmar_senha(class="form-control", placeholder="Digite novamente") }}
                             {% if form.confirmar_senha.errors %}
-                                <small class="text-danger">{{ form.confirmar_senha.errors[0] }}</small>
+                                <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ form.confirmar_senha.errors[0] }}</small>
                             {% endif %}
                         </div>
                     </div>
                     
                     <!-- TERMOS DE SERVIÇO -->
-                    <div class="mb-3 p-3" style="background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db;">
+                    <div class="mb-4 p-3" style="background-color: rgba(255, 107, 0, 0.1); border-radius: 8px; border-left: 4px solid #FF6B00;">
                         <div class="form-check">
-                            {{ form.terms_accepted(class="form-check-input", id="terms_accepted") }}
-                            <label class="form-check-label" for="terms_accepted">
-                                Aceito os 
+                            {{ form.terms_accepted(class="form-check-input", id="terms_accepted", style="border-color: #FF6B00; cursor: pointer;") }}
+                            <label class="form-check-label" for="terms_accepted" style="cursor: pointer;">
+                                Eu aceito os 
                                 <a href="{{ url_for('auth.terms') }}" target="_blank" class="text-decoration-none fw-bold" style="color: #FF6B00;">
                                     Termos de Serviço
                                 </a> 
-                                e 
+                                e a 
                                 <a href="{{ url_for('auth.terms') }}" target="_blank" class="text-decoration-none fw-bold" style="color: #FF6B00;">
                                     Política de Privacidade
                                 </a>
@@ -131,17 +117,24 @@
                                 <i class="fas fa-exclamation-circle me-1"></i>{{ form.terms_accepted.errors[0] }}
                             </small>
                         {% endif %}
-                        <small class="text-muted d-block mt-2">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Você concorda com a coleta e processamento de seus dados conforme descrito nos termos.
-                        </small>
                     </div>
                     
+                    <!-- BOTÕES -->
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn" style="background-color: #FF6B00; color: white;">
-                            <i class="fas fa-paper-plane me-2"></i>Enviar Solicitação
+                        <button type="submit" class="btn btn-lg" style="background-color: #FF6B00; color: white; font-weight: bold;">
+                            <i class="fas fa-check me-2"></i>Criar Conta
                         </button>
-                        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Voltar ao Login</a>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Voltar ao Login
+                        </a>
+                    </div>
+                    
+                    <!-- LINK PARA LOGIN -->
+                    <div class="text-center mt-3">
+                        <p class="text-muted">
+                            Já tem uma conta? 
+                            <a href="{{ url_for('auth.login') }}" class="text-decoration-none fw-bold" style="color: #FF6B00;">Faça login aqui</a>
+                        </p>
                     </div>
                 </form>
             </div>
@@ -198,6 +191,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     value = value.substring(0,5) + '/' + value.substring(5);
                 }
                 e.target.value = value;
+            }
+        });
+    }
+    
+    // Validação de termos antes de submeter
+    const form = document.querySelector('form');
+    const termsCheckbox = document.querySelector('#terms_accepted');
+    
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (termsCheckbox && !termsCheckbox.checked) {
+                e.preventDefault();
+                alert('Você deve aceitar os Termos de Serviço para continuar!');
+                termsCheckbox.focus();
             }
         });
     }

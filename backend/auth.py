@@ -1,5 +1,5 @@
 # auth.py - ATUALIZADO COM SEGURANÇA
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from .models import db, User, Solicitacao, Log, Operador
 from .forms import LoginForm, SolicitacaoForm
@@ -7,6 +7,7 @@ from datetime import datetime
 import secrets
 import json
 from werkzeug.security import generate_password_hash
+from .email_service import enviar_notificacao_solicitacao, enviar_confirmacao_solicitacao
 
 # Importar funções de segurança
 from .auth_security import (
@@ -79,8 +80,10 @@ def login():
     return render_template('auth/login.html', form=form)
 
 
-@auth_bp.route('/solicitar', methods=['GET', 'POST'])
-def solicitar_acesso():
+# ==================== ROTA: CRIAR CONTA ====================
+@auth_bp.route('/criar-conta', methods=['GET', 'POST'])
+def criar_conta():
+    """Criar nova conta de usuário"""
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
@@ -88,88 +91,19 @@ def solicitar_acesso():
     
     if form.validate_on_submit():
         try:
-            # Validar aceitação dos termos
-            if not form.terms_accepted.data:
-                flash('❌ Você deve aceitar os Termos de Serviço para continuar.', 'danger')
-                return render_template('auth/solicitar.html', form=form)
+            # Verificar se usuário já existe
+            if User.query.filter_by(username=form.usuario.data).first():
+                flash('❌ Este usuário já existe! Escolha outro.', 'danger')
+                return render_template('auth/criar_conta.html', form=form)
             
-            # A validação global do formulário já verificou se existe operador com os 4 dados iguais
-            operador = getattr(form, 'operador_encontrado', None)
+            if User.query.filter_by(email=form.email.data).first():
+                flash('❌ Este email já está cadastrado!', 'danger')
+                return render_template('auth/criar_conta.html', form=form)
             
-            if operador:
-                # Já existe operador com todos os dados iguais
-                # Verificar se já tem usuário
-                usuario_existente = User.query.filter_by(username=form.usuario.data).first()
-                
-                if usuario_existente:
-                    flash('❌ Este usuário já existe! Faça login.', 'danger')
-                    return redirect(url_for('auth.login'))
-                
-                # Criar usuário vinculado ao operador existente
-                salt = secrets.token_hex(16)
-                user = User(
-                    username=form.usuario.data,
-                    nome=form.nome.data,
-                    email=form.email.data,
-                    cpf=form.cpf.data,
-                    telefone=form.telefone.data,
-                    data_nascimento=form.data_nascimento.data,
-                    idade=form.idade_calculada,
-                    nivel='operador',
-                    status='aprovado',
-                    salt=salt,
-                    password_hash=generate_password_hash(form.senha.data + salt),
-                    operador_id=operador.id,
-                    terms_accepted=True,
-                    terms_accepted_date=datetime.utcnow()
-                )
-                
-                db.session.add(user)
-                
-                log = Log(
-                    usuario=form.usuario.data,
-                    acao='USUARIO_CRIADO_VINCULADO',
-                    detalhes=f"Usuário vinculado ao operador {operador.warname} - Termos aceitos"
-                )
-                db.session.add(log)
-                db.session.commit()
-                
-                flash('✅ Usuário criado e vinculado ao operador existente! Faça login.', 'success')
-                return redirect(url_for('auth.login'))
-            
-            # SE NÃO EXISTE OPERADOR, VERIFICAR SE ALGUM CAMPO JÁ EXISTE ISOLADAMENTE
-            if Operador.query.filter_by(cpf=form.cpf.data).first():
-                flash('❌ CPF já cadastrado para outro operador. Entre em contato com a BATTLEZONE!', 'danger')
-                return render_template('auth/solicitar.html', form=form)
-            
-            if Operador.query.filter_by(nome=form.nome.data).first():
-                flash('❌ Nome já cadastrado para outro operador. Entre em contato com a BATTLEZONE!', 'danger')
-                return render_template('auth/solicitar.html', form=form)
-            
-            if Operador.query.filter_by(warname=form.usuario.data).first():
-                flash('❌ Warname já cadastrado para outro operador. Entre em contato com a BATTLEZONE!', 'danger')
-                return render_template('auth/solicitar.html', form=form)
-            
-            if Operador.query.filter_by(email=form.email.data).first():
-                flash('❌ Email já cadastrado para outro operador. Entre em contato com a BATTLEZONE!', 'danger')
-                return render_template('auth/solicitar.html', form=form)
-            
-            # Verificar solicitação pendente
-            solicitacao_existente = Solicitacao.query.filter(
-                (Solicitacao.usuario == form.usuario.data) |
-                (Solicitacao.email == form.email.data) |
-                (Solicitacao.cpf == form.cpf.data)
-            ).filter_by(status='pendente').first()
-            
-            if solicitacao_existente:
-                flash('❌ Já existe uma solicitação pendente com algum destes dados', 'warning')
-                return render_template('auth/solicitar.html', form=form)
-            
-            # Criar nova solicitação
+            # Criar novo usuário
             salt = secrets.token_hex(16)
-            
-            solicitacao = Solicitacao(
-                usuario=form.usuario.data,
+            user = User(
+                username=form.usuario.data,
                 nome=form.nome.data,
                 email=form.email.data,
                 cpf=form.cpf.data,
@@ -177,31 +111,44 @@ def solicitar_acesso():
                 data_nascimento=form.data_nascimento.data,
                 idade=form.idade_calculada,
                 nivel='operador',
-                password_hash=generate_password_hash(form.senha.data + salt),
+                status='aprovado',
                 salt=salt,
-                status='pendente',
+                password_hash=generate_password_hash(form.senha.data + salt),
                 terms_accepted=True,
                 terms_accepted_date=datetime.utcnow()
             )
             
-            db.session.add(solicitacao)
+            db.session.add(user)
+            
+            # Criar operador também
+            operador = Operador(
+                nome=form.nome.data,
+                warname=form.usuario.data,
+                cpf=form.cpf.data,
+                email=form.email.data,
+                telefone=form.telefone.data,
+                data_nascimento=form.data_nascimento.data,
+                idade=form.idade_calculada or '0',
+                battlepass='NAO'
+            )
+            db.session.add(operador)
             
             log = Log(
                 usuario=form.usuario.data,
-                acao='SOLICITACAO_CRIADA',
-                detalhes=f"Nome: {form.nome.data} | Email: {form.email.data} | Termos aceitos"
+                acao='USUARIO_CRIADO',
+                detalhes=f"Nova conta criada: {form.nome.data} | Email: {form.email.data} | Termos aceitos"
             )
             db.session.add(log)
             db.session.commit()
             
-            flash('✅ Solicitação enviada! Aguarde a aprovação. Para mais rápido, entre em contato!', 'success')
+            flash('✅ Conta criada com sucesso! Você pode fazer login agora.', 'success')
             return redirect(url_for('auth.login'))
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ Erro ao processar solicitação: {str(e)}', 'danger')
+            flash(f'❌ Erro ao criar conta: {str(e)}', 'danger')
     
-    return render_template('auth/solicitar.html', form=form)
+    return render_template('auth/criar_conta.html', form=form)
 
 
 # ==================== ROTAS DE 2FA ====================
@@ -420,8 +367,8 @@ def reset_password(token):
             flash('As senhas não coincidem.', 'danger')
             return render_template('auth/reset_password.html', token=token)
         
-        if len(nova_senha) < 6:
-            flash('Senha deve ter pelo menos 6 caracteres.', 'danger')
+        if len(nova_senha) < 8:
+            flash('Senha deve ter pelo menos 8 caracteres.', 'danger')
             return render_template('auth/reset_password.html', token=token)
         
         # Resetar senha

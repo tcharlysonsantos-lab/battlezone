@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Pagamento{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header" style="background-color: #FF6B00; color: white;">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Editar Pagamento
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    
+                    <!-- Informações do operador -->
+                    <div class="alert alert-light border-left border-info">
+                        <p class="mb-0">
+                            <strong>Operador:</strong> {{ pagamento.operador.nome }} ({{ pagamento.operador.warname }})
+                        </p>
+                    </div>
+
+                    <form method="POST">
+                        
+                        <!-- OPERADOR (oculto) -->
+                        <input type="hidden" name="operador_id" value="{{ pagamento.operador_id }}">
+
+                        <!-- VALOR -->
+                        <div class="mb-3">
+                            <label for="valor" class="form-label">
+                                <i class="fas fa-money-bill-wave me-2"></i><strong>Valor (R$)</strong>
+                            </label>
+                            <input type="number" name="valor" id="valor" class="form-control form-control-lg" 
+                                   value="{{ "%.2f"|format(pagamento.valor) }}" step="0.01" required>
+                        </div>
+
+                        <!-- MÉTODO DE PAGAMENTO -->
+                        <div class="mb-3">
+                            <label for="metodo" class="form-label">
+                                <i class="fas fa-credit-card me-2"></i><strong>Método de Pagamento</strong>
+                            </label>
+                            <select name="metodo" id="metodo" class="form-select">
+                                <option value="">-- Selecione --</option>
+                                <option value="PIX" {% if pagamento.metodo_pagamento == 'PIX' %}selected{% endif %}>💳 PIX</option>
+                                <option value="Dinheiro" {% if pagamento.metodo_pagamento == 'Dinheiro' %}selected{% endif %}>💰 Dinheiro</option>
+                                <option value="Débito" {% if pagamento.metodo_pagamento == 'Débito' %}selected{% endif %}>💳 Débito</option>
+                                <option value="Crédito" {% if pagamento.metodo_pagamento == 'Crédito' %}selected{% endif %}>💳 Crédito</option>
+                                <option value="Transferência" {% if pagamento.metodo_pagamento == 'Transferência' %}selected{% endif %}>🏦 Transferência</option>
+                            </select>
+                        </div>
+
+                        <!-- OBSERVAÇÕES -->
+                        <div class="mb-4">
+                            <label for="observacoes" class="form-label">
+                                <i class="fas fa-sticky-note me-2"></i>Observações
+                            </label>
+                            <textarea name="observacoes" id="observacoes" class="form-control" rows="3">{{ pagamento.observacoes or '' }}</textarea>
+                        </div>
+
+                        <!-- INFO DE AUDITORIA -->
+                        <div class="alert alert-light mb-4 small">
+                            <p class="mb-2">
+                                <strong>Criado em:</strong> {{ pagamento.created_at.strftime('%d/%m/%Y às %H:%M') if pagamento.created_at else '-' }}
+                            </p>
+                            <p class="mb-0">
+                                <strong>Atualizado em:</strong> {{ pagamento.updated_at.strftime('%d/%m/%Y às %H:%M') if pagamento.updated_at else '-' }}
+                            </p>
+                        </div>
+
+                        <!-- BOTÕES -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save me-2"></i>Salvar Alterações
+                            </button>
+                            <a href="{{ url_for('pagamentos.listar_pagamentos') }}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-arrow-left me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

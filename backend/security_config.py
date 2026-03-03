@@ -31,13 +31,13 @@ SESSION_CONFIG = {
 # ==================== PASSWORD POLICY ====================
 
 PASSWORD_POLICY = {
-    'min_length': 10,  # Aumentado de 8
-    'require_uppercase': True,
-    'require_lowercase': True,
-    'require_numbers': True,
-    'require_special': True,  # Agora obrigatório para maior segurança
+    'min_length': 8,  # Mínimo 8 caracteres
+    'require_uppercase': True,  # Pelo menos 1 letra MAIÚSCULA
+    'require_lowercase': True,  # Pelo menos 1 letra minúscula
+    'require_numbers': False,  # Não obrigatório
+    'require_special': False,  # Não obrigatório
     'no_sequential_chars': True,  # Não permitir 123, abc, xyz, etc.
-    'no_repeated_chars': True,  # Não permitir aaa, 111, @@@ etc.
+    'no_repeated_chars': False,  # Não obrigatório
     'max_age_days': 90,  # Expirar senha após 90 dias
     'history': 5,  # Não permitir últimas 5 senhas
 }

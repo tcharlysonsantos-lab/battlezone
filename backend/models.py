@@ -460,3 +460,50 @@ class Log(db.Model):
     acao = db.Column(db.String(100), nullable=False)
     detalhes = db.Column(db.Text, nullable=True)
     ip_address = db.Column(db.String(50), nullable=True)
+
+
+# ==================== MODELO DE PAGAMENTO DE OPERADOR ====================
+class PagamentoOperador(db.Model):
+    __tablename__ = 'pagamento_operador'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    operador_id = db.Column(db.Integer, db.ForeignKey('operadores.id'), nullable=False)
+    partida_id = db.Column(db.Integer, db.ForeignKey('partidas.id'), nullable=True)  # NULL = pagamento geral
+    
+    valor = db.Column(db.Float, nullable=False)  # Valor esperado
+    valor_pago = db.Column(db.Float, default=0)  # Valor realmente pago
+    status = db.Column(db.String(20), default='Pendente')  # Pendente, Parcial, Pago, Cancelado
+    
+    # Rastreamento
+    data_vencimento = db.Column(db.DateTime, nullable=True)
+    data_pagamento = db.Column(db.DateTime, nullable=True)
+    metodo_pagamento = db.Column(db.String(50), nullable=True)  # PIX, Dinheiro, Débito, Crédito
+    registrado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Quem registrou
+    observacoes = db.Column(db.Text, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamentos
+    operador = db.relationship('Operador', backref='pagamentos')
+    partida = db.relationship('Partida', backref='pagamentos_operadores')
+    registrador = db.relationship('User', backref='pagamentos_registrados')
+    
+    def marcar_pago(self, valor=None, metodo=None, usuario=None):
+        """Marca o pagamento como realizado"""
+        if valor is None:
+            valor = self.valor
+        
+        self.status = 'Pago' if valor >= self.valor else 'Parcial'
+        self.valor_pago = valor
+        self.data_pagamento = datetime.utcnow()
+        self.metodo_pagamento = metodo
+        self.registrado_por = usuario
+        db.session.commit()
+    
+    def pendente(self):
+        """Retorna quanto ainda está pendente"""
+        return max(0, self.valor - self.valor_pago)
+    
+    def __repr__(self):
+        return f"<PagamentoOperador {self.operador.warname} - {self.status}>"

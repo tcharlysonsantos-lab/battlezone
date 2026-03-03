@@ -51,13 +51,19 @@ class Config:
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Sessões
+    # Sessões (melhorado para produção com HTTPS)
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
+    # Em produção com HTTPS, usar Secure + SameSite=Lax para máxima compatibilidade
     SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
     SESSION_COOKIE_HTTPONLY = True  # Protege contra XSS
-    SESSION_COOKIE_SAMESITE = 'Lax'  # Protege contra CSRF
+    SESSION_COOKIE_SAMESITE = 'Lax'  # Protege contra CSRF, funciona bem com HTTPS
+    SESSION_COOKIE_DOMAIN = None  # Deixar None para funcionar em subdomínios
     REMEMBER_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
     REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
+    
+    # Em produção, fazer força permanência de sessão para não perder durante navegação
+    PERMANENT_SESSION_TIMEOUT_SECONDS = 30 * 60  # 30 minutos
     
     # Upload
     UPLOAD_FOLDER = 'static/uploads'

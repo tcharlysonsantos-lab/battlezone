@@ -1,0 +1,288 @@
+"""
+Email Service - Envia notificações via email
+"""
+
+from flask import url_for
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Tentar importar Flask-Mail, mas fazer fallback se não disponível
+try:
+    from flask_mail import Mail, Message
+    HAS_FLASK_MAIL = True
+except ImportError:
+    HAS_FLASK_MAIL = False
+    logger.warning("⚠️  Flask-Mail não instalado. Emails não serão enviados. Instale com: pip install Flask-Mail")
+    Mail = None
+    Message = None
+
+mail = None
+
+def init_mail(app):
+    """Inicializa o serviço de email com a aplicação Flask"""
+    global mail
+    
+    if not HAS_FLASK_MAIL:
+        logger.warning("⚠️ Email service not available - Flask-Mail not installed")
+        return
+    
+    mail = Mail(app)
+    logger.info("✅ Email service initialized")
+
+
+def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = None) -> bool:
+    """
+    Envia um email
+    
+    Args:
+        destinatarios: Lista de emails
+        assunto: Assunto do email
+        html: Corpo HTML do email
+        remetente: Email do remetente (opcional)
+    
+    Returns:
+        True se enviado com sucesso, False caso contrário
+    """
+    if not HAS_FLASK_MAIL or not mail:
+        logger.warning("⚠️ Email service not available")
+        return False
+    
+    if not destinatarios:
+        logger.warning("⚠️ Nenhum destinatário especificado")
+        return False
+    
+    try:
+        msg = Message(
+            subject=assunto,
+            recipients=destinatarios if isinstance(destinatarios, list) else [destinatarios],
+            html=html,
+            sender=remetente or 'noreply@battlezone.local'
+        )
+        
+        mail.send(msg)
+        logger.info(f"✅ Email enviado para {len(msg.recipients)} destinatário(s): {assunto}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao enviar email: {str(e)}")
+        return False
+
+
+def enviar_notificacao_solicitacao(solicitacao, app):
+    """
+    Envia notificação de nova solicitação para todos os admins/gerentes
+    
+    Args:
+        solicitacao: Objeto Solicitacao
+        app: Aplicação Flask (para contexto de app_context)
+    """
+    from backend.models import User
+    
+    if not mail:
+        logger.warning("⚠️ Email service not initialized, cannot send notification")
+        return False
+    
+    try:
+        # Buscar todos os admins e gerentes
+        admins_gerentes = User.query.filter(
+            User.nivel.in_(['admin', 'gerente']),
+            User.status == 'aprovado'
+        ).all()
+        
+        if not admins_gerentes:
+            logger.warning("⚠️ Nenhum admin/gerente configurado com email")
+            return False
+        
+        # Emails dos admins/gerentes
+        emails_destinatarios = [user.email for user in admins_gerentes if user.email]
+        
+        if not emails_destinatarios:
+            logger.warning("⚠️ Nenhum email cadastrado para admins/gerentes")
+            return False
+        
+        # Usar contexto da aplicação para gerar URLs
+        with app.app_context():
+            # Gerar link para visualizar solicitação no painel admin
+            link_visualizar = url_for('admin_solicitacoes', _external=True)
+            link_aprovar = url_for('admin_solicitacoes', _external=True)  # Mesmo link, pode filtrar por ID depois
+            
+            # Template HTML do email
+            html_email = f"""
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 0; padding: 0; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background-color: #FF6B00; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                    .content {{ background-color: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }}
+                    .info-box {{ background-color: #e8f4f8; padding: 15px; border-left: 4px solid #3498db; margin: 15px 0; }}
+                    .action-box {{ text-align: center; margin: 20px 0; }}
+                    .btn {{ display: inline-block; padding: 12px 30px; background-color: #FF6B00; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }}
+                    .btn:hover {{ background-color: #e55a00; }}
+                    .footer {{ color: #666; font-size: 12px; margin-top: 20px; text-align: center; }}
+                    .details {{ background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; }}
+                    .detail-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }}
+                    .detail-row strong {{ color: #333; }}
+                    .status-badge {{ display: inline-block; padding: 5px 10px; background-color: #ffc107; color: #333; border-radius: 3px; font-weight: bold; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🎮 Battlezone - Nova Solicitação de Acesso</h1>
+                    </div>
+                    
+                    <div class="content">
+                        <p>Olá,</p>
+                        <p>Uma <strong>nova solicitação de acesso</strong> foi enviada ao sistema Battlezone. Verifique os detalhes abaixo:</p>
+                        
+                        <div class="info-box">
+                            <h3 style="margin-top: 0;">📋 Informações do Solicitante</h3>
+                        </div>
+                        
+                        <div class="details">
+                            <div class="detail-row">
+                                <strong>Nome Completo:</strong>
+                                <span>{solicitacao.nome}</span>
+                            </div>
+                            <div class="detail-row">
+                                <strong>Warname:</strong>
+                                <span>{solicitacao.usuario}</span>
+                            </div>
+                            <div class="detail-row">
+                                <strong>Email:</strong>
+                                <span><a href="mailto:{solicitacao.email}">{solicitacao.email}</a></span>
+                            </div>
+                            <div class="detail-row">
+                                <strong>CPF:</strong>
+                                <span>{solicitacao.cpf}</span>
+                            </div>
+                            <div class="detail-row">
+                                <strong>Telefone:</strong>
+                                <span>{solicitacao.telefone}</span>
+                            </div>
+                            <div class="detail-row">
+                                <strong>Data de Nascimento:</strong>
+                                <span>{solicitacao.data_nascimento}</span>
+                            </div>
+                            <div class="detail-row">
+                                <strong>Nível:</strong>
+                                <span><span class="status-badge">OPERADOR</span></span>
+                            </div>
+                            <div class="detail-row" style="border-bottom: none;">
+                                <strong>Enviado em:</strong>
+                                <span>{solicitacao.created_at.strftime('%d/%m/%Y às %H:%M') if solicitacao.created_at else 'Agora'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-box">
+                            <strong>⏳ Ação Necessária:</strong> Acesse o painel administrativo para aprovar ou rejeitar esta solicitação.
+                        </div>
+                        
+                        <div class="action-box">
+                            <a href="{link_visualizar}" class="btn">
+                                Acessar Painel Admin
+                            </a>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>Este é um email automático. Não responda este email.</p>
+                            <p>Battlezone © 2026</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Enviar email
+            sucesso = enviar_email(
+                emails_destinatarios,
+                f"🔔 Nova Solicitação de Acesso - {solicitacao.usuario}",
+                html_email
+            )
+            
+            return sucesso
+    
+    except Exception as e:
+        logger.error(f"❌ Erro ao enviar notificação de solicitação: {str(e)}")
+        return False
+
+
+def enviar_confirmacao_solicitacao(usuario_email: str, nome_usuario: str, app):
+    """
+    Envia email de confirmação para o usuário que enviou a solicitação
+    
+    Args:
+        usuario_email: Email do solicitante
+        nome_usuario: Nome do solicitante
+        app: Aplicação Flask
+    """
+    if not mail:
+        logger.warning("⚠️ Email service not initialized")
+        return False
+    
+    try:
+        with app.app_context():
+            link_login = url_for('auth.login', _external=True)
+            
+            html_email = f"""
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 0; padding: 0; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background-color: #FF6B00; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                    .content {{ background-color: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }}
+                    .success-box {{ background-color: #d4edda; padding: 15px; border-left: 4px solid #28a745; margin: 15px 0; color: #155724; }}
+                    .info-box {{ background-color: #e8f4f8; padding: 15px; border-left: 4px solid #3498db; margin: 15px 0; }}
+                    .footer {{ color: #666; font-size: 12px; margin-top: 20px; text-align: center; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🎮 Battlezone - Solicitação Recebida</h1>
+                    </div>
+                    
+                    <div class="content">
+                        <p>Olá <strong>{nome_usuario}</strong>,</p>
+                        
+                        <div class="success-box">
+                            <h3 style="margin-top: 0;">✅ Solicitação Enviada com Sucesso!</h3>
+                            <p>Sua solicitação de acesso foi recebida com sucesso. Agora aguarde a aprovação do administrador do sistema.</p>
+                        </div>
+                        
+                        <div class="info-box">
+                            <strong>📌 Próximos Passos:</strong>
+                            <ul>
+                                <li>O administrador analisará sua solicitação</li>
+                                <li>Você receberá um email quando sua conta for aprovada</li>
+                                <li>Para agilizar, entre em contato conosco por WhatsApp ou telefone</li>
+                            </ul>
+                        </div>
+                        
+                        <p>Se você tiver dúvidas ou precisar de mais informações, entre em contato com o suporte.</p>
+                        
+                        <div class="footer">
+                            <p>Este é um email automático. Não responda este email.</p>
+                            <p>Battlezone © 2026</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            sucesso = enviar_email(
+                usuario_email,
+                "✅ Solicitação Recebida - Battlezone",
+                html_email
+            )
+            
+            return sucesso
+    
+    except Exception as e:
+        logger.error(f"❌ Erro ao enviar confirmação de solicitação: {str(e)}")
+        return False

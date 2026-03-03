@@ -251,6 +251,13 @@
                     </a>
                     {% endif %}
                     
+                    <!-- PAGAMENTOS -->
+                    {% if current_user.nivel in ['admin', 'gerente', 'financeiro'] %}
+                    <a class="nav-link {% if request.endpoint in ['pagamentos.listar_pagamentos', 'pagamentos.registrar_pagamento', 'pagamentos.editar_pagamento'] %}active{% endif %}" href="{{ url_for('pagamentos.listar_pagamentos') }}">
+                        <i class="fas fa-credit-card me-2"></i>Pagamentos
+                    </a>
+                    {% endif %}
+                    
                     <!-- CAIXA -->
                     {% if current_user.tem_permissao('caixa') %}
                     <a class="nav-link {% if request.endpoint == 'caixa' %}active{% endif %}" href="{{ url_for('caixa') }}">
