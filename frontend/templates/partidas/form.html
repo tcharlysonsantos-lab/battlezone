@@ -492,10 +492,25 @@ function cambiarTipoParticipacao(tipo) {
         document.getElementById('participantes-equipe').value = '';
         selectedOp.eq1.clear();
         selectedOp.eq2.clear();
+        
+        // Limpar selects de equipe
+        document.getElementById('plano_equipe').innerHTML = '<option value="">Selecione campo</option>';
+        document.getElementById('tempo_equipe').innerHTML = '<option value="">Selecione plano</option>';
+        document.getElementById('modo_equipe').innerHTML = '<option value="">Selecione tempo</option>';
+        document.getElementById('equipe1_id').value = '';
+        document.getElementById('equipe2_id').value = '';
+        
         renderizarOperadores('individual');
     } else {
         document.getElementById('participantes-individual').value = '';
         selectedOp.individual.clear();
+        
+        // Limpar selects de individual
+        document.getElementById('plano').innerHTML = '<option value="">Selecione campo</option>';
+        document.getElementById('tempo').innerHTML = '<option value="">Selecione plano</option>';
+        document.getElementById('modo').innerHTML = '<option value="">Selecione tempo</option>';
+        document.getElementById('participantes-individual').value = '';
+        
         renderizarOperadores('eq1');
         renderizarOperadores('eq2');
     }
@@ -845,5 +860,94 @@ function selecionarCacada(event, valor) {
     event.target.closest('.cacada-btn').classList.add('selecionado');
     document.getElementById('cacada_valor').value = valor;
 }
+
+// ===== MÁSCARA DE DATA E HORA =====
+const dataInput = document.querySelector('input[name="data"]');
+const horarioInput = document.querySelector('input[name="horario"]');
+
+if (dataInput) {
+    // Máscara de Data: DD/MM/YYYY
+    dataInput.addEventListener('input', function(e) {
+        let valor = e.target.value.replace(/\D/g, '');
+        
+        // Limite de dígitos
+        if (valor.length > 8) valor = valor.slice(0, 8);
+        
+        // Validar padrão - não permitir números/datas repetidas
+        if (/^(\d)\1*$/.test(valor)) {
+            e.target.value = valor.slice(0, 2);
+            return;
+        }
+        
+        // Aplicar máscara
+        if (valor.length >= 2) valor = valor.slice(0, 2) + '/' + valor.slice(2);
+        if (valor.length >= 5) valor = valor.slice(0, 5) + '/' + valor.slice(5);
+        
+        e.target.value = valor;
+    });
+    
+    // Validação ao sair do campo
+    dataInput.addEventListener('blur', function(e) {
+        const valor = e.target.value;
+        if (valor) {
+            const [dia, mes, ano] = valor.split('/').map(x => parseInt(x) || 0);
+            
+            // Validar data
+            if (dia < 1 || dia > 31 || mes < 1 || mes > 12 || ano < 2000) {
+                alert('❌ Data inválida! Use DD/MM/YYYY com data a partir de hoje.');
+                e.target.value = '';
+                return;
+            }
+            
+            // Não permitir data anterior a hoje
+            const dataObj = new Date(ano, mes - 1, dia);
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            if (dataObj < hoje) {
+                alert('❌ A data não pode ser anterior a hoje!');
+                e.target.value = '';
+                return;
+            }
+        }
+    });
+}
+
+if (horarioInput) {
+    // Máscara de Hora: HH:MM
+    horarioInput.addEventListener('input', function(e) {
+        let valor = e.target.value.replace(/\D/g, '');
+        
+        // Limite de dígitos
+        if (valor.length > 4) valor = valor.slice(0, 4);
+        
+        // Validar padrão - não permitir horas ou minutos repetidas iguais
+        const [h, m] = [valor.slice(0, 2), valor.slice(2, 4)];
+        if ((h && /^(\d)\1+$/.test(h)) || (m && /^(\d)\1+$/.test(m))) {
+            return;
+        }
+        
+        // Aplicar máscara
+        if (valor.length >= 2) valor = valor.slice(0, 2) + ':' + valor.slice(2);
+        
+        e.target.value = valor;
+    });
+    
+    // Validação ao sair do campo
+    horarioInput.addEventListener('blur', function(e) {
+        const valor = e.target.value;
+        if (valor) {
+            const [hora, minuto] = valor.split(':').map(x => parseInt(x) || 0);
+            
+            // Validar hora
+            if (hora < 0 || hora > 23 || minuto < 0 || minuto > 59) {
+                alert('❌ Hora inválida! Use HH:MM (00:00 a 23:59)');
+                e.target.value = '';
+                return;
+            }
+        }
+    });
+}
+
 </script>
 {% endblock %}

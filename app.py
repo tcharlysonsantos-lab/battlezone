@@ -1491,6 +1491,7 @@ def listar_partidas():
         # Aplicar filtro de período MANUALMENTE (evita erros de conversão)
         if periodo != 'Todas':
             hoje = datetime.now()
+            amanha = hoje + timedelta(days=1)
             partidas_filtradas = []
             
             for p in todas_partidas:
@@ -1501,12 +1502,18 @@ def listar_partidas():
                         if p.data == hoje.strftime('%d/%m/%Y'):
                             partidas_filtradas.append(p)
                     
+                    elif periodo == 'Amanha':
+                        if p.data == amanha.strftime('%d/%m/%Y'):
+                            partidas_filtradas.append(p)
+                    
                     elif periodo == '7d':
-                        dias_diff = (hoje - data_p).days
-                        if 0 <= dias_diff <= 7:
+                        # Próximos 7 dias (futuro)
+                        dias_diff = (data_p - hoje).days
+                        if 1 <= dias_diff <= 7:
                             partidas_filtradas.append(p)
                     
                     elif periodo == '30d':
+                        # Últimos 30 dias (passado)
                         dias_diff = (hoje - data_p).days
                         if 0 <= dias_diff <= 30:
                             partidas_filtradas.append(p)
@@ -1975,6 +1982,11 @@ def nova_partida():
                     flash(f'⚠️ Partida criada com {participantes_adicionados} participantes. {participantes_erro} participantes ignorados.', 'warning')
                 else:
                     flash(f'✅ Partida criada com {participantes_adicionados} participantes!', 'success')
+                    
+                # Notificar APENAS não-operadores sobre nova partida
+                if current_user.nivel != 'operador':
+                    # Notificação será visível para gerentes e admins 
+                    pass
                 
                 app.logger.info(f"✅ Partida {partida.id} criada por {current_user.username}")
                 return redirect(url_for('listar_partidas'))

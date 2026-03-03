@@ -1,0 +1,15 @@
+[33m91bd242[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Cleanup: Remove test files, cache, and sensitive files
+[33ma891e8a[m Fix: utils imports and database URI for Windows compatibility
+[33mf1951fb[m 🐛 Corrigir imports em scripts e init_db.py
+[33mfad8376[m 🏗️ Reorganização: Sistema e Infrastructure centralizados
+[33m00aa4bd[m 📁 Reorganização: Separação Backend e Frontend - Criadas pastas backend/ e frontend/ - Movidos arquivos Python para backend/ - Movidos templates e static para frontend/ - Ajustados TODOS os imports (relativo vs absolute) - app.py configurado para usar frontend/templates e frontend/static - Estrutura pronta para escalabilidade
+[33m9e976e8[m ♻️ Limpeza e reorganização completa - Removidos: arquivos debug, testes antigos, docs redundantes - Movidos: scripts para /scripts/ - Criados: /docs com documentação consolidada - NGROK mantido - Estrutura pronta para produção
+[33mddc046d[m Add Railway deployment documentation
+[33m867392c[m Add Railway deployment configuration: Procfile, updated requirements.txt, flexible database config
+[33m7083ed0[m Servidor inicial
+[33m8f78eef[m Backup de antes de colocar o servidor
+[33m3228cce[m 📦 BACKUP COMPLETO 2026-03-02 15:02:43
+[33m60122f7[m[33m ([m[1;31mold_origin/main[m[33m, [m[1;31mold_origin/HEAD[m[33m)[m Merge branch 'main' of https://github.com/tcharlysonsantos-lab/Troquei-de-IA
+[33m9af6d45[m Meu projeto Battlezone Flask
+[33m16ce11e[m Initial commit
+[33m8667789[m Backup de segurança - [Data]

@@ -28,7 +28,8 @@
                 <select name="periodo" class="form-select">
                     <option value="Todas" {% if periodo == 'Todas' %}selected{% endif %}>Todas</option>
                     <option value="Hoje" {% if periodo == 'Hoje' %}selected{% endif %}>Hoje</option>
-                    <option value="7d" {% if periodo == '7d' %}selected{% endif %}>Últimos 7 dias</option>
+                    <option value="Amanha" {% if periodo == 'Amanha' %}selected{% endif %}>Amanhã</option>
+                    <option value="7d" {% if periodo == '7d' %}selected{% endif %}>Próximos 7 dias</option>
                     <option value="30d" {% if periodo == '30d' %}selected{% endif %}>Últimos 30 dias</option>
                 </select>
             </div>
