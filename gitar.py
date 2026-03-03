@@ -39,6 +39,11 @@ def main():
     print("║" + " "*15 + "🎯 GITAR.PY - Git Automático" + " "*14 + "║")
     print("╚" + "="*58 + "╝")
     
+    # 0. SINCRONIZAR COM O SERVIDOR PRIMEIRO!
+    print("\n🔄 Sincronizando com o servidor...")
+    if not executar_comando("git pull origin main", "Puxando mudanças do servidor"):
+        print("⚠️ Falha ao sincronizar, mas continuando...")
+    
     # 1. Verificar status do git
     print("\n🔍 Verificando status do repositório...")
     resultado = subprocess.run("git status --porcelain", shell=True, capture_output=True, text=True)
