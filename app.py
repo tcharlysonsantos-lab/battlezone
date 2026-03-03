@@ -154,10 +154,6 @@ app.register_blueprint(pagamento_bp, url_prefix='/pagamentos')
 def before_request():
     """Middleware para verificar sessão de operadores"""
     
-    # Desabilitar CSRF temporariamente para rotas de password reset (debug)
-    if request.path in ['/auth/forgot-password', '/auth/reset-password']:
-        csrf.exempt(lambda: None)  # Exempt these paths from CSRF
-    
     # Marcar sessão como permanente para renovar o timeout a cada requisição
     if current_user.is_authenticated:
         session.permanent = True
