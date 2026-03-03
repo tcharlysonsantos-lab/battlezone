@@ -32,16 +32,22 @@ class Config:
     
     # Banco de dados (compatível com SQLite local e PostgreSQL em produção)
     # Railway passa DATABASE_URL automaticamente quando você adiciona PostgreSQL
-    _db_path = INSTANCE_PATH / 'database.db'
     
     # Se estiver em produção e há DATABASE_URL (Railway), usa PostgreSQL
     # Caso contrário, usa SQLite local
-    if os.environ.get('DATABASE_URL'):
+    _database_url = os.environ.get('DATABASE_URL')
+    
+    if _database_url:
         # Railway PostgreSQL
-        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+        SQLALCHEMY_DATABASE_URI = _database_url
     else:
         # SQLite local (desenvolvimento e free tier Railway)
-        SQLALCHEMY_DATABASE_URI = f'sqlite:///{_db_path}'
+        # Usa caminho ABSOLUTO para SQLite funcionar corretamente
+        db_file = os.path.abspath(os.path.join(str(INSTANCE_PATH), 'database.db'))
+        # Converte backslashes em slashes para URL (IMPORTANTE para Windows!)
+        db_file = db_file.replace('\\', '/')
+        # URL de SQLite: sqlite:///caminho/absoluto
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_file}'
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     

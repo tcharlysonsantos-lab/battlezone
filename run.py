@@ -22,7 +22,7 @@ def gerar_senha_segura():
 
 def criar_admin_inicial():
     """Cria usuário admin com senha segura (APENAS NA PRIMEIRA VEZ)"""
-    from models import User
+    from backend.models import User
     from werkzeug.security import generate_password_hash
     
     # Verificar se admin já existe
@@ -116,7 +116,7 @@ def main():
                 print("✅ Banco de dados encontrado")
                 
                 # Verificar se tem admin
-                from models import User
+                from backend.models import User
                 admin = User.query.filter_by(username='admin').first()
                 if not admin:
                     print("⚠️  Admin não encontrado, criando...")

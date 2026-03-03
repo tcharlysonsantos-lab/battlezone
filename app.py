@@ -469,7 +469,7 @@ def estatisticas():
         operadores_ranking.sort(key=lambda x: x['total_mvps'], reverse=reverse)
     
     # ===== ESTATÍSTICAS DE EQUIPES =====
-    from models import Equipe
+    from backend.models import Equipe
     
     # Primeiro, buscar TODAS as partidas finalizadas de equipe
     partidas_equipe = Partida.query.filter_by(tipo_participacao='equipe', finalizada=True).all()
@@ -881,7 +881,7 @@ def index():
                 minuto = minuto_total % 60
                 horarios_disponiveis.append(f"{hora:02d}:{minuto:02d}")
         
-        from utils import PLANOS_WARFIELD, PLANOS_REDLINE
+        from backend.utils import PLANOS_WARFIELD, PLANOS_REDLINE
         
         return render_template('public/index.html',
                              partidas_hoje=partidas_hoje,
@@ -890,7 +890,7 @@ def index():
                              planos_redline=PLANOS_REDLINE)
     except Exception as e:
         print(f"Erro: {e}")
-        from utils import PLANOS_WARFIELD, PLANOS_REDLINE
+        from backend.utils import PLANOS_WARFIELD, PLANOS_REDLINE
         return render_template('public/index.html',
                              partidas_hoje=[],
                              horarios_disponiveis=['15:30', '16:30', '17:30', '18:30', '19:30', '20:30', '21:30'],
@@ -1183,7 +1183,7 @@ def deletar_operador(id):
                 print(f"  ✅ Removido da equipe: {equipe.nome}")
         
         # ===== REMOVER DE PARTIDAS =====
-        from models import PartidaParticipante
+        from backend.models import PartidaParticipante
         partidas = PartidaParticipante.query.filter_by(operador_id=id).all()
         for part in partidas:
             db.session.delete(part)
@@ -1225,7 +1225,7 @@ def deletar_operador(id):
 @login_required
 def debug_permissoes():
     """Página de debug para verificar permissões"""
-    from models import User
+    from backend.models import User
     
     user = User.query.get(current_user.id)
     
@@ -2207,7 +2207,7 @@ def ver_partida(id):
 def deletar_partida(id):
     """Deleta uma partida, devolve BBs, remove vendas e remove estatísticas dos operadores"""
     try:
-        from utils import remover_estadisticas_partida
+        from backend.utils import remover_estadisticas_partida
         
         partida = Partida.query.get_or_404(id)
         
@@ -2785,7 +2785,7 @@ def sincronizar_estatisticas_admin():
         return render_template('admin/sincronizar_estatisticas.html')
     
     # POST: executar sincronização
-    from utils import sincronizar_estatisticas_operadores
+    from backend.utils import sincronizar_estatisticas_operadores
     
     resultado = sincronizar_estatisticas_operadores()
     
