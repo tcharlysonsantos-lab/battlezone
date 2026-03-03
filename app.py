@@ -1,7 +1,7 @@
 # app.py - BATTLEZONE SECURITY-FIRST EDITION
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import LoginManager, login_required, current_user
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
@@ -171,6 +171,23 @@ def before_request():
 def after_request(response):
     """Adicionar headers de segurança a TODAS as respostas"""
     return add_security_headers(response)
+
+# ==================== CSRF ERROR HANDLER ====================
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    """Handle CSRF errors with detailed logging"""
+    logger.error(f"CSRF Error: {e.description}")
+    logger.error(f"  Remote Addr: {request.remote_addr}")
+    logger.error(f"  Method: {request.method}")
+    logger.error(f"  Path: {request.path}")
+    logger.error(f"  Secure: {request.is_secure}")
+    logger.error(f"  X-Forwarded-Proto: {request.headers.get('X-Forwarded-Proto')}")
+    logger.error(f"  X-Forwarded-For: {request.headers.get('X-Forwarded-For')}")
+    logger.error(f"  Host: {request.host}")
+    logger.error(f"  Cookies: {list(request.cookies.keys())}")
+    
+    flash('Erro de segurança: Token CSRF inválido. Tente novamente.', 'danger')
+    return render_template('auth/login.html'), 400
 
 # ==================== USER LOADER ====================
 @login_manager.user_loader

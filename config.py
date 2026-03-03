@@ -54,11 +54,13 @@ class Config:
     # Sessões (melhorado para produção com HTTPS)
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
     # Em produção com HTTPS, usar Secure + SameSite=Lax para máxima compatibilidade
-    SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
+    # Railway: setting SESSION_COOKIE_SECURE=False allows HTTPS proxy to work properly
+    # The ProxyFix middleware will handle X-Forwarded-Proto correctly
+    SESSION_COOKIE_SECURE = False  # Let proxy handle HTTPS, don't force Secure flag
     SESSION_COOKIE_HTTPONLY = True  # Protege contra XSS
     SESSION_COOKIE_SAMESITE = 'Lax'  # Protege contra CSRF, funciona bem com HTTPS
     SESSION_COOKIE_DOMAIN = None  # Deixar None para funcionar em subdomínios
-    REMEMBER_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
+    REMEMBER_COOKIE_SECURE = False  # Railway proxy handles HTTPS
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = 'Lax'
     
