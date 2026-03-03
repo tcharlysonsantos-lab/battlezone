@@ -160,6 +160,89 @@
             border-top: 1px solid var(--laranja);
             margin-top: 30px;
         }
+        
+        /* ========== RESPONSIVIDADE MOBILE ========== */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -250px;
+                height: 100%;
+                width: 250px;
+                transition: left 0.3s;
+                z-index: 1000;
+            }
+            
+            .sidebar.show {
+                left: 0;
+            }
+            
+            .navbar-brand {
+                font-size: 18px;
+            }
+            
+            .card {
+                margin-bottom: 15px;
+            }
+            
+            h1, h2, h3, h4, h5 {
+                font-size: 1.2rem !important;
+            }
+            
+            .table {
+                font-size: 0.85rem;
+            }
+            
+            .btn {
+                display: block;
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            
+            .row {
+                margin: 0 -5px;
+            }
+            
+            .col-md-4, .col-md-6, .col-lg-3 {
+                padding: 0 5px;
+                margin-bottom: 10px;
+            }
+            
+            .py-5 {
+                padding: 15px 0 !important;
+            }
+            
+            .px-3 {
+                padding: 0 10px !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .navbar-brand {
+                font-size: 16px;
+            }
+            
+            h1 {
+                font-size: 1.1rem !important;
+            }
+            
+            .btn {
+                font-size: 0.85rem;
+                padding: 8px 10px !important;
+            }
+            
+            .container, .container-fluid {
+                padding: 0 10px;
+            }
+            
+            .card-header {
+                padding: 8px 15px !important;
+                font-size: 0.9rem;
+            }
+            
+            .card-body {
+                padding: 15px !important;
+            }
+        }
     </style>
 </head>
 <body>
