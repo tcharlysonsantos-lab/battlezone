@@ -286,3 +286,119 @@ def enviar_confirmacao_solicitacao(usuario_email: str, nome_usuario: str, app):
     except Exception as e:
         logger.error(f"❌ Erro ao enviar confirmação de solicitação: {str(e)}")
         return False
+
+
+def enviar_email_reset_senha(usuario_email: str, nome_usuario: str, reset_link: str) -> bool:
+    """
+    Envia email com link para reset de senha
+    
+    Args:
+        usuario_email: Email do usuário
+        nome_usuario: Nome do usuário
+        reset_link: Link completo para reset de senha
+    
+    Returns:
+        True se enviado com sucesso, False caso contrário
+    """
+    if not mail:
+        logger.warning("[AVISO] Email service not initialized - cannot send password reset email")
+        return False
+    
+    try:
+        html_email = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%); color: white; padding: 30px; text-align: center; border-radius: 5px 5px 0 0; }}
+                .header h1 {{ margin: 0; font-size: 28px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }}
+                .content {{ background-color: white; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }}
+                .warning-box {{ background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 3px; color: #856404; }}
+                .button-container {{ text-align: center; margin: 30px 0; }}
+                .reset-button {{ 
+                    display: inline-block;
+                    padding: 15px 40px;
+                    background-color: #FF6B00;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    font-size: 16px;
+                    transition: background-color 0.3s;
+                }}
+                .reset-button:hover {{ background-color: #FF8C00; }}
+                .footer {{ color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }}
+                .security-tips {{ background-color: #e8f4f8; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0; border-radius: 3px; }}
+                .security-tips strong {{ color: #1a5276; }}
+                .security-tips ul {{ margin: 10px 0; padding-left: 20px; }}
+                .security-tips li {{ margin: 5px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎮 BATTLEZONE</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Redefinir Senha</p>
+                </div>
+                
+                <div class="content">
+                    <p>Olá <strong>{nome_usuario}</strong>,</p>
+                    
+                    <p>Você solicitou a redefinição de sua senha no BattleZone. Clique no botão abaixo para criar uma nova senha:</p>
+                    
+                    <div class="button-container">
+                        <a href="{reset_link}" class="reset-button">Redefinir Minha Senha</a>
+                    </div>
+                    
+                    <p style="text-align: center; color: #666; font-size: 13px; margin-top: 15px;">
+                        Ou copie e cole este link no seu navegador:<br>
+                        <code style="background-color: #f5f5f5; padding: 5px 10px; border-radius: 3px; word-break: break-all;">
+                            {reset_link}
+                        </code>
+                    </p>
+                    
+                    <div class="warning-box">
+                        <strong>⏰ ATENÇÃO:</strong> Este link é válido por apenas 30 minutos. Se não redefinir sua senha dentro deste prazo, você precisará solicitar um novo link.
+                    </div>
+                    
+                    <div class="security-tips">
+                        <strong>🔒 Dicas de Segurança:</strong>
+                        <ul>
+                            <li>Sua nova senha deve ter no mínimo 8 caracteres</li>
+                            <li>Inclua letras maiúsculas, minúsculas e números</li>
+                            <li>Use uma senha que você não utiliza em outros sites</li>
+                            <li>Nunca compartilhe sua senha com outras pessoas</li>
+                        </ul>
+                    </div>
+                    
+                    <p style="margin-top: 25px; color: #666;">
+                        Não solicitou esta redefinição de senha? Pode ignorar este email com segurança. 
+                        Apenas alguém com acesso ao seu email pode redefinir sua senha.
+                    </p>
+                    
+                    <div class="footer">
+                        <p style="margin: 0 0 10px 0;">Este é um email automático. Não responda este email.</p>
+                        <p style="margin: 0;">
+                            <strong>Precisa de ajuda?</strong><br>
+                            Entre em contato conosco por WhatsApp ou através do site
+                        </p>
+                        <p style="margin-top: 15px; font-style: italic;">BattleZone © 2026 - Todos os direitos reservados</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        sucesso = enviar_email(
+            [usuario_email],
+            "Redefinir Senha - BattleZone",
+            html_email
+        )
+        
+        return sucesso
+    
+    except Exception as e:
+        logger.error(f"[ERRO] Erro ao enviar email de reset de senha: {str(e)}")
+        return False

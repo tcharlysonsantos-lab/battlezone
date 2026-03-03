@@ -318,16 +318,26 @@ def forgot_password():
             # Log do evento
             log_security_event('PASSWORD_RESET_SOLICITADO', user.username, request.remote_addr)
             
-            # Mensagem para o usuário
-            flash(
-                'Se esta conta existe, um link para reset de senha foi enviado.\n'
-                'Link: ' + reset_link,
-                'info'
-            )
+            # Enviar email com link de reset
+            try:
+                from backend.email_service import enviar_email_reset_senha
+                enviar_email_reset_senha(user.email, user.nome, reset_link)
+                flash(
+                    'Um link para redefinir sua senha foi enviado para seu email.\n'
+                    'O link é válido por 30 minutos.',
+                    'success'
+                )
+            except Exception as e:
+                # Se falhar, mostrar link em flash (backup)
+                print(f'Erro ao enviar email: {e}')
+                flash(
+                    'Link para reset de senha:\n' + reset_link,
+                    'warning'
+                )
         else:
             # Segurança: não revelar se email existe ou não
             flash(
-                'Se esta conta existe, um link para reset de senha foi enviado.',
+                'Se esta conta existe, um link para reset de senha foi enviado para seu email.',
                 'info'
             )
         
