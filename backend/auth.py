@@ -303,12 +303,6 @@ def terms():
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     """Requisitar reset de senha"""
-    from flask_wtf.csrf import generate_csrf
-    
-    # DEBUG: Log de cookies e sessão
-    print(f"DEBUG - Method: {request.method}")
-    print(f"DEBUG - Cookies: {request.cookies}")
-    print(f"DEBUG - Form data: {request.form}")
     
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -350,9 +344,7 @@ def forgot_password():
         
         return redirect(url_for('auth.login'))
     
-    # Gerar token CSRF explicitamente para o template
-    csrf_token = generate_csrf()
-    return render_template('auth/forgot_password.html', csrf_token=csrf_token)
+    return render_template('auth/forgot_password.html')
 
 
 @auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
@@ -380,21 +372,15 @@ def reset_password(token):
         # Validações
         if not nova_senha or not confirma_senha:
             flash('Preenchimento de senha obrigatório.', 'danger')
-            from flask_wtf.csrf import generate_csrf
-            csrf_token = generate_csrf()
-            return render_template('auth/reset_password.html', token=token, csrf_token=csrf_token)
+            return render_template('auth/reset_password.html', token=token)
         
         if nova_senha != confirma_senha:
             flash('As senhas não coincidem.', 'danger')
-            from flask_wtf.csrf import generate_csrf
-            csrf_token = generate_csrf()
-            return render_template('auth/reset_password.html', token=token, csrf_token=csrf_token)
+            return render_template('auth/reset_password.html', token=token)
         
         if len(nova_senha) < 8:
             flash('Senha deve ter pelo menos 8 caracteres.', 'danger')
-            from flask_wtf.csrf import generate_csrf
-            csrf_token = generate_csrf()
-            return render_template('auth/reset_password.html', token=token, csrf_token=csrf_token)
+            return render_template('auth/reset_password.html', token=token)
         
         # Resetar senha
         user.resetar_senha(nova_senha)
@@ -403,7 +389,4 @@ def reset_password(token):
         flash('Sua senha foi alterada com sucesso! Agora faça login.', 'success')
         return redirect(url_for('auth.login'))
     
-    # Gerar token CSRF explicitamente para o template
-    from flask_wtf.csrf import generate_csrf
-    csrf_token = generate_csrf()
-    return render_template('auth/reset_password.html', token=token, csrf_token=csrf_token)
+    return render_template('auth/reset_password.html', token=token)

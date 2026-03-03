@@ -93,15 +93,6 @@ if not app.config['DEBUG']:
 # 1. CSRF Protection
 csrf = CSRFProtect(app)
 
-# Handler para erros CSRF
-@app.errorhandler(400)
-def csrf_error(e):
-    """Tratar erros CSRF"""
-    print(f"[CSRF ERROR] {e}")
-    import traceback
-    traceback.print_exc()
-    return {'error': f'Request inválido: {str(e)}'}, 400
-
 # 2. Headers de Segurança (NOVO)
 # Configuração de CSP com todos os domínios necessários
 csp_config = {
@@ -162,6 +153,10 @@ app.register_blueprint(pagamento_bp, url_prefix='/pagamentos')
 @app.before_request
 def before_request():
     """Middleware para verificar sessão de operadores"""
+    
+    # Desabilitar CSRF temporariamente para rotas de password reset (debug)
+    if request.path in ['/auth/forgot-password', '/auth/reset-password']:
+        csrf.exempt(lambda: None)  # Exempt these paths from CSRF
     
     # Marcar sessão como permanente para renovar o timeout a cada requisição
     if current_user.is_authenticated:
