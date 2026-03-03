@@ -14,6 +14,7 @@ Flask-Talisman==1.1.0
 python-dotenv==1.0.0
 cryptography==41.0.7
 pyotp==2.9.0
+qrcode==7.4.2
 
 # Validação e Sanitização
 email-validator==2.1.0
