@@ -1,0 +1,131 @@
+# ========================================
+# VARIÁVEIS NECESSÁRIAS PARA RAILWAY
+# ========================================
+# 
+# INSTRUÇÕES:
+# 1. Acesse: https://railway.app
+# 2. Selecione seu projeto: battlezone-production
+# 3. Vá para: Settings (canto superior direito)
+# 4. Clique em: Variables
+# 5. Para CADA variável abaixo:
+#    - Clique em "+ Add Variable"
+#    - Cole o Nome e Valor
+#    - Clique em "Add"
+#
+# ========================================
+
+NOME: FLASK_ENV
+VALOR: production
+
+---
+
+NOME: SECRET_KEY
+VALOR: (GERE COM: python -c "import secrets; print(secrets.token_hex(32))")
+EXEMPLO: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e
+
+---
+
+# IMPORTANTE: DATABASE_URL é adicionado AUTOMATICAMENTE quando você
+# habilita PostgreSQL. Não precisa fazer nada, apenas:
+# 1. Vá para: Resources (ou Plugins)
+# 2. Clique em: + Add
+# 3. Procure: PostgreSQL
+# 4. Selecione e aguarde criar (2-5 minutos)
+# 5. Pronto! DATABASE_URL aparecerá automaticamente em Variables
+
+NOME: DATABASE_URL
+VALOR: (Será adicionado automaticamente pelo Railway)
+STATUS: Deve aparecer automaticamente após habilitar PostgreSQL
+
+---
+
+# OPCIONAL - Apenas se quiser enviar emails:
+
+NOME: MAIL_SERVER
+VALOR: smtp.gmail.com
+
+---
+
+NOME: MAIL_PORT
+VALOR: 587
+
+---
+
+NOME: MAIL_USE_TLS
+VALOR: true
+
+---
+
+NOME: MAIL_USERNAME
+VALOR: seu-email@gmail.com
+
+---
+
+NOME: MAIL_PASSWORD
+VALOR: sua-app-password-google
+
+---
+
+# ========================================
+# PASSO-A-PASSO PASSO A PASSO:
+# ========================================
+
+1. GERAR SECRET_KEY
+   - Abra PowerShell/Terminal
+   - Digite: python -c "import secrets; print(secrets.token_hex(32))"
+   - Copie o resultado (será uma string longa com números e letras)
+
+2. ADICIONAR VARIÁVEIS NO RAILWAY
+   - Acesse: https://railway.app
+   - Projeto: battlezone-production
+   - Settings > Variables
+   - Clique "+ Add Variable"
+   - Nome: FLASK_ENV
+   - Valor: production
+   - Clique "Add"
+   
+   - Repita para SECRET_KEY (usar o valor gerado no passo 1)
+
+3. HABILITAR POSTGRESQL
+   - Em railway.app, seu projeto
+   - Vá para: Resources (ou + Add)
+   - Procure: PostgreSQL
+   - Clique em PostgreSQL para adicionar
+   - Aguarde 2-5 minutos
+   - DATABASE_URL aparecerá automaticamente
+
+4. REDEPLOY
+   - Volte ao VS Code
+   - Digite: git push origin main
+   - Railway fará novo deploy automaticamente
+
+5. VERIFICAR
+   - Aguarde 2-3 minutos
+   - Acesse: https://battlezone-production.up.railway.app
+   - Deve funcionar agora!
+
+# ========================================
+# TROUBLESHOOTING
+# ========================================
+
+Se ainda der 502 Bad Gateway:
+
+1. Verifique se tem PostgreSQL habilitado:
+   - railway.app > seu projeto
+   - Veja se tem um card "PostgreSQL"
+   - Se não tem, adicione!
+
+2. Verifique as variáveis:
+   - railway.app > seu projeto > Settings > Variables
+   - FLASK_ENV DEVE ser: production
+   - SECRET_KEY DEVE ter um valor longo
+   - DATABASE_URL DEVE aparecer
+
+3. Verifique os logs:
+   - railway.app > seu projeto > Deployments
+   - Clique no deploy mais recente
+   - Veja a aba "Logs"
+   - Procure por erro específico
+
+4. Se tudo estiver certo:
+   - Force redeploy: git add -A && git commit --allow-empty -m "redeploy" && git push origin main
