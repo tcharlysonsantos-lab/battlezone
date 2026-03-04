@@ -3156,7 +3156,12 @@ def migrar_json():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+            print("✅ Banco de dados inicializado com sucesso")
+        except Exception as e:
+            print(f"⚠️ Aviso ao inicializar banco: {str(e)}")
+            print("Tentando continuar mesmo assim...")
     app.run(debug=True)
 
 @app.cli.command("migrar-json")
@@ -3192,8 +3197,3 @@ def migrar_json():
         print(f"Operadores migrados: {len(operadores_json)}")
     
     print("Migração concluída!")
-
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)

@@ -51,6 +51,15 @@ class Config:
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Configuração de pool para melhor controle de conexões (especialmente em produção com PostgreSQL)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,
+        'pool_recycle': 3600,  # Recicla conexões a cada 1 hora
+        'pool_pre_ping': True,  # Verifica se conexão está viva antes de usar
+        'pool_use_lifo': True,
+        'max_overflow': 20,
+    }
+    
     # Sessões (melhorado para produção com HTTPS)
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
     # Em produção com HTTPS, usar Secure + SameSite=Lax para máxima compatibilidade
