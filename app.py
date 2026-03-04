@@ -3159,28 +3159,6 @@ def migrar_json():
     print("Migração concluída!")
 
 
-@app.route('/admin/database/init', methods=['POST'])
-@login_required
-@admin_required
-def init_database_route():
-    """Inicializa as tabelas do banco de dados (apenas admin)"""
-    try:
-        from backend.init_db import init_database
-        init_database(app)
-        
-        log = Log(
-            usuario=current_user.username,
-            acao='DATABASE_INIT',
-            detalhes='Banco de dados inicializado'
-        )
-        db.session.add(log)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Database initialized successfully'}), 200
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
 if __name__ == '__main__':
     # Em desenvolvimento, apenas rodar
     app.run(debug=False, host='0.0.0.0', port=5000)
