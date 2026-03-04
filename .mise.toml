@@ -1,0 +1,6 @@
+[tools]
+python = "3.11"
+
+[env]
+# Configurações de ambiente para production
+_.node-version = "20"
