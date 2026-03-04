@@ -9,12 +9,12 @@ from datetime import datetime
 # Importar com tratamento de erro se config.py não existir
 try:
     from app import app, db, cloud_manager
-    from backend.db_health import db_health_check
+    from backend.health_check import db_health_check
 except Exception as e:
-    print(f"❌ ERRO ao carregar app: {e}")
-    print("\nVerifique:")
-    print("1. Arquivo seguranca.env existe?")
-    print("2. SECRET_KEY está definida em seguranca.env?")
+    print(f"ERROR importing app: {e}")
+    print("\nVerify:")
+    print("1. File seguranca.env exists?")
+    print("2. SECRET_KEY is defined in seguranca.env?")
     sys.exit(1)
 
 def gerar_senha_segura():

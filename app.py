@@ -24,7 +24,7 @@ from backend.cloud_manager import CloudManager
 from backend.forms import OperadorForm, EquipeForm, PartidaForm, VendaForm, EstoqueForm
 from backend.security_utils import allowed_file_secure, safe_filename_with_timestamp, create_upload_directory
 from backend.email_service import init_mail
-from backend.db_health import db_health_check
+from backend.health_check import db_health_check
 
 # Importar segurança (NOVO)
 from backend.security_middleware import (
