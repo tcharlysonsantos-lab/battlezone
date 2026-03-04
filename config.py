@@ -37,9 +37,10 @@ class Config:
     # Caso contrário, usa SQLite local
     _database_url = os.environ.get('DATABASE_URL')
     
-    if _database_url:
-        # Railway PostgreSQL
+    if _database_url and _database_url != 'sqlite:///instance/database.db':
+        # Railway PostgreSQL ou URL customizada
         SQLALCHEMY_DATABASE_URI = _database_url
+        DB_TYPE = 'PostgreSQL'
     else:
         # SQLite local (desenvolvimento e free tier Railway)
         # Usa caminho ABSOLUTO para SQLite funcionar corretamente
@@ -48,6 +49,7 @@ class Config:
         db_file = db_file.replace('\\', '/')
         # URL de SQLite: sqlite:///caminho/absoluto
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_file}'
+        DB_TYPE = 'SQLite'
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     

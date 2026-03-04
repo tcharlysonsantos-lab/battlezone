@@ -110,10 +110,14 @@ def main():
             def timeout_handler(signum, frame):
                 raise TimeoutError("Timeout ao conectar ao banco de dados")
             
+            # Verificar tipo de banco configurado
+            from config import config
+            db_type = getattr(config, 'DB_TYPE', 'SQLite')
+            
             # Para localhost (SQLite) ou se DEBUG=True, criar tabelas
             # Para produção (PostgreSQL), deixar a migração para depois
             if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
-                print("   🗄️  SQLite detectado")
+                print(f"   🗄️  {db_type} detectado")
                 if not os.path.exists('instance/database.db'):
                     print("   ➜ Criando tabelas...")
                     try:
@@ -123,20 +127,21 @@ def main():
                     except Exception as e:
                         print(f"   ⚠️  Erro ao criar tabelas (continuando): {e}")
             else:
-                print("   🐘 PostgreSQL detectado (Railway)")
+                print(f"   🐘 {db_type} detectado (Railway)")
                 print("   ℹ️  Banco será inicializado na primeira conexão")
     except Exception as e:
         print(f"   ⚠️  Aviso ao inicializar banco: {e}")
         print("   ℹ️  Continuando mesmo assim...")
     
     # Iniciar Health Check para conexão persistente
-    print("\n🔄 Iniciando Database Health Check...")
-    try:
-        with app.app_context():
-            db_health_check.start()
-            print("   ✅ Database Health Check iniciado")
-    except Exception as e:
-        print(f"   ⚠️  Erro ao iniciar health check: {e}")
+    # DESABILITADO TEMPORARIAMENTE - será iniciado automaticamente na primeira requisição
+    # print("\n🔄 Iniciando Database Health Check...")
+    # try:
+    #     with app.app_context():
+    #         db_health_check.start()
+    #         print("   ✅ Database Health Check iniciado")
+    # except Exception as e:
+    #     print(f"   ⚠️  Erro ao iniciar health check: {e}")
     
     # Verificar variáveis críticas
     print("\n🔒 Verificando configuração de segurança...")

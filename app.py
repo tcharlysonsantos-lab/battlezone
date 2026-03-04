@@ -199,21 +199,6 @@ def handle_csrf_error(e):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# ==================== HEALTH CHECK STARTUP ====================
-_health_check_started = False
-
-@app.before_first_request
-def start_health_check():
-    """Inicia health check na primeira requisição"""
-    global _health_check_started
-    if not _health_check_started:
-        try:
-            db_health_check.start()
-            logger.info("✅ Database Health Check iniciado automaticamente")
-            _health_check_started = True
-        except Exception as e:
-            logger.error(f"⚠️ Erro ao iniciar health check: {e}")
-
 # ==================== CONTEXT PROCESSOR ====================
 @app.context_processor
 def inject_now():
