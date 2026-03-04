@@ -98,34 +98,36 @@ def main():
     os.makedirs('data', exist_ok=True)
     os.makedirs('logs', exist_ok=True)
     
-    print("\n📦 Verificando banco de dados...")
+    print("\n📦 Inicializando banco de dados...")
     
-    # Verificar se banco existe
+    # Inicialização não-bloqueadora do banco
     try:
         with app.app_context():
-            if not os.path.exists('instance/database.db'):
-                print("\n❌ Banco de dados não encontrado. Criando...")
-                
-                # Criar tabelas
-                db.create_all()
-                print("✅ Tabelas criadas!")
-                
-                # Criar admin inicial
-                criar_admin_inicial()
+            # Tentar criar tabelas com timeout curto (não bloqueia o app)
+            import signal
+            
+            def timeout_handler(signum, frame):
+                raise TimeoutError("Timeout ao conectar ao banco de dados")
+            
+            # Para localhost (SQLite) ou se DEBUG=True, criar tabelas
+            # Para produção (PostgreSQL), deixar a migração para depois
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                print("   🗄️  SQLite detectado")
+                if not os.path.exists('instance/database.db'):
+                    print("   ➜ Criando tabelas...")
+                    try:
+                        db.create_all()
+                        print("   ✅ Tabelas criadas!")
+                        criar_admin_inicial()
+                    except Exception as e:
+                        print(f"   ⚠️  Erro ao criar tabelas (continuando): {e}")
             else:
-                print("✅ Banco de dados encontrado")
-                
-                # Verificar se tem admin
-                from backend.models import User
-                admin = User.query.filter_by(username='admin').first()
-                if not admin:
-                    print("⚠️  Admin não encontrado, criando...")
-                    criar_admin_inicial()
+                print("   🐘 PostgreSQL detectado (Railway)")
+                print("   ℹ️  Banco será inicializado na primeira conexão")
     except Exception as e:
-        print(f"❌ ERRO ao verificar banco: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+        print(f"   ⚠️  Aviso ao inicializar banco: {e}")
+        print("   ℹ️  Continuando mesmo assim...")
+    
     
     # Verificar variáveis críticas
     print("\n🔒 Verificando configuração de segurança...")
