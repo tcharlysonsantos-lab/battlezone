@@ -39,6 +39,12 @@ try:
     logger.info(f"[WSGI] App imported OK")
     logger.info(f"[WSGI] Debug: {app.debug}")
     
+    # Initialize database tables if needed
+    logger.info("[WSGI] Initializing database...")
+    from backend.init_db import init_database
+    init_database(app)
+    logger.info("[WSGI] Database initialized")
+    
     # Export for Gunicorn/WSGI
     application = app
     logger.info("[WSGI] Ready for Gunicorn")
