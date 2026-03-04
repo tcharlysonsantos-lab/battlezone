@@ -3159,6 +3159,33 @@ def migrar_json():
     print("Migração concluída!")
 
 
+@app.route('/setup/info')
+def setup_info():
+    """Show current database setup"""
+    import os
+    from backend.models import db
+    
+    try:
+        info = {
+            'flask_env': os.environ.get('FLASK_ENV', 'NOT SET'),
+            'database_url_set': 'DATABASE_URL' in os.environ,
+            'database_uri': str(db.engine.url),
+            'debug_mode': app.debug,
+            'tables': db.inspect(db.engine).get_table_names() if db.inspect(db.engine) else []
+        }
+        
+        # Test connection
+        try:
+            result = db.session.execute(db.text('SELECT 1'))
+            info['connection_status'] = 'OK'
+        except Exception as e:
+            info['connection_status'] = f'ERROR: {str(e)}'
+        
+        return jsonify(info), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/setup/init-database/<secret_key>')
 def init_database_setup(secret_key):
     """Initialize database tables - use SECRET_KEY from environment"""
