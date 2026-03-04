@@ -1,0 +1,10 @@
+[build]
+# Force railway to use Python without Mise
+nixpkgs.rev = "123456789"
+
+[[build.staticFiles]]
+paths = ["static"]
+output = "/app/static"
+
+[start]
+cmd = "python run.py"
