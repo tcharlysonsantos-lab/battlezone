@@ -29,7 +29,7 @@ def criar_admin_inicial():
     # Verificar se admin já existe
     admin_existente = User.query.filter_by(username='admin').first()
     if admin_existente:
-        print("✅ Admin já existe no banco de dados")
+        print("[OK] Admin já existe no banco de dados")
         return False
     
     # Gerar senha segura
@@ -69,16 +69,16 @@ def criar_admin_inicial():
         except:
             pass
     except Exception as e:
-        print(f"❌ Erro ao salvar credenciais: {e}")
+        print(f"[ERROR] Erro ao salvar credenciais: {e}")
         # Mesmo se falhar o arquivo, mostrar a senha no console
         pass
     
     print("\n" + "="*60)
-    print("🔐 ADMIN CRIADO COM SUCESSO!")
+    print("[OK] ADMIN CRIADO COM SUCESSO!")
     print("="*60)
     print(f"Usuário: {credenciais['usuario']}")
     print(f"Senha:   {credenciais['senha_inicial']}")
-    print("\n⚠️  IMPORTANTE:")
+    print("\n[WARN] IMPORTANTE:")
     print("   1. Salve essa senha em local seguro")
     print("   2. Mude para uma senha forte IMEDIATAMENTE após login")
     print(f"   3. Arquivo '{file_credenciais}' criado com essas credenciais")
@@ -90,7 +90,7 @@ def criar_admin_inicial():
 def main():
     """Função principal para iniciar o sistema"""
     print("=" * 70)
-    print("🎮 BATTLEZONE - Sistema de Gerenciamento de Airsoft")
+    print("[BATTLEZONE] Sistema de Gerenciamento de Airsoft")
     print("Versão 3.0.0 - Flask | Edição com Segurança Ativada")
     print("=" * 70)
     
@@ -99,7 +99,7 @@ def main():
     os.makedirs('data', exist_ok=True)
     os.makedirs('logs', exist_ok=True)
     
-    print("\n📦 Inicializando banco de dados...")
+    print("\n[DB] Inicializando banco de dados...")
     
     # Inicialização não-bloqueadora do banco
     try:
@@ -117,21 +117,21 @@ def main():
             # Para localhost (SQLite) ou se DEBUG=True, criar tabelas
             # Para produção (PostgreSQL), deixar a migração para depois
             if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
-                print(f"   🗄️  {db_type} detectado")
+                print(f"   [{db_type}] Detectado")
                 if not os.path.exists('instance/database.db'):
                     print("   ➜ Criando tabelas...")
                     try:
                         db.create_all()
-                        print("   ✅ Tabelas criadas!")
+                        print("   [OK] Tabelas criadas!")
                         criar_admin_inicial()
                     except Exception as e:
-                        print(f"   ⚠️  Erro ao criar tabelas (continuando): {e}")
+                        print(f"   [WARN] Erro ao criar tabelas (continuando): {e}")
             else:
-                print(f"   🐘 {db_type} detectado (Railway)")
-                print("   ℹ️  Banco será inicializado na primeira conexão")
+                print(f"   [{db_type}] Detectado (Railway)")
+                print("   [INFO] Banco será inicializado na primeira conexão")
     except Exception as e:
-        print(f"   ⚠️  Aviso ao inicializar banco: {e}")
-        print("   ℹ️  Continuando mesmo assim...")
+        print(f"   [WARN] Aviso ao inicializar banco: {e}")
+        print("   [INFO] Continuando mesmo assim...")
     
     # Iniciar Health Check para conexão persistente
     print("\n[DB] Iniciando Database Health Check...")
@@ -143,7 +143,7 @@ def main():
         print(f"   [WARNING] Erro ao iniciar health check: {e}")
     
     # Verificar variáveis críticas
-    print("\n🔒 Verificando configuração de segurança...")
+    print("\n[SECURITY] Verificando configuração de segurança...")
     try:
         from config import config
         
@@ -164,14 +164,14 @@ def main():
         print(f"❌ ERRO ao verificar configuração: {e}")
     
     # Verificar sincronização com Drive
-    print(f"\n☁️  Pasta de nuvem: {cloud_manager.CAMINHO_NUVEM}")
+    print(f"\n[CLOUD] Pasta de nuvem: {cloud_manager.CAMINHO_NUVEM}")
     
     if cloud_manager.CAMINHO_NUVEM == cloud_manager.CAMINHO_LOCAL + '/backups_drive':
-        print("⚠️  Pasta do Google Drive não encontrada!")
+        print("[WARN] Pasta do Google Drive não encontrada!")
         print("   Os backups serão salvos localmente em: backups_drive/")
     
     print("\n" + "=" * 70)
-    print("🚀 INICIANDO SERVIDOR...")
+    print("[START] INICIANDO SERVIDOR...")
     print("   Acesse: http://localhost:5000")
     print("   Para parar: Ctrl + C")
     print("=" * 70 + "\n")
@@ -185,10 +185,10 @@ def main():
             use_reloader=config.DEBUG
         )
     except KeyboardInterrupt:
-        print("\n\n✅ Servidor parado pelo usuário (Ctrl + C)")
+        print("\n\n[OK] Servidor parado pelo usuário (Ctrl + C)")
         sys.exit(0)
     except Exception as e:
-        print(f"\n❌ ERRO ao iniciar servidor: {e}")
+        print(f"\n[ERROR] ERRO ao iniciar servidor: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

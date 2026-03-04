@@ -3160,22 +3160,9 @@ def migrar_json():
 
 
 if __name__ == '__main__':
-    # Em desenvolvimento, inicializar serviços
-    with app.app_context():
-        try:
-            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
-                if not os.path.exists('instance/database.db'):
-                    logger.info("[DB] Criando tabelas SQLite...")
-                    db.create_all()
-            
-            # Iniciar health check
-            db_health_check.start()
-            logger.info("[HEALTH] Database Health Check iniciado")
-        except Exception as e:
-            logger.warning(f"[INIT] Erro ao inicializar serviços: {e}")
-    
-    # Rodar em desenvolvimento
+    # Em desenvolvimento, apenas rodar
     app.run(debug=False, host='0.0.0.0', port=5000)
+
 
 
 
