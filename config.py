@@ -37,12 +37,20 @@ class Config:
     # Caso contrário, usa SQLite local
     _database_url = os.environ.get('DATABASE_URL')
     
-    if _database_url and _database_url != 'sqlite:///instance/database.db':
-        # Railway PostgreSQL ou URL customizada
+    # DEBUG: print da DATABASE_URL
+    print(f"[CONFIG] DATABASE_URL raw: {_database_url}")
+    print(f"[CONFIG] DATABASE_URL type: {type(_database_url)}")
+    print(f"[CONFIG] DATABASE_URL is empty: {not _database_url}")
+    print(f"[CONFIG] DATABASE_URL starts with postgres: {_database_url.startswith('postgres') if _database_url else False}")
+    
+    if _database_url and _database_url.startswith('postgres'):
+        # Railway PostgreSQL - Railway pode usar postgresql:// ou postgres://
+        print(f"[CONFIG] Using PostgreSQL from DATABASE_URL")
         SQLALCHEMY_DATABASE_URI = _database_url
         DB_TYPE = 'PostgreSQL'
     else:
         # SQLite local (desenvolvimento e free tier Railway)
+        print(f"[CONFIG] Using SQLite - DATABASE_URL not valid for PostgreSQL")
         # Usa caminho ABSOLUTO para SQLite funcionar corretamente
         db_file = os.path.abspath(os.path.join(str(INSTANCE_PATH), 'database.db'))
         # Converte backslashes em slashes para URL (IMPORTANTE para Windows!)
