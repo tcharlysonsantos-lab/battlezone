@@ -24,6 +24,7 @@ from backend.cloud_manager import CloudManager
 from backend.forms import OperadorForm, EquipeForm, PartidaForm, VendaForm, EstoqueForm
 from backend.security_utils import allowed_file_secure, safe_filename_with_timestamp, create_upload_directory
 from backend.email_service import init_mail
+from backend.db_health import db_health_check
 
 # Importar segurança (NOVO)
 from backend.security_middleware import (
@@ -131,6 +132,10 @@ limiter = Limiter(
 
 # ==================== INICIALIZAR EXTENSÕES ====================
 db.init_app(app)
+
+# Inicializar Database Health Check (conexão persistente)
+db_health_check.init_app(app, db)
+
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Por favor, faça login para acessar esta página.'
@@ -193,6 +198,21 @@ def handle_csrf_error(e):
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+# ==================== HEALTH CHECK STARTUP ====================
+_health_check_started = False
+
+@app.before_first_request
+def start_health_check():
+    """Inicia health check na primeira requisição"""
+    global _health_check_started
+    if not _health_check_started:
+        try:
+            db_health_check.start()
+            logger.info("✅ Database Health Check iniciado automaticamente")
+            _health_check_started = True
+        except Exception as e:
+            logger.error(f"⚠️ Erro ao iniciar health check: {e}")
 
 # ==================== CONTEXT PROCESSOR ====================
 @app.context_processor
@@ -3159,6 +3179,10 @@ if __name__ == '__main__':
         try:
             db.create_all()
             print("✅ Banco de dados inicializado com sucesso")
+            
+            # Iniciar health check para conexão persistente
+            db_health_check.start()
+            print("✅ Database Health Check iniciado")
         except Exception as e:
             print(f"⚠️ Aviso ao inicializar banco: {str(e)}")
             print("Tentando continuar mesmo assim...")

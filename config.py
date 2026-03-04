@@ -51,13 +51,15 @@ class Config:
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Configuração de pool para melhor controle de conexões (especialmente em produção com PostgreSQL)
+    # Configuração de pool para manter conexão SEMPRE ATIVA (conexão persistente)
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 5,  # Reduzido para evitar overhead
-        'pool_recycle': 3600,  # Recicla conexões a cada 1 hora
-        'pool_pre_ping': True,  # Verifica se conexão está viva antes de usar
-        'pool_use_lifo': True,
-        'max_overflow': 10,
+        'pool_size': 10,  # Mantém 10 conexões abertas sempre
+        'pool_recycle': 1800,  # Recicla a cada 30 minutos
+        'pool_pre_ping': True,  # Verifica saúde antes de usar
+        'pool_use_lifo': True,  # Usa conexão mais recente (menos chance de timeout)
+        'max_overflow': 5,  # Permite 5 conexões extras se necessário
+        'echo_pool': False,  # Log de pool (desabilitar em produção)
+        'isolation_level': 'AUTOCOMMIT',  # Autocommit para evitar locks longos
     }
     
     # Sessões (melhorado para produção com HTTPS)
@@ -86,6 +88,10 @@ class Config:
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    
+    # Configuração de Health Check (verifica conexão a cada 30 segundos)
+    DB_HEALTH_CHECK_INTERVAL = 30  # segundos
+    DB_HEALTH_CHECK_ENABLED = True
     
     # Rate Limiting
     RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'true').lower() == 'true'

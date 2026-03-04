@@ -9,6 +9,7 @@ from datetime import datetime
 # Importar com tratamento de erro se config.py não existir
 try:
     from app import app, db, cloud_manager
+    from backend.db_health import db_health_check
 except Exception as e:
     print(f"❌ ERRO ao carregar app: {e}")
     print("\nVerifique:")
@@ -128,6 +129,14 @@ def main():
         print(f"   ⚠️  Aviso ao inicializar banco: {e}")
         print("   ℹ️  Continuando mesmo assim...")
     
+    # Iniciar Health Check para conexão persistente
+    print("\n🔄 Iniciando Database Health Check...")
+    try:
+        with app.app_context():
+            db_health_check.start()
+            print("   ✅ Database Health Check iniciado")
+    except Exception as e:
+        print(f"   ⚠️  Erro ao iniciar health check: {e}")
     
     # Verificar variáveis críticas
     print("\n🔒 Verificando configuração de segurança...")
