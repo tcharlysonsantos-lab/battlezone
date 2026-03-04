@@ -3159,6 +3159,32 @@ def migrar_json():
     print("Migração concluída!")
 
 
+@app.route('/setup/init-database/<secret_key>')
+def init_database_setup(secret_key):
+    """Initialize database tables - use SECRET_KEY from environment"""
+    import os
+    
+    # Security: require correct secret key
+    if secret_key != os.environ.get('SECRET_KEY', ''):
+        return jsonify({'error': 'Invalid secret key'}), 403
+    
+    try:
+        from backend.init_db import init_database
+        init_database(app)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Database initialized successfully',
+            'timestamp': datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 if __name__ == '__main__':
     # Em desenvolvimento, apenas rodar
     app.run(debug=False, host='0.0.0.0', port=5000)
