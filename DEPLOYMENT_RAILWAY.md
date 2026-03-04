@@ -50,13 +50,49 @@ If you don't see startup output immediately:
 
 ### Step 1: Configure Environment Variables on Railway
 
-Go to your Railway project settings and add:
+**CRITICAL:** Go to your Railway project settings and add **EXACTLY these variables**:
 
 ```
 SECRET_KEY=<your-secret-key>
 FLASK_ENV=production
-DATABASE_URL=<automatically set by Railway when PostgreSQL is added>
 ```
+
+To generate SECRET_KEY:
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Copy the output and paste it as SECRET_KEY in Railway.
+
+**Important:**
+- `FLASK_ENV=production` MUST be set, or the app will run in DEBUG mode and use SQLite instead of PostgreSQL
+- `DATABASE_URL` is automatically set by Railway when PostgreSQL is enabled
+- Store all values in Railway dashboard, NOT in `seguranca.env` (never commit secrets!)
+
+### Step 2: Enable PostgreSQL
+
+In Railway dashboard:
+1. Go to your project
+2. Click "+ Add"
+3. Select "PostgreSQL"
+4. Wait for it to be created
+5. `DATABASE_URL` will appear automatically in Environment
+
+### Step 3: Verify Procfile
+
+The root `Procfile` should contain:
+
+```
+web: gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120 --access-logfile - --error-logfile - --log-level info wsgi:application
+```
+
+**Key configuration explained:**
+- `--workers 1` - Single worker process (sufficient for small apps)
+- `--threads 2` - 2 threads per worker for concurrent requests
+- `--timeout 120` - 120 seconds (app takes 2-3s to initialize)
+- `--access-logfile -` - Log to stdout (Railway captures this)
+- `--error-logfile -` - Error logs to stdout
+- `--log-level info` - Show INFO level logs
 
 ### Step 2: Verify Procfile
 
@@ -113,16 +149,55 @@ In Railway dashboard:
 
 ### Issue: 502 Bad Gateway
 
+**Most common cause:** `FLASK_ENV=production` not set in Railway environment!
+
 **Possible causes:**
-1. App not starting - check logs
-2. DATABASE_URL not set - add PostgreSQL add-on
-3. SECRET_KEY not configured - add to environment variables
+1. `FLASK_ENV` not set to `production` - app runs in DEBUG mode with SQLite → Connection fails
+2. PostgreSQL not enabled - Database not available
+3. `SECRET_KEY` not configured - App refuses to start
+4. App taking too long to initialize - Gunicorn timeout too short
+5. Missing module - Dependency not installed
 
 **Solution:**
-1. Check Railway logs: `railway logs`
-2. Verify environment variables are set
-3. Ensure `wsgi.py` exists and is correct
-4. Ensure `Procfile` exists in root directory
+
+1. **Verify Environment Variables Set:**
+   - Go to Railway dashboard → Your Project → Settings → Environment
+   - Check that these exist:
+     - `FLASK_ENV=production`
+     - `SECRET_KEY=<actual-key>`
+     - `DATABASE_URL=<shown automatically>`
+   - If missing, add them manually
+
+2. **Check Railway Logs:**
+   ```bash
+   railway logs  # CLI
+   ```
+   Or in Railway dashboard: Deployments → View Logs
+   
+   Look for:
+   - `[WSGI] Starting application initialization...`
+   - `[WSGI] App imported successfully!`
+   - `[WSGI] Application ready for Gunicorn`
+   
+   If you see errors, the logs will show them.
+
+3. **Verify PostgreSQL Connected:**
+   - Ensure PostgreSQL add-on is visible in Railway dashboard
+   - `DATABASE_URL` should appear in Environment variables
+   - If not present, click "+ Add" and select PostgreSQL
+
+4. **Force Redeploy:**
+   ```bash
+   git add -A
+   git commit --allow-empty -m "Trigger redeploy"
+   git push origin main
+   ```
+
+5. **Test Locally First:**
+   ```bash
+   FLASK_ENV=production python start.py
+   ```
+   Should start without errors and say "Running on http://0.0.0.0:5000"
 
 ### Issue: Database Connection Errors
 
