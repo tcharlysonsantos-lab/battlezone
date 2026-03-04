@@ -3,6 +3,7 @@ import threading
 import time
 import logging
 from datetime import datetime
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +33,14 @@ class DatabaseHealthCheck:
         self.running = True
         self.thread = threading.Thread(target=self._health_check_loop, daemon=True)
         self.thread.start()
-        logger.info(f"✅ Database Health Check iniciado (intervalo: {self.interval}s)")
+        logger.info(f"[OK] Database Health Check iniciado (intervalo: {self.interval}s)")
         
     def stop(self):
         """Para o health check"""
         self.running = False
         if self.thread:
             self.thread.join(timeout=5)
-        logger.info("❌ Database Health Check parado")
+        logger.info("[STOP] Database Health Check parado")
         
     def _health_check_loop(self):
         """Loop principal que verifica conexão continuamente"""
@@ -61,7 +62,7 @@ class DatabaseHealthCheck:
                 
             with self.app.app_context():
                 # Executar query simples para testar conexão
-                result = self.db.session.execute('SELECT 1')
+                result = self.db.session.execute(text('SELECT 1'))
                 result.close()
                 
                 self.connection_status = 'connected'
@@ -72,7 +73,7 @@ class DatabaseHealthCheck:
             self.connection_status = 'disconnected'
             self.last_error = str(e)
             self.last_check = datetime.now()
-            logger.warning(f"⚠️ Database desconectado: {e}")
+            logger.warning(f"[WARNING] Database desconectado: {e}")
             
             # Tentar reconectar
             try:
@@ -87,9 +88,9 @@ class DatabaseHealthCheck:
                 # Fechar conexões antigas
                 self.db.session.close_all()
                 # Tentar nova query
-                self.db.session.execute('SELECT 1')
+                self.db.session.execute(text('SELECT 1'))
                 self.connection_status = 'reconnected'
-                logger.info("✅ Reconectado com sucesso ao banco de dados")
+                logger.info("[RECONNECTED] Reconectado com sucesso ao banco de dados")
         except Exception as e:
             logger.error(f"Falha na reconexão: {e}")
             raise

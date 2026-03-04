@@ -134,13 +134,13 @@ def main():
         print("   ℹ️  Continuando mesmo assim...")
     
     # Iniciar Health Check para conexão persistente
-    print("\n🔄 Iniciando Database Health Check...")
+    print("\n[DB] Iniciando Database Health Check...")
     try:
         with app.app_context():
             db_health_check.start()
-            print("   ✅ Database Health Check iniciado")
+            print("   [OK] Database Health Check iniciado")
     except Exception as e:
-        print(f"   ⚠️  Erro ao iniciar health check: {e}")
+        print(f"   [WARNING] Erro ao iniciar health check: {e}")
     
     # Verificar variáveis críticas
     print("\n🔒 Verificando configuração de segurança...")
