@@ -154,6 +154,39 @@ create_upload_directory(app.config['UPLOAD_FOLDER'])
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(pagamento_bp, url_prefix='/pagamentos')
 
+# ==================== INICIALIZAÇÃO DO APP (Desenvolvimento e Produção) ====================
+# Esta função roda uma única vez quando o app é carregado (tanto em run.py quanto Gunicorn)
+_app_initialized = False
+
+def init_app_services():
+    """Inicializa serviços do app (database, health check, etc)"""
+    global _app_initialized
+    if _app_initialized:
+        return
+    
+    try:
+        _app_initialized = True
+        logger.info("[APP] Inicializando serviços da aplicação...")
+        
+        with app.app_context():
+            # Criar tabelas se necessário (SQLite)
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                if not os.path.exists('instance/database.db'):
+                    logger.info("[DB] Criando tabelas SQLite...")
+                    db.create_all()
+            
+            # Iniciar health check em background
+            try:
+                db_health_check.start()
+                logger.info("[HEALTH] Database Health Check iniciado")
+            except Exception as e:
+                logger.warning(f"[HEALTH] Erro ao iniciar health check: {e}")
+    except Exception as e:
+        logger.error(f"[APP] Erro ao inicializar serviços: {e}")
+
+# Inicializar imediatamente quando o app é criado
+init_app_services()
+
 # ==================== MIDDLEWARE ====================
 @app.before_request
 def before_request():
@@ -3160,18 +3193,9 @@ def migrar_json():
 
 
 if __name__ == '__main__':
-    with app.app_context():
-        try:
-            db.create_all()
-            print("✅ Banco de dados inicializado com sucesso")
-            
-            # Iniciar health check para conexão persistente
-            db_health_check.start()
-            print("✅ Database Health Check iniciado")
-        except Exception as e:
-            print(f"⚠️ Aviso ao inicializar banco: {str(e)}")
-            print("Tentando continuar mesmo assim...")
-    app.run(debug=True)
+    # Em desenvolvimento, rodar com reloader
+    app.run(debug=False, host='0.0.0.0', port=5000)
+
 
 @app.cli.command("migrar-json")
 def migrar_json():
