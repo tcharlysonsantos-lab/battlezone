@@ -68,7 +68,9 @@
                                 <div class="card-body py-2">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <strong>{{ membro.nome }}</strong>
+                                            <a href="{{ url_for('perfil_operador', id=membro.id) }}" style="color: var(--laranja); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                                                <strong>{{ membro.nome }}</strong>
+                                            </a>
                                             <br>
                                             <small class="text-muted">@{{ membro.warname }}</small>
                                         </div>

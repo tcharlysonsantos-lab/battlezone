@@ -20,12 +20,12 @@ PLANOS_WARFIELD = {
         "valores": [10, 20, 25, 40, 160, 280]
     },
     "Equipe": {
-        "tempos": ["60¹ min", "60² min", "60³ min"],
+        "tempos": ["60 minutos - básico", "60 minutos - premium", "60 minutos - master"],
         "bbs": [0, 200, 400],
         "valores": [160, 200, 240]
     },
     "Sua Arma": {
-        "tempos": ["10 min", "60¹ min", "120¹ min", "150 min", "180¹ min", "60² min", "120² min", "180² min"],
+        "tempos": ["10 min", "60 minutos - básico", "120 minutos - básico", "150 min", "180 minutos - básico", "60 minutos - premium", "120 minutos - premium", "180 minutos - premium"],
         "bbs": [0, 0, 0, 0, 0, 0, 0, 0],
         "valores": [5, 15, 25, 35, 40, 80, 140, 250]
     }
@@ -58,12 +58,13 @@ MODOS_POR_TEMPO = {
     "60 min": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "PLANTAÇÃO DE BOMBA"],
     "30 min*": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "PLANTAÇÃO DE BOMBA"],
     "60 min*": ["PVP INFINITY", "ONE LIFE", "PEGA REFÉM", "CAÇA AO VIP", "CAPTURA DE BANDEIRA", "PLANTAÇÃO DE BOMBA"],
-    "60¹ min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
-    "60² min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
-    "60³ min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
-    "120¹ min": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
+    "60 minutos - básico": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
+    "60 minutos - premium": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
+    "60 minutos - master": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
+    "120 minutos - básico": ["PVP INFINITY", "ONE LIFE", "CAPTURA DE BANDEIRA"],
     "150 min": ["PVP INFINITY", "ONE LIFE"],
-    "180¹ min": ["PVP INFINITY", "ONE LIFE"],
+    "180 minutos - básico": ["PVP INFINITY", "ONE LIFE"],
+    "180 minutos - premium": ["PVP INFINITY", "ONE LIFE"],
     "5 min": ["PVP INFINITY"],
     "5 min*": ["PVP INFINITY"],
     "15 min": ["PVP INFINITY", "ONE LIFE"],

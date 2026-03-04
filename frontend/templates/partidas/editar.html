@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Partida{% endblock %}
+
+{% block content %}
+<style>
+    .info-box {
+        background: linear-gradient(145deg, var(--cinza-escuro), var(--preto));
+        border: 2px solid var(--laranja);
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        text-align: center;
+    }
+
+    .info-valor {
+        color: var(--laranja);
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .campo-desabilitado {
+        background-color: var(--cinza-claro) !important;
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+</style>
+
+<div class="mb-4">
+    <a href="{{ url_for('ver_partida', id=partida.id) }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Cancelar
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-edit me-2"></i>Editar Partida: {{ partida.nome }}</h4>
+            </div>
+            <div class="card-body">
+                <!-- INFO: Campos que podem ser editados -->
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Campos editáveis:</strong> Nome, Data, Horário, Modo e Pagamento
+                    <br>
+                    <small>Participantes, Campo, Plano e Tempo não podem ser alterados após criação.</small>
+                </div>
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- Seção 1: Informações básicas (editáveis) -->
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Nome da Partida</label>
+                            <input type="text" name="nome" class="form-control" value="{{ partida.nome }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Data</label>
+                            <input type="text" name="data" class="form-control" value="{{ partida.data }}" placeholder="DD/MM/YYYY" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Horário</label>
+                            <input type="text" name="horario" class="form-control" value="{{ partida.horario }}" placeholder="HH:MM" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Pagamento</label>
+                            <select name="pagamento" class="form-select">
+                                <option value="Pendente" {% if partida.pagamento == 'Pendente' %}selected{% endif %}>Pendente</option>
+                                <option value="Dinheiro" {% if partida.pagamento == 'Dinheiro' %}selected{% endif %}>Dinheiro</option>
+                                <option value="PIX" {% if partida.pagamento == 'PIX' %}selected{% endif %}>PIX</option>
+                                <option value="Crédito" {% if partida.pagamento == 'Crédito' %}selected{% endif %}>Crédito</option>
+                                <option value="Débito" {% if partida.pagamento == 'Débito' %}selected{% endif %}>Débito</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Modo</label>
+                            <input type="text" name="modo" class="form-control" value="{{ partida.modo }}" required>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Seção 2: Informações que NÃO podem ser editadas -->
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Campo</label>
+                            <input type="text" class="form-control campo-desabilitado" value="{{ partida.campo }}" disabled>
+                            <small class="text-muted">Não pode ser alterado</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Plano</label>
+                            <input type="text" class="form-control campo-desabilitado" value="{{ partida.plano }}" disabled>
+                            <small class="text-muted">Não pode ser alterado</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tempo</label>
+                            <input type="text" class="form-control campo-desabilitado" value="{{ partida.tempo }}" disabled>
+                            <small class="text-muted">Não pode ser alterado</small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tipo de Participação</label>
+                            <input type="text" class="form-control campo-desabilitado" value="{{ partida.tipo_participacao|upper }}" disabled>
+                            <small class="text-muted">Não pode ser alterado</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Número de Participantes</label>
+                            <input type="text" class="form-control campo-desabilitado" value="{{ partida.participantes|length }}" disabled>
+                            <small class="text-muted">Não pode ser alterado</small>
+                        </div>
+                    </div>
+
+                    <!-- Info: Valores totais -->
+                    <div class="info-box">
+                        <div>💰 Valor Total: <span class="info-valor">R$ {{ "%.2f"|format(partida.valor_total) }}</span></div>
+                        <div>📦 BBs por Participante: <span class="info-valor">{{ partida.bbs_por_pessoa }}</span></div>
+                    </div>
+
+                    <!-- Botões de ação -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('ver_partida', id=partida.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn" style="background-color: var(--laranja); color: white;">
+                            <i class="fas fa-save me-2"></i>Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Máscara para data: DD/MM/YYYY
+    const dataInput = document.querySelector('input[name="data"]');
+    if (dataInput) {
+        dataInput.addEventListener('input', function(e) {
+            let valor = e.target.value.replace(/\D/g, '');
+            
+            if (valor.length > 8) valor = valor.slice(0, 8);
+            
+            if (valor.length >= 2) valor = valor.slice(0, 2) + '/' + valor.slice(2);
+            if (valor.length >= 5) valor = valor.slice(0, 5) + '/' + valor.slice(5);
+            
+            e.target.value = valor;
+        });
+    }
+
+    // Máscara para hora: HH:MM
+    const horarioInput = document.querySelector('input[name="horario"]');
+    if (horarioInput) {
+        horarioInput.addEventListener('input', function(e) {
+            let valor = e.target.value.replace(/\D/g, '');
+            
+            if (valor.length > 4) valor = valor.slice(0, 4);
+            
+            if (valor.length >= 2) valor = valor.slice(0, 2) + ':' + valor.slice(2);
+            
+            e.target.value = valor;
+        });
+    }
+</script>
+{% endblock %}

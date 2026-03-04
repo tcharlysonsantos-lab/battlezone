@@ -161,7 +161,9 @@
                                 {% for p in dados_partida.participantes %}
                                 <tr class="participant-row">
                                     <td>
-                                        <strong>{{ p.nome_operador }}</strong>
+                                        <a href="{{ url_for('perfil_operador', id=p.operador_id) }}" style="color: var(--laranja); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                                            <strong>{{ p.nome_operador }}</strong>
+                                        </a>
                                     </td>
                                     <td>
                                         <span class="text-muted">@{{ p.warname }}</span>
@@ -218,12 +220,30 @@
                 <h5 class="mb-0"><i class="fas fa-flag-checkered me-2"></i>Ações</h5>
             </div>
             <div class="card-body">
+                <a href="{{ url_for('editar_partida', id=partida.id) }}" class="btn btn-primary w-100 mb-2">
+                    <i class="fas fa-edit me-2"></i>Editar
+                </a>
                 <a href="{{ url_for('formulario_finalizar_partida', id=partida.id) }}" class="btn btn-success w-100 mb-2">
                     <i class="fas fa-flag-checkered me-2"></i>Finalizar Partida
                 </a>
                 <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#confirmarDelecao">
                     <i class="fas fa-trash me-2"></i>Deletar
                 </button>
+            </div>
+        </div>
+        {% elif not partida.finalizada and é_operador %}
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Edição</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('editar_partida', id=partida.id) }}" class="btn btn-primary w-100 mb-2">
+                    <i class="fas fa-edit me-2"></i>Editar
+                </a>
+                <small class="text-muted d-block">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Operadores podem editar até 10 minutos antes da partida
+                </small>
             </div>
         </div>
         {% endif %}

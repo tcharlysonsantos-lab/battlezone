@@ -198,7 +198,10 @@
                             <input type="text" name="horario" class="form-control" value="{{ request.form.get('horario', now.strftime('%H:%M')) }}" required>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label class="form-label">Campo</label>
+                            <label class="form-label">
+                                Campo
+                                <i class="fas fa-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="<strong>Warfield:</strong> Mini Campo de guerra<br><strong>Redline:</strong> Stand de tiro com arma de Airsoft: Rifle/Pistola" style="margin-left: 5px; color: var(--laranja); cursor: help;"></i>
+                            </label>
                             <select name="campo" id="campo" class="form-select" required>
                                 <option value="">Selecione</option>
                                 <option value="Warfield" {% if request.form.get('campo') == 'Warfield' %}selected{% endif %}>Warfield</option>
@@ -948,6 +951,14 @@ if (horarioInput) {
         }
     });
 }
+
+// Inicializar tooltips Bootstrap 5
+const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+}
+
 
 </script>
 {% endblock %}

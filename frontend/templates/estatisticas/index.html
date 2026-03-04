@@ -406,7 +406,9 @@
                                 {% endif %}>
                                 <td><strong>{{ loop.index }}º</strong></td>
                                 <td>
-                                    <strong>{{ op.warname }}</strong>
+                                    <a href="{{ url_for('perfil_operador', id=op.id) }}" style="color: var(--laranja); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                                        <strong>{{ op.warname }}</strong>
+                                    </a>
                                     <br>
                                     <small class="text-muted">{{ op.nome }}</small>
                                 </td>

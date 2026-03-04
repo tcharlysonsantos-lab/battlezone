@@ -2300,6 +2300,71 @@ def ver_partida(id):
 
 
 
+@app.route('/partidas/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+@requer_permissao('partidas')
+def editar_partida(id):
+    """Edita uma partida com validações de permissão"""
+    from datetime import datetime
+    
+    partida = Partida.query.get_or_404(id)
+    
+    # ===== VALIDAÇÃO DE PERMISSÃO =====
+    é_operador = current_user.nivel == 'operador'
+    é_staff = current_user.nivel in ['admin', 'gerente']
+    
+    if é_operador:
+        # Operador só pode editar até 10 minutos antes da partida
+        try:
+            data_hora_str = f"{partida.data} {partida.horario}"
+            data_hora = datetime.strptime(data_hora_str, '%d/%m/%Y %H:%M')
+            tempo_falta = (data_hora - datetime.now()).total_seconds() / 60  # em minutos
+            
+            if tempo_falta <= 10:
+                flash('❌ Operadores só podem editar partidas até 10 minutos antes da data/hora!', 'danger')
+                return redirect(url_for('ver_partida', id=id))
+        except Exception as e:
+            app.logger.error(f'Erro ao calcular tempo: {str(e)}')
+            flash('❌ Erro ao validar horário da partida', 'danger')
+            return redirect(url_for('ver_partida', id=id))
+    
+    # ===== PROCESSAMENTO GET - Mostrar formulário =====
+    if request.method == 'GET':
+        return render_template('partidas/editar.html',
+                             partida=partida,
+                             é_staff=é_staff)
+    
+    # ===== PROCESSAMENTO POST - Salvar alterações =====
+    try:
+        # Atualizar campos permitidos
+        partida.nome = request.form.get('nome', '').strip() or partida.nome
+        partida.data = request.form.get('data', '') or partida.data
+        partida.horario = request.form.get('horario', '') or partida.horario
+        partida.modo = request.form.get('modo', '') or partida.modo
+        partida.pagamento = request.form.get('pagamento', 'Pendente')
+        
+        # Log da edição
+        log = Log(
+            usuario=current_user.username,
+            acao='PARTIDA_EDITADA',
+            detalhes=f"Partida: {partida.nome} - ID: {partida.id}"
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        flash('✅ Partida atualizada com sucesso!', 'success')
+        return redirect(url_for('ver_partida', id=id))
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'❌ Erro ao editar partida: {str(e)}')
+        flash(f'❌ Erro ao editar partida: {str(e)}', 'danger')
+        return render_template('partidas/editar.html',
+                             partida=partida,
+                             é_staff=é_staff)
+
+
+
 @app.route('/partidas/<int:id>/deletar', methods=['POST'])
 @login_required
 @requer_permissao('partidas')
