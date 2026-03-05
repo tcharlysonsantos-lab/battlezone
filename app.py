@@ -3107,6 +3107,133 @@ def api_equipe_membros_search(equipe_id):
 
 
 # ==================== INICIALIZAÇÃO ====================
+@app.cli.command("reset-database")
+def reset_database():
+    """Reset entire database - delete all data"""
+    confirm = input("⚠️  This will DELETE ALL DATA! Type 'reset' to confirm: ").strip().lower()
+    
+    if confirm != 'reset':
+        print("Cancelled.")
+        return
+    
+    try:
+        # Delete in correct order (respecting foreign keys)
+        from backend.models import (
+            PagamentoOperador, PartidaParticipante, Partida, Venda, 
+            Estoque, Log, Solicitacao, EquipeMembros, Equipe, Operador, User
+        )
+        
+        print("Deleting data...")
+        PagamentoOperador.query.delete()
+        print("  ✓ pagamento_operador")
+        PartidaParticipante.query.delete()
+        print("  ✓ partida_participantes")
+        Partida.query.delete()
+        print("  ✓ partidas")
+        Venda.query.delete()
+        print("  ✓ vendas")
+        Estoque.query.delete()
+        print("  ✓ estoque")
+        Log.query.delete()
+        print("  ✓ logs")
+        Solicitacao.query.delete()
+        print("  ✓ solicitacoes")
+        EquipeMembros.query.delete()
+        print("  ✓ equipe_membros")
+        Equipe.query.delete()
+        print("  ✓ equipes")
+        Operador.query.delete()
+        print("  ✓ operadores")
+        User.query.delete()
+        print("  ✓ users")
+        
+        db.session.commit()
+        print("\n✅ Database reset successfully!")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error: {e}")
+
+
+@app.cli.command("delete-all-users")
+def delete_all_users():
+    """Delete all users from database"""
+    confirm = input("⚠️  This will delete ALL users! Type 'yes' to confirm: ").strip().lower()
+    
+    if confirm != 'yes':
+        print("Cancelled.")
+        return
+    
+    try:
+        count = User.query.count()
+        User.query.delete()
+        db.session.commit()
+        print(f"✅ Deleted {count} users successfully!")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error: {e}")
+
+
+@app.cli.command("list-users")
+def list_users():
+    """List all users"""
+    users = User.query.all()
+    
+    if not users:
+        print("No users found!")
+        return
+    
+    print("\n" + "="*80)
+    print(f"{'ID':<5} {'Username':<20} {'Nome':<30} {'Nivel':<10} {'Status':<10}")
+    print("="*80)
+    
+    for user in users:
+        print(f"{user.id:<5} {user.username:<20} {user.nome:<30} {user.nivel:<10} {user.status:<10}")
+    
+    print("="*80 + "\n")
+
+
+@app.cli.command("create-admin")
+def create_admin():
+    """Create an admin user"""
+    import secrets
+    from werkzeug.security import generate_password_hash
+    
+    username = input('Username: ').strip()
+    email = input('Email: ').strip()
+    password = input('Password: ').strip()
+    nome = input('Full name: ').strip()
+    
+    # Check if user already exists
+    if User.query.filter_by(username=username).first():
+        print(f'❌ User {username} already exists!')
+        return
+    
+    if User.query.filter_by(email=email).first():
+        print(f'❌ Email {email} already exists!')
+        return
+    
+    # Create admin user
+    salt = secrets.token_hex(16)
+    admin = User(
+        username=username,
+        nome=nome,
+        email=email,
+        nivel='admin',
+        status='aprovado',
+        salt=salt,
+        terms_accepted=True,
+        terms_accepted_date=datetime.utcnow()
+    )
+    admin.set_password(password)
+    
+    db.session.add(admin)
+    db.session.commit()
+    
+    print(f'✅ Admin user created successfully!')
+    print(f'   Username: {username}')
+    print(f'   Email: {email}')
+
+
 @app.cli.command("init-db")
 def init_db():
     db.create_all()
