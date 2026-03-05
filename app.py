@@ -936,13 +936,16 @@ def perfil_operador(id):
 def index():
     """Página inicial pública"""
     try:
+        logger.info("[INDEX] Iniciando rota /")
         
         agora = datetime.now()
         data_hoje = agora.strftime("%d/%m/%Y")
         hora_atual = agora.strftime("%H:%M")
         
         # Buscar partidas de hoje com horário futuro
+        logger.info("[INDEX] Executando query para partidas")
         todas_partidas = Partida.query.filter_by(finalizada=False).all()
+        logger.info(f"[INDEX] Query retornou {len(todas_partidas)} partidas")
         partidas_hoje = []
         
         for p in todas_partidas:
@@ -974,12 +977,14 @@ def index():
         
         from backend.utils import PLANOS_WARFIELD, PLANOS_REDLINE
         
+        logger.info(f"[INDEX] Renderizando template com {len(partidas_hoje)} partidas")
         return render_template('public/index.html',
                              partidas_hoje=partidas_hoje,
                              horarios_disponiveis=horarios_disponiveis,
                              planos_warfield=PLANOS_WARFIELD,
                              planos_redline=PLANOS_REDLINE)
     except Exception as e:
+        logger.error(f"[INDEX] ERRO: {e}", exc_info=True)
         print(f"Erro: {e}")
         from backend.utils import PLANOS_WARFIELD, PLANOS_REDLINE
         return render_template('public/index.html',
