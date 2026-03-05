@@ -3217,6 +3217,47 @@ def init_database_setup(secret_key):
         }), 500
 
 
+@app.route('/setup/db-stats')
+def db_stats():
+    """Show data count in each table"""
+    try:
+        from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao, PagamentoOperador
+        
+        # Count records in each table
+        stats = {
+            'timestamp': datetime.now().isoformat(),
+            'database_type': 'PostgreSQL' if 'postgresql' in str(db.engine.url) else 'SQLite',
+            'data_counts': {
+                'users': User.query.count(),
+                'operadores': Operador.query.count(),
+                'equipes': Equipe.query.count(),
+                'partidas': Partida.query.count(),
+                'partida_participantes': PartidaParticipante.query.count(),
+                'vendas': Venda.query.count(),
+                'estoque': Estoque.query.count(),
+                'logs': Log.query.count(),
+                'solicitacoes': Solicitacao.query.count(),
+                'pagamento_operador': PagamentoOperador.query.count(),
+            },
+            'total_records': sum([
+                User.query.count(),
+                Operador.query.count(),
+                Equipe.query.count(),
+                Partida.query.count(),
+                PartidaParticipante.query.count(),
+                Venda.query.count(),
+                Estoque.query.count(),
+                Log.query.count(),
+                Solicitacao.query.count(),
+                PagamentoOperador.query.count(),
+            ])
+        }
+        
+        return jsonify(stats), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     # Em desenvolvimento, apenas rodar
     app.run(debug=False, host='0.0.0.0', port=5000)
