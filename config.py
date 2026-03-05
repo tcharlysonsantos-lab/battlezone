@@ -41,9 +41,12 @@ class Config:
     print(f"[CONFIG] DATABASE_URL raw: {_database_url}")
     print(f"[CONFIG] DATABASE_URL type: {type(_database_url)}")
     print(f"[CONFIG] DATABASE_URL is empty: {not _database_url}")
-    print(f"[CONFIG] DATABASE_URL starts with postgres: {_database_url.startswith('postgres') if _database_url else False}")
+    if _database_url:
+        print(f"[CONFIG] DATABASE_URL starts with: {_database_url[:20]}")
+        print(f"[CONFIG] DATABASE_URL full (first 100 chars): {_database_url[:100]}")
     
-    if _database_url and _database_url.startswith('postgres'):
+    # Aceitar postgresql:// OU postgres://
+    if _database_url and (_database_url.startswith('postgres') or _database_url.startswith('postgresql')):
         # Railway PostgreSQL - Railway pode usar postgresql:// ou postgres://
         print(f"[CONFIG] Using PostgreSQL from DATABASE_URL")
         SQLALCHEMY_DATABASE_URI = _database_url
