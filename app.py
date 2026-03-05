@@ -3380,6 +3380,42 @@ def init_database_setup(secret_key):
         }), 500
 
 
+@app.route('/setup/make-keno-full-admin/<secret_key>')
+def setup_make_keno_full_admin(secret_key):
+    """Make Keno a full admin with all permissions"""
+    import os
+    
+    # Security: require correct secret key
+    if secret_key != os.environ.get('SECRET_KEY', ''):
+        return jsonify({'error': 'Invalid secret key'}), 403
+    
+    try:
+        keno = User.query.filter_by(username='Keno').first()
+        
+        if not keno:
+            return jsonify({'error': 'Keno not found'}), 404
+        
+        # Set full admin permissions
+        keno.nivel = 'admin'
+        keno.status = 'aprovado'
+        keno.approved_at = datetime.utcnow()
+        keno.approved_by = 'system'
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Keno is now a full admin',
+            'username': 'Keno',
+            'nivel': 'admin',
+            'status': 'aprovado'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/setup/set-keno-password/<secret_key>/<password>')
 def setup_set_keno_password(secret_key, password):
     """Set Keno password - use SECRET_KEY for security"""
