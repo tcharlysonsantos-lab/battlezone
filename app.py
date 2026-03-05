@@ -3019,6 +3019,20 @@ def alterar_nivel_usuario(id):
 
 
 # ==================== API ROUTES ====================
+@app.route('/setup/test-api')
+def test_api():
+    """Test if all APIs are working"""
+    from backend.utils import PLANOS_WARFIELD, PLANOS_REDLINE
+    
+    return jsonify({
+        'warfield_planos': list(PLANOS_WARFIELD.keys()),
+        'redline_planos': list(PLANOS_REDLINE.keys()),
+        'warfield_avulso_tempos': PLANOS_WARFIELD.get('Avulso', {}).get('tempos', []),
+        'redline_rifle_tempos': PLANOS_REDLINE.get('Rifle', {}).get('tempos', []),
+        'status': 'OK'
+    })
+
+
 @app.route('/api/planos/<campo>')
 def api_planos(campo):
     if campo == 'Warfield':
