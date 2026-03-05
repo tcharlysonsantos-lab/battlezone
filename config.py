@@ -5,8 +5,10 @@ from datetime import timedelta
 from dotenv import load_dotenv
 
 # ==================== CARREGAR VARIÁVEIS DE AMBIENTE ====================
-# Carrega o arquivo seguranca.env
-load_dotenv('seguranca.env')
+# Carrega o arquivo seguranca.env APENAS em desenvolvimento
+# Em produção (Railway), as variáveis vêm do dashboard
+if os.environ.get('FLASK_ENV') != 'production':
+    load_dotenv('seguranca.env')
 
 # ==================== CRIAR PASTA INSTANCE ====================
 # Criar pasta instance se não existir (necessário para banco de dados)
