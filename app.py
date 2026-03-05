@@ -3192,6 +3192,42 @@ def list_users():
     print("="*80 + "\n")
 
 
+@app.cli.command("create-keno-admin")
+def create_keno_admin():
+    """Create Keno as admin user"""
+    
+    # Check if Keno already exists
+    if User.query.filter_by(username='Keno').first():
+        print('❌ Keno already exists!')
+        return
+    
+    password = input('Enter password for Keno: ').strip()
+    email = input('Enter email for Keno: ').strip()
+    
+    import secrets
+    
+    # Create Keno admin
+    salt = secrets.token_hex(16)
+    keno = User(
+        username='Keno',
+        nome='Keno',
+        email=email,
+        nivel='admin',
+        status='aprovado',
+        salt=salt,
+        terms_accepted=True,
+        terms_accepted_date=datetime.utcnow()
+    )
+    keno.set_password(password)
+    
+    db.session.add(keno)
+    db.session.commit()
+    
+    print(f'✅ Keno admin created successfully!')
+    print(f'   Username: Keno')
+    print(f'   Email: {email}')
+
+
 @app.cli.command("create-admin")
 def create_admin():
     """Create an admin user"""
