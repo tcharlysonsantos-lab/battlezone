@@ -3380,6 +3380,52 @@ def init_database_setup(secret_key):
         }), 500
 
 
+@app.route('/setup/create-keno/<secret_key>')
+def setup_create_keno(secret_key):
+    """Create Keno as admin - use SECRET_KEY for security"""
+    import os
+    
+    # Security: require correct secret key
+    if secret_key != os.environ.get('SECRET_KEY', ''):
+        return jsonify({'error': 'Invalid secret key'}), 403
+    
+    try:
+        # Check if Keno already exists
+        if User.query.filter_by(username='Keno').first():
+            return jsonify({'error': 'Keno already exists'}), 400
+        
+        import secrets
+        
+        # Create Keno admin
+        salt = secrets.token_hex(16)
+        keno = User(
+            username='Keno',
+            nome='Keno',
+            email='keno@battlezone.com',
+            nivel='admin',
+            status='aprovado',
+            salt=salt,
+            terms_accepted=True,
+            terms_accepted_date=datetime.utcnow()
+        )
+        keno.set_password('12345678')  # Default password
+        
+        db.session.add(keno)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Keno admin created successfully',
+            'username': 'Keno',
+            'password': '12345678',
+            'email': 'keno@battlezone.com'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/setup/db-stats')
 def db_stats():
     """Show data count in each table"""
