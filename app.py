@@ -3548,6 +3548,125 @@ def db_stats():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/setup/criar-partidas-teste')
+def criar_partidas_teste():
+    """Cria partidas de teste para todas as combinações de campo, plano e tempo"""
+    try:
+        from datetime import datetime, timedelta
+        
+        # 1. Criar ou obter operadores Keno e Tete
+        keno = Operador.query.filter_by(nome='Keno').first()
+        if not keno:
+            keno = Operador(nome='Keno', warname='Keno', email='keno@battlezone.com')
+            db.session.add(keno)
+            db.session.flush()
+        
+        tete = Operador.query.filter_by(nome='Tete').first()
+        if not tete:
+            tete = Operador(nome='Tete', warname='Tete', email='tete@battlezone.com')
+            db.session.add(tete)
+            db.session.flush()
+        
+        db.session.commit()
+        
+        # 2. Buscar usuário criador (Keno)
+        keno_user = User.query.filter_by(username='Keno').first()
+        creator_id = keno_user.id if keno_user else None
+        
+        # 3. Gerar lista de combinações
+        partidas_criar = []
+        
+        # Warfield
+        for plano in ['Avulso', 'Equipe', 'Sua Arma']:
+            tempos = PLANOS_WARFIELD[plano]['tempos']
+            for tempo in tempos:
+                partidas_criar.append({
+                    'campo': 'Warfield',
+                    'plano': plano,
+                    'tempo': tempo
+                })
+        
+        # Redline
+        for plano in ['Rifle', 'Pistola']:
+            tempos = PLANOS_REDLINE[plano]['tempos']
+            for tempo in tempos:
+                partidas_criar.append({
+                    'campo': 'Redline',
+                    'plano': plano,
+                    'tempo': tempo
+                })
+        
+        # 4. Criar partidas
+        counter = 100
+        data_base = datetime.now()
+        resultado = []
+        
+        for config in partidas_criar:
+            campo = config['campo']
+            plano = config['plano']
+            tempo = config['tempo']
+            
+            # Obter modo (primeiro disponível) e valores
+            modos = get_modos_permitidos(tempo, plano)
+            modo = modos[0] if modos else 'PVP INFINITY'
+            
+            valor, bbs = get_valores_plano(campo, plano, tempo)
+            
+            # Criar partida
+            partida = Partida(
+                nome=str(counter),
+                data=(data_base + timedelta(days=counter-100)).strftime('%Y-%m-%d'),
+                horario='18:00',
+                campo=campo,
+                plano=plano,
+                tempo=tempo,
+                modo=modo,
+                tipo_participacao='individual',
+                valor_total=valor,
+                valor_por_participante=valor / 2,
+                bbs_por_pessoa=bbs,
+                total_bbs=bbs * 2,
+                status='Agendada',
+                created_by=creator_id
+            )
+            db.session.add(partida)
+            db.session.flush()
+            
+            # Adicionar participantes
+            part_keno = PartidaParticipante(partida_id=partida.id, operador_id=keno.id)
+            part_tete = PartidaParticipante(partida_id=partida.id, operador_id=tete.id)
+            
+            db.session.add(part_keno)
+            db.session.add(part_tete)
+            
+            resultado.append({
+                'numero': counter,
+                'campo': campo,
+                'plano': plano,
+                'tempo': tempo,
+                'modo': modo,
+                'data': (data_base + timedelta(days=counter-100)).strftime('%Y-%m-%d')
+            })
+            
+            counter += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'total_criadas': len(resultado),
+            'operadores': {
+                'operador1': f'Keno (ID: {keno.id})',
+                'operador2': f'Tete (ID: {tete.id})'
+            },
+            'partidas': resultado
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e), 'type': type(e).__name__}), 500
+
+
 if __name__ == '__main__':
     # Em desenvolvimento, apenas rodar
     app.run(debug=False, host='0.0.0.0', port=5000)
