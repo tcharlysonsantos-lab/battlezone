@@ -3380,6 +3380,38 @@ def init_database_setup(secret_key):
         }), 500
 
 
+@app.route('/setup/reset-keno-password/<secret_key>')
+def reset_keno_password(secret_key):
+    """Reset Keno password - use SECRET_KEY for security"""
+    import os
+    
+    # Security: require correct secret key
+    if secret_key != os.environ.get('SECRET_KEY', ''):
+        return jsonify({'error': 'Invalid secret key'}), 403
+    
+    try:
+        keno = User.query.filter_by(username='Keno').first()
+        
+        if not keno:
+            return jsonify({'error': 'Keno not found'}), 404
+        
+        # Reset password to 'Keno123456'
+        new_password = 'Keno123456'
+        keno.set_password(new_password)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Keno password reset successfully',
+            'username': 'Keno',
+            'new_password': new_password
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/setup/create-keno/<secret_key>')
 def setup_create_keno(secret_key):
     """Create Keno as admin - use SECRET_KEY for security"""
