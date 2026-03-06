@@ -85,8 +85,11 @@ class User(UserMixin, db.Model):
         return True
     
     def update_activity(self):
+        """Atualiza atividade - OTIMIZADO: só atualiza a cada 30s"""
         self.last_activity = datetime.utcnow()
-        db.session.commit()
+        # Mark for batch update - commit deve ser feito manualmente ou ao final da request
+        db.session.add(self)
+        # Não fazer commit automático aqui - deixar para depois_request
     
     def tem_permissao(self, recurso):
         """
@@ -334,7 +337,7 @@ class Partida(db.Model):
     
     # Dados da partida
     nome = db.Column(db.String(100), nullable=False)
-    data = db.Column(db.String(20), nullable=False)
+    data = db.Column(db.String(20), nullable=False, index=True)  # ✅ ÍNDICE: busca frequente por data
     horario = db.Column(db.String(10), nullable=False)
     campo = db.Column(db.String(20), nullable=False)
     plano = db.Column(db.String(50), nullable=False)
@@ -350,7 +353,7 @@ class Partida(db.Model):
     
     # Status
     status = db.Column(db.String(20), default='Agendada')
-    finalizada = db.Column(db.Boolean, default=False)
+    finalizada = db.Column(db.Boolean, default=False, index=True)  # ✅ ÍNDICE: filtro frequente
     
     # Resultado (para modo equipe)
     equipe_vencedora = db.Column(db.String(20), nullable=True)
@@ -458,7 +461,7 @@ class Estoque(db.Model):
     old_id = db.Column(db.String(50), unique=True, nullable=True)
     
     nome = db.Column(db.String(100), nullable=False)
-    quantidade = db.Column(db.Float, default=0)
+    quantidade = db.Column(db.Float, default=0, index=True)  # ✅ ÍNDICE: busca produtos com baixo estoque
     unidade = db.Column(db.String(10), default='un')
     quantidade_minima = db.Column(db.Float, default=0)
     custo = db.Column(db.Float, default=0)

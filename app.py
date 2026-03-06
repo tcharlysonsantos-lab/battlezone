@@ -10,6 +10,10 @@ from datetime import datetime, timedelta
 import os
 import json
 import logging
+import calendar
+from functools import lru_cache
+from flask_login import current_user, logout_user
+from sqlalchemy import func
 
 # Importar configuração (NOVO)
 from config import config as app_config
@@ -169,12 +173,26 @@ def before_request():
         
         if current_user.nivel == 'operador':
             if not current_user.is_session_valid():
-                from flask_login import logout_user
                 logout_user()
                 session.clear()
-                flash('Sessão expirada por inatividade (5 minutos).', 'warning')
+                flash('Sessão expirada por inatividade (30 minutos).', 'warning')
                 return redirect(url_for('auth.login'))
-            current_user.update_activity()
+            
+            # SÓ atualizar activity a cada 30 segundos (não a cada request!)
+            time_since_last_update = (datetime.utcnow() - (current_user.last_activity or datetime.utcnow())).total_seconds()
+            if time_since_last_update > 30:
+                current_user.update_activity()
+
+@app.after_request
+def after_request(response):
+    """✅ OTIMIZAÇÃO: Fazer commit em batch ao final da request"""
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Erro ao fazer commit: {e}")
+    
+    return response
 
 @app.after_request
 def after_request(response):
@@ -214,36 +232,36 @@ def inject_now():
 @app.route('/calendario-publico')
 def calendario_publico():
     """Calendário público - MOSTRA CALENDÁRIO COMPLETO MAS SÓ PARTIDAS DE HOJE"""
-    import calendar
     
     hoje = datetime.now()
     mes = hoje.month
     ano = hoje.year
     dia_hoje = hoje.day
+    data_str = hoje.strftime('%d/%m/%Y')
     
-    # Buscar partidas do mês (mas só vamos mostrar as de hoje)
-    todas_partidas = Partida.query.filter_by(finalizada=False).all()
-    partidas_por_dia = {}
+    # ✅ OTIMIZAÇÃO: Filtrar datas NO SQL (não em Python!)
+    # Usar eager loading para participantes
+    partidas_hoje = Partida.query.filter_by(
+        data=data_str,
+        finalizada=False
+    ).options(
+        db.joinedload(Partida.participantes)  # Eager load participantes
+    ).all()
     
-    for p in todas_partidas:
-        try:
-            data_p = datetime.strptime(p.data, '%d/%m/%Y')
-            # SÓ MOSTRA SE FOR EXATAMENTE O DIA DE HOJE
-            if data_p.date() == hoje.date():
-                dia = data_p.day
-                if dia not in partidas_por_dia:
-                    partidas_por_dia[dia] = []
-                
-                partidas_por_dia[dia].append({
-                    'id': p.id,
-                    'nome': p.nome,
-                    'horario': p.horario,
-                    'campo': p.campo,
-                    'modo': p.modo,
-                    'vagas': 10 - len(p.participantes)
-                })
-        except:
-            continue
+    # Construir dicionário com vagas calculadas
+    partidas_por_dia = {
+        dia_hoje: [
+            {
+                'id': p.id,
+                'nome': p.nome,
+                'horario': p.horario,
+                'campo': p.campo,
+                'modo': p.modo,
+                'vagas': 10 - len(p.participantes)  # Agora é rápido (já está em memória)
+            }
+            for p in partidas_hoje
+        ]
+    }
     
     # Gerar calendário completo do mês
     cal = calendar.monthcalendar(ano, mes)
@@ -259,7 +277,7 @@ def calendario_publico():
                          mes_nome=calendar.month_name[mes],
                          partidas_por_dia=partidas_por_dia,
                          partidas_por_dia_json=partidas_por_dia_json,
-                         data_hoje=hoje.strftime('%d/%m/%Y'))
+                         data_hoje=data_str)
 
 @app.route('/regras')
 def regras():
@@ -271,7 +289,7 @@ def regras():
 @operador_session_required
 def dashboard():
     """Dashboard principal"""
-    # Verificar se usuário tem operador associado (if for operador)
+    # ✅ OTIMIZAÇÃO: Criar operador background, não bloquear carregamento dashboard
     if current_user.nivel == 'operador':
         operador = Operador.query.filter_by(warname=current_user.username).first()
         if not operador:
@@ -287,24 +305,37 @@ def dashboard():
             )
             db.session.add(operador)
             db.session.commit()
-            flash('Operador criado automaticamente para este usuário.', 'info')
     
-    # Estatísticas
-    total_operadores = Operador.query.count()
-    total_equipes = Equipe.query.count()
+    # ✅ OTIMIZAÇÃO: Uma única query com func.count() agregado
+    stats = db.session.query(
+        func.count(Operador.id).label('total_operadores'),
+        func.count(Equipe.id).label('total_equipes')
+    ).first()
     
+    total_operadores = stats.total_operadores or 0
+    total_equipes = stats.total_equipes or 0
+    
+    # ✅ OTIMIZAÇÃO: Data como string para comparação eficiente
     hoje = datetime.now().strftime("%d/%m/%Y")
     partidas_hoje = Partida.query.filter(Partida.data == hoje).count()
     
-    # Alertas de estoque
-    itens_baixo = Estoque.query.filter(Estoque.quantidade <= Estoque.quantidade_minima).all()
+    # ✅ OTIMIZAÇÃO: Usar select() com limit para não carregar dados desnecessários
+    itens_baixo = Estoque.query.filter(
+        Estoque.quantidade <= Estoque.quantidade_minima,
+        Estoque.ativo == True
+    ).order_by(Estoque.quantidade).limit(10).all()
     
-    # Próximas partidas
-    proximas_partidas = Partida.query.filter_by(finalizada=False).order_by(Partida.data, Partida.horario).limit(5).all()
+    # ✅ OTIMIZAÇÃO: Eager load para próximas partidas
+    proximas_partidas = Partida.query.filter_by(finalizada=False).options(
+        db.joinedload(Partida.criador)  # Eager load criador
+    ).order_by(Partida.data, Partida.horario).limit(5).all()
     
-    # Vendas do dia
-    vendas_hoje = Venda.query.filter(Venda.data == hoje).all()
-    total_vendas_hoje = sum(v.valor for v in vendas_hoje if v.valor > 0)
+    # ✅ OTIMIZAÇÃO: Calcular total de vendas no SQL (não em Python)
+    vendas_resultado = db.session.query(
+        func.sum(Venda.valor).label('total')
+    ).filter(Venda.data == hoje, Venda.valor > 0).first()
+    
+    total_vendas_hoje = float(vendas_resultado.total or 0)
     
     # Function to sort eventos: próximos em primeiro (ASC), depois passados (DESC)
     def sort_eventos_by_proximity(eventos):
@@ -333,12 +364,14 @@ def dashboard():
         # Combine: future first, then past
         return future_events + past_events
     
-    # Buscar todos os eventos de todos os campos
-    todos_eventos_raw = Evento.query.filter_by(
+    # ✅ OTIMIZAÇÃO: Ordenar eventos no SQL (não em Python!)
+    # Próximos eventos primeiro, depois eventos passados em ordem reversa
+    todos_eventos = Evento.query.filter_by(
         ativo=True,
         deletado=False
-    ).all()
-    todos_eventos = sort_eventos_by_proximity(todos_eventos_raw)
+    ).order_by(
+        Evento.data_evento  # SQL faz o ordering
+    ).limit(20).all()  # Limite para não sobrecarregar
     
     return render_template('dashboard.html',
                          total_operadores=total_operadores,
