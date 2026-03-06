@@ -262,7 +262,18 @@ class Operador(db.Model):
     telefone = db.Column(db.String(20), nullable=True)
     data_nascimento = db.Column(db.String(20), nullable=True)
     idade = db.Column(db.String(10), nullable=True)
-    battlepass = db.Column(db.String(10), default='NAO')
+    battlepass = db.Column(db.String(50), nullable=True)  # NULL, 'OPERADOR', 'ELITE_CAVEIRA'
+    
+    def get_battlepass_info(self):
+        """Retorna nome e emoji do battlepass"""
+        battlepass_config = {
+            'OPERADOR': {'nome': 'Battlepass Operador', 'emoji': '🎖️'},
+            'ELITE_CAVEIRA': {'nome': 'Battlepass Elite-Caveira', 'emoji': '☠️'},
+        }
+        if self.battlepass in battlepass_config:
+            config = battlepass_config[self.battlepass]
+            return f"{config['emoji']} {config['nome']}"
+        return None
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -294,8 +305,18 @@ class Equipe(db.Model):
     
     nome = db.Column(db.String(100), nullable=False)
     foto = db.Column(db.String(200), nullable=True)
-    battlepass = db.Column(db.String(10), default='NAO')
+    battlepass = db.Column(db.String(50), nullable=True)  # NULL, 'EQUIPE_BASICA'
     capitao_id = db.Column(db.Integer, db.ForeignKey('operadores.id'), nullable=True)
+    
+    def get_battlepass_info(self):
+        """Retorna nome e emoji do battlepass"""
+        battlepass_config = {
+            'EQUIPE_BASICA': {'nome': 'Battlepass Equipe Básica', 'emoji': '🛡️'},
+        }
+        if self.battlepass in battlepass_config:
+            config = battlepass_config[self.battlepass]
+            return f"{config['emoji']} {config['nome']}"
+        return None
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -507,3 +528,141 @@ class PagamentoOperador(db.Model):
     
     def __repr__(self):
         return f"<PagamentoOperador {self.operador.warname} - {self.status}>"
+
+
+# ==================== MODELO DE BATTLEPASS ====================
+class Battlepass(db.Model):
+    __tablename__ = 'battlepasses'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Tipo de battlepass
+    tipo = db.Column(db.String(50), nullable=False)  # 'operador_basico', 'operador_elite', 'equipe_basica'
+    nome = db.Column(db.String(120), nullable=False)  # "Battlepass Operador", "Battlepass Elite-Caveira", "Battlepass Equipe Basica"
+    descricao = db.Column(db.Text, nullable=True)
+    categoria = db.Column(db.String(20), nullable=False)  # 'operador' ou 'equipe'
+    
+    # Status
+    ativo = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamentos
+    sorteios = db.relationship('Sorteio', back_populates='battlepass', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f"<Battlepass {self.nome}>"
+
+
+# ==================== MODELO DE SORTEIO ====================
+class Sorteio(db.Model):
+    __tablename__ = 'sorteios'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Relacionamento com battlepass
+    battlepass_id = db.Column(db.Integer, db.ForeignKey('battlepasses.id'), nullable=False)
+    
+    # Semana/Mês
+    mes = db.Column(db.Integer, nullable=False)  # 1-12
+    ano = db.Column(db.Integer, nullable=False)
+    semana = db.Column(db.Integer, nullable=True)  # 1-4, NULL significa resultado do mês
+    
+    # Resultado do sorteio
+    operador_id = db.Column(db.Integer, db.ForeignKey('operadores.id'), nullable=True)  # Se for operador
+    equipe_id = db.Column(db.Integer, db.ForeignKey('equipes.id'), nullable=True)  # Se for equipe
+    
+    # Quem realizou o sorteio
+    sorteado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    sorteado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Status
+    deletado = db.Column(db.Boolean, default=False)
+    deletado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    deletado_em = db.Column(db.DateTime, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relacionamentos
+    battlepass = db.relationship('Battlepass', back_populates='sorteios')
+    operador = db.relationship('Operador', backref='sorteios')
+    equipe = db.relationship('Equipe', backref='sorteios')
+    usuario_sorteio = db.relationship('User', foreign_keys=[sorteado_por], backref='sorteios_realizados')
+    usuario_delecao = db.relationship('User', foreign_keys=[deletado_por], backref='sorteios_deletados')
+    
+    def __repr__(self):
+        return f"<Sorteio {self.battlepass.nome} - Mês {self.mes}/{self.ano}>"
+
+
+# ==================== MODELO DE EVENTO ====================
+class Evento(db.Model):
+    __tablename__ = 'eventos'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Informações básicas
+    nome = db.Column(db.String(200), nullable=False)
+    descricao = db.Column(db.Text, nullable=True)
+    data_evento = db.Column(db.DateTime, nullable=False)  # Data e hora do evento
+    
+    # Campo do evento (Warfield, Redline, ou geral)
+    campo = db.Column(db.String(50), default='GERAL')  # 'Warfield', 'Redline', 'GERAL'
+    
+    # Preço
+    valor_pessoa = db.Column(db.Float, nullable=True)  # Valor por pessoa
+    valor_individual = db.Column(db.Float, nullable=True)  # Valor individual si é diferente
+    tipo_cobranca = db.Column(db.String(20), default='POR_PESSOA')  # 'POR_PESSOA' ou 'INDIVIDUAL'
+    
+    # Fotos (JSON com lista de paths)
+    fotos = db.Column(db.Text, nullable=True)  # JSON: ["foto1.jpg", "foto2.jpg", ...]
+    
+    # Criado por
+    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Status
+    ativo = db.Column(db.Boolean, default=True)
+    deletado = db.Column(db.Boolean, default=False)
+    
+    # Relacionamentos
+    brindes = db.relationship('EventoBrinde', back_populates='evento', cascade='all, delete-orphan')
+    criador = db.relationship('User', backref='eventos_criados', foreign_keys=[criado_por])
+    
+    def get_fotos_lista(self):
+        """Retorna lista de fotos ou lista vazia"""
+        if not self.fotos:
+            return []
+        try:
+            return json.loads(self.fotos)
+        except:
+            return []
+    
+    @property
+    def fotos_list(self):
+        """Property que retorna fotos como lista (para uso no template)"""
+        return self.get_fotos_lista()
+    
+    def __repr__(self):
+        return f"<Evento {self.nome} - {self.data_evento}>"
+
+
+# ==================== MODELO DE BRINDE DE EVENTO ====================
+class EventoBrinde(db.Model):
+    __tablename__ = 'evento_brindes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Relacionamento com evento
+    evento_id = db.Column(db.Integer, db.ForeignKey('eventos.id'), nullable=False)
+    
+    # Informação do brinde
+    descricao = db.Column(db.String(255), nullable=False)
+    ordem = db.Column(db.Integer, default=0)  # Para ordenar brindes
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relacionamento
+    evento = db.relationship('Evento', back_populates='brindes')
+    
+    def __repr__(self):
+        return f"<EventoBrinde {self.descricao}>"

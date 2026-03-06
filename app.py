@@ -15,7 +15,7 @@ import logging
 from config import config as app_config
 
 # Importar módulos do backend
-from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao, PagamentoOperador
+from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao, PagamentoOperador, Evento
 from backend.auth import auth_bp
 from backend.pagamentos_routes import pagamento_bp
 from backend.decorators import requer_permissao, operador_session_required, admin_required
@@ -267,7 +267,7 @@ def regras():
 @operador_session_required
 def dashboard():
     """Dashboard principal"""
-    # Verificar se usuário tem operador associado (se for operador)
+    # Verificar se usuário tem operador associado (if for operador)
     if current_user.nivel == 'operador':
         operador = Operador.query.filter_by(warname=current_user.username).first()
         if not operador:
@@ -302,13 +302,48 @@ def dashboard():
     vendas_hoje = Venda.query.filter(Venda.data == hoje).all()
     total_vendas_hoje = sum(v.valor for v in vendas_hoje if v.valor > 0)
     
+    # Function to sort eventos: próximos em primeiro (ASC), depois passados (DESC)
+    def sort_eventos_by_proximity(eventos):
+        from datetime import datetime
+        today = datetime.now().date()
+        
+        # Separate into future and past events
+        future_events = []
+        past_events = []
+        
+        for e in eventos:
+            if e.data_evento:
+                # Converter para date se for datetime para comparação
+                evento_date = e.data_evento.date() if isinstance(e.data_evento, datetime) else e.data_evento
+                today_date = today
+                
+                if evento_date >= today_date:
+                    future_events.append(e)
+                else:
+                    past_events.append(e)
+        
+        # Sort each group
+        future_events.sort(key=lambda e: e.data_evento)  # Próximos primeiro (ASC)
+        past_events.sort(key=lambda e: e.data_evento, reverse=True)  # Mais recentes passados primeiro (DESC)
+        
+        # Combine: future first, then past
+        return future_events + past_events
+    
+    # Buscar todos os eventos de todos os campos
+    todos_eventos_raw = Evento.query.filter_by(
+        ativo=True,
+        deletado=False
+    ).all()
+    todos_eventos = sort_eventos_by_proximity(todos_eventos_raw)
+    
     return render_template('dashboard.html',
                          total_operadores=total_operadores,
                          total_equipes=total_equipes,
                          partidas_hoje=partidas_hoje,
                          itens_baixo=itens_baixo,
                          proximas_partidas=proximas_partidas,
-                         total_vendas_hoje=total_vendas_hoje)
+                         total_vendas_hoje=total_vendas_hoje,
+                         todos_eventos=todos_eventos)
 
 # ==================== ROTA PARA DELETAR USUÁRIO ====================
 @app.route('/admin/usuario/<int:id>/deletar', methods=['POST'])
@@ -2829,6 +2864,234 @@ def api_partida(id):
         'status': partida.status
     })
 
+# ==================== ROTAS DE SORTEIOS - BATTLEPASS ====================
+@app.route('/historico-sorteios')
+@login_required
+@operador_session_required
+def historico_sorteios():
+    """Página de histórico de sorteios com navegação de mês"""
+    from backend.models import Battlepass, Sorteio, Operador, Equipe
+    from datetime import datetime as dt, timedelta
+    import calendar
+    
+    # Parâmetros
+    tipo = request.args.get('tipo', 'operador')  # 'operador' ou 'equipe'
+    battlepass_id = request.args.get('battlepass_id', type=int)
+    mes = request.args.get('mes', type=int, default=dt.now().month)
+    ano = request.args.get('ano', type=int, default=dt.now().year)
+    
+    # Validar
+    if not (1 <= mes <= 12):
+        mes = dt.now().month
+    if ano < 2000 or ano > 2100:
+        ano = dt.now().year
+    
+    # Buscar battlepass
+    battlepass = Battlepass.query.get_or_404(battlepass_id)
+    
+    # Calcular mês anterior e próximo
+    mes_anterior = mes - 1 if mes > 1 else 12
+    ano_anterior = ano if mes > 1 else ano - 1
+    
+    mes_proximo = mes + 1 if mes < 12 else 1
+    ano_proximo = ano if mes < 12 else ano + 1
+    
+    # Nome do mês
+    meses_nomes = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+    nome_mes = meses_nomes[mes]
+    
+    # Buscar histórico
+    if tipo == 'operador':
+        # Buscar sorteios semanais para operadores
+        sorteios = Sorteio.query.filter_by(
+            battlepass_id=battlepass_id,
+            mes=mes,
+            ano=ano,
+            deletado=False
+        ).order_by(Sorteio.semana.asc()).all()
+        
+        historico = []
+        for semana_num in range(1, 6):
+            sorteio_semana = next((s for s in sorteios if s.semana == semana_num), None)
+            historico.append({
+                'semana': semana_num,
+                'operador': sorteio_semana.operador.nome if sorteio_semana and sorteio_semana.operador else None,
+                'operador_warname': sorteio_semana.operador.warname if sorteio_semana and sorteio_semana.operador else None,
+                'data': sorteio_semana.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio_semana and sorteio_semana.sorteado_em else 'Não sorteado',
+                'sorteio_id': sorteio_semana.id if sorteio_semana else None
+            })
+    else:
+        # Buscar sorteios mensais para equipes
+        sorteio = Sorteio.query.filter_by(
+            battlepass_id=battlepass_id,
+            mes=mes,
+            ano=ano,
+            semana=None,
+            deletado=False
+        ).first()
+        
+        historico = [{
+            'mes': mes,
+            'equipe': sorteio.equipe.nome if sorteio and sorteio.equipe else None,
+            'data': sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio and sorteio.sorteado_em else 'Não sorteado',
+            'sorteio_id': sorteio.id if sorteio else None
+        }]
+    
+    # Verificar permissão
+    é_admin_gerente = current_user.nivel in ['admin', 'gerente']
+    
+    return render_template('historico_sorteios.html',
+                         tipo=tipo,
+                         battlepass=battlepass,
+                         mes=mes,
+                         ano=ano,
+                         nome_mes=nome_mes,
+                         mes_anterior=mes_anterior,
+                         ano_anterior=ano_anterior,
+                         mes_proximo=mes_proximo,
+                         ano_proximo=ano_proximo,
+                         historico=historico,
+                         é_admin_gerente=é_admin_gerente,
+                         meses_nomes=meses_nomes)
+
+
+@app.route('/sorteios')
+@login_required
+@operador_session_required
+def sorteios():
+    """Página de Sorteios - Battlepass (RENOMEADO PARA EVENTOS)"""
+    from backend.models import Battlepass, Sorteio, Evento
+    from datetime import datetime as dt, timedelta
+    
+    # Parâmetros
+    semana = request.args.get('semana', type=int, default=None)
+    ano = request.args.get('ano', type=int, default=datetime.now().year)
+    mes = request.args.get('mes', type=int, default=datetime.now().month)
+    
+    # Se não especificou semana, calcular semana atual (semana do mês)
+    if semana is None:
+        hoje = dt.now()
+        import math
+        semana = math.ceil(hoje.day / 7)  # Semana do mês (1-5)
+    
+    # Validar
+    if not (1 <= semana <= 5):
+        hoje = dt.now()
+        import math
+        semana = math.ceil(hoje.day / 7)
+    if ano < 2000 or ano > 2100:
+        ano = datetime.now().year
+    
+    # Function to sort eventos: próximos em primeiro (ASC), depois passados (DESC)
+    def sort_eventos_by_proximity(eventos):
+        from datetime import datetime
+        today = datetime.now()
+        
+        # Separate into future and past events
+        future_events = []
+        past_events = []
+        
+        for e in eventos:
+            if e.data_evento:
+                # Converter para date se for datetime para comparação
+                evento_date = e.data_evento.date() if isinstance(e.data_evento, datetime) else e.data_evento
+                today_date = today.date()
+                
+                if evento_date >= today_date:
+                    future_events.append(e)
+                else:
+                    past_events.append(e)
+        
+        # Sort each group
+        future_events.sort(key=lambda e: e.data_evento)  # Próximos primeiro (ASC)
+        past_events.sort(key=lambda e: e.data_evento, reverse=True)  # Mais recentes passados primeiro (DESC)
+        
+        # Combine: future first, then past
+        return future_events + past_events
+    
+    # Buscar eventos por campo
+    eventos_warfield_raw = Evento.query.filter_by(
+        campo='Warfield',
+        ativo=True,
+        deletado=False
+    ).all()
+    eventos_warfield = sort_eventos_by_proximity(eventos_warfield_raw)
+    
+    eventos_redline_raw = Evento.query.filter_by(
+        campo='Redline',
+        ativo=True,
+        deletado=False
+    ).all()
+    eventos_redline = sort_eventos_by_proximity(eventos_redline_raw)
+    
+    eventos_geral_raw = Evento.query.filter_by(
+        campo='GERAL',
+        ativo=True,
+        deletado=False
+    ).all()
+    eventos_geral = sort_eventos_by_proximity(eventos_geral_raw)
+    
+    # Buscar battlepasses
+    battlepasses_operador = Battlepass.query.filter(
+        Battlepass.categoria == 'operador',
+        Battlepass.ativo == True
+    ).all()
+    
+    battlepasses_equipe = Battlepass.query.filter(
+        Battlepass.categoria == 'equipe',
+        Battlepass.ativo == True
+    ).all()
+    
+    # Preparar dados de sorteios
+    sorteios_data = {
+        'operador': {
+            'semana_atual': {}
+        },
+        'equipe': {
+            'mes': {}
+        }
+    }
+    
+    # Preencher sorteios de operadores (SEMANAIS)
+    for bp in battlepasses_operador:
+        sorteio_semana = Sorteio.query.filter_by(
+            battlepass_id=bp.id,
+            ano=ano,
+            semana=semana,
+            deletado=False
+        ).first()
+        
+        sorteios_data['operador']['semana_atual'][bp.id] = sorteio_semana
+    
+    # Preencher sorteios de equipes (MENSAIS)
+    for bp in battlepasses_equipe:
+        sorteio_mes = Sorteio.query.filter_by(
+            battlepass_id=bp.id,
+            mes=mes,  # ← Usar 'mes' do parâmetro, não datetime.now().month
+            ano=ano,
+            semana=None,
+            deletado=False
+        ).first()
+        
+        sorteios_data['equipe']['mes'][bp.id] = sorteio_mes
+    
+    # Verificar se é admin/gerente
+    é_admin_gerente = current_user.nivel in ['admin', 'gerente']
+    
+    return render_template('eventos.html',
+                         semana=semana,
+                         mes=mes,
+                         ano=ano,
+                         eventos_warfield=eventos_warfield,
+                         eventos_redline=eventos_redline,
+                         eventos_geral=eventos_geral,
+                         battlepasses_operador=battlepasses_operador,
+                         battlepasses_equipe=battlepasses_equipe,
+                         sorteios_data=sorteios_data,
+                         é_admin_gerente=é_admin_gerente,
+                         current_user=current_user)
+
 # ==================== ROTAS DE ADMIN ====================
 @app.route('/admin/usuarios')
 @login_required
@@ -3120,6 +3383,436 @@ def api_equipe_membros_search(equipe_id):
     } for m in membros])
 
 
+# ==================== APIS DE SORTEIOS - BATTLEPASS ====================
+@app.route('/api/sortear-operador', methods=['POST'])
+@login_required
+@admin_required
+def api_sortear_operador():
+    """Sorteia um operador para um battlepass - TOTALMENTE ALEATÓRIO"""
+    from backend.models import Battlepass, Sorteio
+    import random
+    
+    data = request.get_json()
+    battlepass_id = data.get('battlepass_id')
+    semana = data.get('semana')
+    mes = data.get('mes')
+    ano = data.get('ano')
+    
+    try:
+        # Validar parâmetros
+        if not all([battlepass_id, semana, mes, ano]):
+            return jsonify({'success': False, 'error': 'Parâmetros incompletos'}), 400
+        
+        battlepass = Battlepass.query.get_or_404(battlepass_id)
+        
+        # Mapear tipo de battlepass para o tipo de operador esperado
+        tipo_map = {
+            'operador_basico': 'OPERADOR',
+            'operador_elite': 'ELITE_CAVEIRA'
+        }
+        
+        tipo_operador = tipo_map.get(battlepass.tipo)
+        if not tipo_operador:
+            return jsonify({'success': False, 'error': 'Tipo de battlepass inválido'}), 400
+        
+        # Buscar TODOS os operadores com este tipo de battlepass (sem filtros de semana)
+        operadores = Operador.query.filter_by(battlepass=tipo_operador).all()
+        
+        if not operadores:
+            return jsonify({
+                'success': False, 
+                'error': f'Nenhum operador com Battlepass {tipo_operador}'
+            }), 400
+        
+        # SORTEAR ALEATORIAMENTE - completamente aleatório, sem restrições
+        operador_sorteado = random.choice(operadores)
+        
+        # Verificar se já existe sorteio para esta semana/battlepass
+        sorteio_existente = Sorteio.query.filter_by(
+            battlepass_id=battlepass_id,
+            semana=semana,
+            mes=mes,
+            ano=ano,
+            deletado=False
+        ).first()
+        
+        if sorteio_existente:
+            # Se já existe, substituir por um novo sorteio
+            db.session.delete(sorteio_existente)
+        
+        # Criar novo registro de sorteio
+        sorteio = Sorteio(
+            battlepass_id=battlepass_id,
+            mes=mes,
+            ano=ano,
+            semana=semana,
+            operador_id=operador_sorteado.id,
+            sorteado_por=current_user.id
+        )
+        
+        db.session.add(sorteio)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'sorteado': {
+                'id': operador_sorteado.id,
+                'nome': operador_sorteado.nome,
+                'warname': operador_sorteado.warname
+            }
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/sortear-equipe', methods=['POST'])
+@login_required
+@admin_required
+def api_sortear_equipe():
+    """Sorteia uma equipe para um battlepass - TOTALMENTE ALEATÓRIO"""
+    from backend.models import Battlepass, Sorteio
+    import random
+    
+    data = request.get_json()
+    battlepass_id = data.get('battlepass_id')
+    mes = data.get('mes')
+    ano = data.get('ano')
+    
+    try:
+        # Validar parâmetros
+        if not all([battlepass_id, mes, ano]):
+            return jsonify({'success': False, 'error': 'Parâmetros incompletos'}), 400
+        
+        battlepass = Battlepass.query.get_or_404(battlepass_id)
+        
+        # Mapear tipo de battlepass para o tipo de equipe esperado
+        tipo_map = {
+            'equipe_basica': 'EQUIPE_BASICA'
+        }
+        
+        tipo_equipe = tipo_map.get(battlepass.tipo)
+        if not tipo_equipe:
+            return jsonify({'success': False, 'error': 'Tipo de battlepass inválido'}), 400
+        
+        # Buscar TODAS as equipes com este tipo de battlepass (sem filtros de mês)
+        equipes = Equipe.query.filter_by(battlepass=tipo_equipe).all()
+        
+        if not equipes:
+            return jsonify({
+                'success': False, 
+                'error': f'Nenhuma equipe com Battlepass {tipo_equipe}'
+            }), 400
+        
+        # SORTEAR ALEATORIAMENTE - completamente aleatório, sem restrições
+        equipe_sorteada = random.choice(equipes)
+        
+        # Verificar se já existe sorteio para este mês/battlepass
+        sorteio_existente = Sorteio.query.filter_by(
+            battlepass_id=battlepass_id,
+            semana=None,  # Sorteios de equipe não têm semana
+            mes=mes,
+            ano=ano,
+            deletado=False
+        ).first()
+        
+        if sorteio_existente:
+            # Se já existe, substituir por um novo sorteio
+            db.session.delete(sorteio_existente)
+        
+        # Criar novo registro de sorteio
+        sorteio = Sorteio(
+            battlepass_id=battlepass_id,
+            mes=mes,
+            ano=ano,
+            semana=None,  # Equipe não tem semana
+            equipe_id=equipe_sorteada.id,
+            sorteado_por=current_user.id
+        )
+        
+        db.session.add(sorteio)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'sorteado': {
+                'id': equipe_sorteada.id,
+                'nome': equipe_sorteada.nome
+            }
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/sorteio/<int:sorteio_id>', methods=['GET', 'DELETE'])
+@login_required
+def api_sorteio(sorteio_id):
+    """Obtém info ou deleta um sorteio"""
+    from backend.models import Sorteio
+    
+    sorteio = Sorteio.query.get_or_404(sorteio_id)
+    
+    if request.method == 'GET':
+        return jsonify({
+            'id': sorteio.id,
+            'sorteado_por': sorteio.usuario_sorteio.username if sorteio.usuario_sorteio else 'N/A',
+            'sorteado_em': sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A'
+        })
+    
+    elif request.method == 'DELETE':
+        # Apenas admin/gerente pode deletar
+        if current_user.nivel not in ['admin', 'gerente']:
+            return jsonify({'success': False, 'error': 'Permissão negada'}), 403
+        
+        try:
+            sorteio.deletado = True
+            sorteio.deletado_por = current_user.id
+            sorteio.deletado_em = datetime.utcnow()
+            
+            db.session.commit()
+            
+            return jsonify({'success': True})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ==================== APIs DE HISTÓRICO DE SORTEIOS ====================
+@app.route('/api/historico-sorteios-operador')
+@login_required
+def api_historico_sorteios_operador():
+    """Retorna histórico de sorteios de operadores para um mês/ano"""
+    from backend.models import Sorteio, Battlepass
+    from datetime import datetime as dt
+    
+    battlepass_id = request.args.get('battlepass_id', type=int)
+    mes = request.args.get('mes', type=int, default=dt.now().month)
+    ano = request.args.get('ano', type=int, default=dt.now().year)
+    
+    try:
+        sorteios = Sorteio.query.filter_by(
+            battlepass_id=battlepass_id,
+            mes=mes,
+            ano=ano,
+            deletado=False
+        ).order_by(Sorteio.semana.asc()).all()
+        
+        historico = []
+        for sorteio in sorteios:
+            if sorteio.operador:
+                historico.append({
+                    'semana': sorteio.semana,
+                    'operador_nome': sorteio.operador.nome,
+                    'operador_warname': sorteio.operador.warname,
+                    'data_sorteio': sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A'
+                })
+        
+        return jsonify({'success': True, 'historico': historico})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/historico-sorteios-equipe')
+@login_required
+def api_historico_sorteios_equipe():
+    """Retorna histórico de sorteios de equipes para um mês/ano"""
+    from backend.models import Sorteio, Battlepass
+    from datetime import datetime as dt
+    
+    battlepass_id = request.args.get('battlepass_id', type=int)
+    mes = request.args.get('mes', type=int, default=dt.now().month)
+    ano = request.args.get('ano', type=int, default=dt.now().year)
+    
+    try:
+        sorteios = Sorteio.query.filter_by(
+            battlepass_id=battlepass_id,
+            mes=mes,
+            ano=ano,
+            semana=None,  # Sorteios de equipe (sem semana)
+            deletado=False
+        ).order_by(Sorteio.sorteado_em.desc()).all()
+        
+        historico = []
+        for sorteio in sorteios:
+            if sorteio.equipe:
+                historico.append({
+                    'equipe_nome': sorteio.equipe.nome,
+                    'data_sorteio': sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A'
+                })
+        
+        return jsonify({'success': True, 'historico': historico})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ==================== APIs DE EVENTOS ====================
+@app.route('/api/eventos/criar', methods=['POST'])
+@login_required
+@admin_required
+def api_criar_evento():
+    """Cria um novo evento com fotos e brindes"""
+    from backend.models import Evento, EventoBrinde
+    from datetime import datetime as dt
+    import json
+    
+    try:
+        data = request.form.to_dict()
+        
+        # Validar campos obrigatórios
+        if not all([data.get('nome'), data.get('data_evento'), data.get('campo')]):
+            return jsonify({'success': False, 'error': 'Campos obrigatórios faltando'}), 400
+        
+        # Processar fotos (base64 string no campo fotos)
+        fotos = []
+        if 'fotos' in request.files:
+            files = request.files.getlist('fotos')
+            for file in files[:5]:  # Máximo 5 fotos
+                if file and file.filename:
+                    import base64
+                    fotos.append(base64.b64encode(file.read()).decode())
+        
+        # Criar evento
+        evento = Evento(
+            nome=data.get('nome'),
+            descricao=data.get('descricao', ''),
+            data_evento=dt.strptime(data.get('data_evento'), '%Y-%m-%d %H:%M'),
+            campo=data.get('campo'),
+            valor_pessoa=float(data.get('valor_pessoa', 0)),
+            valor_individual=float(data.get('valor_individual', 0)),
+            fotos=json.dumps(fotos) if fotos else None,
+            criado_por=current_user.id,
+            ativo=True
+        )
+        
+        db.session.add(evento)
+        db.session.flush()
+        
+        # Adicionar brindes - usar getlist do request.form, não do dict
+        brindes = request.form.getlist('brindes')
+        for idx, brinde_desc in enumerate(brindes):
+            if brinde_desc.strip():
+                brinde = EventoBrinde(
+                    evento_id=evento.id,
+                    descricao=brinde_desc,
+                    ordem=idx
+                )
+                db.session.add(brinde)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'evento_id': evento.id,
+            'message': 'Evento criado com sucesso!'
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Erro ao criar evento: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/eventos/<int:evento_id>/editar', methods=['POST'])
+@login_required
+@admin_required
+def api_editar_evento(evento_id):
+    """Edita um evento existente"""
+    from backend.models import Evento, EventoBrinde
+    from datetime import datetime as dt
+    import json
+    
+    try:
+        evento = Evento.query.get_or_404(evento_id)
+        data = request.form.to_dict()
+        
+        # Atualizar campos
+        if 'nome' in data:
+            evento.nome = data['nome']
+        if 'descricao' in data:
+            evento.descricao = data['descricao']
+        if 'data_evento' in data:
+            evento.data_evento = dt.strptime(data['data_evento'], '%Y-%m-%d %H:%M')
+        if 'campo' in data:
+            evento.campo = data['campo']
+        if 'valor_pessoa' in data:
+            evento.valor_pessoa = float(data['valor_pessoa'] or 0)
+        if 'valor_individual' in data:
+            evento.valor_individual = float(data['valor_individual'] or 0)
+        
+        # Processar fotos
+        if 'fotos' in request.files:
+            files = request.files.getlist('fotos')
+            fotos = []
+            for file in files[:5]:
+                if file and file.filename:
+                    import base64
+                    fotos.append(base64.b64encode(file.read()).decode())
+            if fotos:
+                evento.fotos = json.dumps(fotos)
+        
+        # Atualizar brindes
+        EventoBrinde.query.filter_by(evento_id=evento_id).delete()
+        brindes = request.form.getlist('brindes')
+        for idx, brinde_desc in enumerate(brindes):
+            if brinde_desc.strip():
+                brinde = EventoBrinde(
+                    evento_id=evento_id,
+                    descricao=brinde_desc,
+                    ordem=idx
+                )
+                db.session.add(brinde)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Evento atualizado!'})
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/eventos/<int:evento_id>', methods=['GET', 'DELETE'])
+@login_required
+def api_evento_detail(evento_id):
+    """Obtém detalhes ou deleta um evento"""
+    from backend.models import Evento
+    
+    evento = Evento.query.get_or_404(evento_id)
+    
+    if request.method == 'GET':
+        return jsonify({
+            'id': evento.id,
+            'nome': evento.nome,
+            'descricao': evento.descricao,
+            'data_evento': evento.data_evento.strftime('%Y-%m-%d'),
+            'campo': evento.campo,
+            'valor_pessoa': evento.valor_pessoa,
+            'valor_individual': evento.valor_individual,
+            'fotos': evento.fotos or [],
+            'brindes': [{'id': b.id, 'descricao': b.descricao, 'ordem': b.ordem} for b in evento.brindes],
+            'ativo': evento.ativo
+        })
+    
+    elif request.method == 'DELETE':
+        if current_user.nivel not in ['admin', 'gerente']:
+            return jsonify({'success': False, 'error': 'Permissão negada'}), 403
+        
+        try:
+            evento.deletado = True
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ==================== INICIALIZAÇÃO ====================
 @app.cli.command("reset-database")
 def reset_database():
@@ -3307,6 +4000,61 @@ def init_db():
     
     print("Banco de dados inicializado!")
     print("Usuário admin criado: admin / admin123")
+
+
+@app.cli.command("init-battlepasses")
+def init_battlepasses():
+    """Inicializa os battlepasses padrão no banco de dados"""
+    from backend.models import Battlepass
+    
+    battlepasses_data = [
+        # Operadores
+        {
+            'tipo': 'OPERADOR',
+            'nome': 'Battlepass Operador',
+            'descricao': 'Battlepass básico para operadores',
+            'categoria': 'operador',
+            'ativo': True
+        },
+        {
+            'tipo': 'ELITE_CAVEIRA',
+            'nome': 'Battlepass Elite-Caveira',
+            'descricao': 'Battlepass elite com Caveira',
+            'categoria': 'operador',
+            'ativo': True
+        },
+        # Equipes
+        {
+            'tipo': 'EQUIPE_BASICA',
+            'nome': 'Battlepass Equipe Basica',
+            'descricao': 'Battlepass básico para equipes',
+            'categoria': 'equipe',
+            'ativo': True
+        }
+    ]
+    
+    for bp_data in battlepasses_data:
+        # Verificar se já existe
+        existente = Battlepass.query.filter_by(tipo=bp_data['tipo']).first()
+        
+        if existente:
+            print(f"✓ {bp_data['nome']} já existe")
+            continue
+        
+        # Criar novo battlepass
+        bp = Battlepass(
+            tipo=bp_data['tipo'],
+            nome=bp_data['nome'],
+            descricao=bp_data['descricao'],
+            categoria=bp_data['categoria'],
+            ativo=bp_data['ativo']
+        )
+        
+        db.session.add(bp)
+        print(f"✓ Criado: {bp_data['nome']}")
+    
+    db.session.commit()
+    print("\n✓ Battlepasses inicializados com sucesso!")
 
 
 @app.cli.command("migrar-json")

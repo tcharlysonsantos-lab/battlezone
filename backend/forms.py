@@ -201,7 +201,11 @@ class OperadorForm(FlaskForm):
     telefone = StringField('Telefone', validators=[Optional(), Length(max=20)])  # ← OPCIONAL
     data_nascimento = StringField('Data de Nascimento', validators=[DataRequired(), Length(max=20)])
     idade = StringField('Idade', validators=[Optional(), Length(max=10)])
-    battlepass = SelectField('Battlepass', choices=[('NAO', 'Não'), ('SIM', 'Sim')], default='NAO')
+    battlepass = SelectField('Battlepass', choices=[
+        ('', 'Sem Battlepass'),
+        ('OPERADOR', 'Battlepass Operador 🎖️'),
+        ('ELITE_CAVEIRA', 'Battlepass Elite-Caveira ☠️')
+    ], default='')
     
     def __init__(self, *args, **kwargs):
         super(OperadorForm, self).__init__(*args, **kwargs)
@@ -293,7 +297,10 @@ class OperadorForm(FlaskForm):
 class EquipeForm(FlaskForm):
     nome = StringField('Nome da Equipe', validators=[DataRequired(), Length(max=100)])
     foto = StringField('URL da Foto', validators=[Optional(), Length(max=200)])
-    battlepass = SelectField('Battlepass', choices=[('NAO', 'Não'), ('SIM', 'Sim')], default='NAO')
+    battlepass = SelectField('Battlepass', choices=[
+        ('', 'Sem Battlepass'),
+        ('EQUIPE_BASICA', 'Battlepass Equipe Básica 🛡️')
+    ], default='')
     capitao_id = SelectField('Capitão (Opcional)', coerce=int, validators=[Optional()], default=0)
 
 # ==================== FORMULÁRIO DE PARTIDA ====================

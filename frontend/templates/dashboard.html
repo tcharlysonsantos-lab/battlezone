@@ -204,4 +204,213 @@
         </div>
     </div>
 {% endif %}
+
+<!-- ====== SEÇÃO: PRÓXIMOS EVENTOS ====== -->
+{% if todos_eventos %}
+<div class="card mt-5 mb-4">
+    <div class="card-header" style="background-color: #FF6B00; color: white;">
+        <h5 class="mb-0"><i class="fas fa-star"></i> Próximos Eventos</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for evento in todos_eventos %}
+            <div class="col-12 col-md-6 col-lg-4 mb-3">
+                <div class="card h-100 shadow-sm" style="min-height: 450px; display: flex; flex-direction: column;">
+                    <!-- HEADER COM NOME DO EVENTO -->
+                    <div class="card-header" style="background-color: #FF6B00; border: none; padding: 1.5rem 1rem; cursor: pointer; text-align: center;"
+                         onclick="carregarEventoDetalhes({{ evento.id }})">
+                        <h5 class="card-title mb-0 text-white" style="font-weight: 700; font-size: 1.15rem; letter-spacing: 0.5px;">
+                            {{ evento.nome }}
+                        </h5>
+                        <small class="text-white-50">{{ evento.campo }}</small>
+                    </div>
+
+                    <!-- CAROUSEL DE FOTOS -->
+                    <div style="flex: 1; min-height: 300px;">
+                        {% if evento.fotos_list and evento.fotos_list | length > 0 %}
+                        <div id="carousel-{{ evento.id }}" class="carousel slide h-100" data-bs-ride="carousel" data-bs-interval="5000">
+                            <div class="carousel-inner h-100">
+                                {% for foto_idx in range(evento.fotos_list | length) %}
+                                <div class="carousel-item h-100 {% if foto_idx == 0 %}active{% endif %}" onclick="if(event.target.closest('button') === null) carregarEventoDetalhes({{ evento.id }})" style="cursor: pointer;">
+                                    <img src="data:image/jpeg;base64,{{ evento.fotos_list[foto_idx] }}" 
+                                         alt="Foto {{ foto_idx + 1 }}" 
+                                         style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if evento.fotos_list | length > 1 %}
+                            <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ evento.id }}" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon"></span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ evento.id }}" data-bs-slide="next">
+                                <span class="carousel-control-next-icon"></span>
+                            </button>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div style="flex: 1; width: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; cursor: pointer; min-height: 300px;"
+                             onclick="carregarEventoDetalhes({{ evento.id }})">
+                            <i class="fas fa-image" style="font-size: 4rem; color: #ccc;"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- MODAL DETALHES EVENTO -->
+<div class="modal fade" id="modalDetalhesEvento" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background-color: var(--cinza-escuro); color: white;">
+            <div class="modal-header" style="border-bottom: 2px solid #FF6B00;">
+                <h5 class="modal-title" style="color: #FF6B00;">Detalhes do Evento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="conteudoDetalhes">
+                <!-- Conteúdo carregado via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Status do user atual (admin ou não)
+const isAdmin = {{ 'true' if current_user.nivel in ['admin', 'gerente'] else 'false' }};
+
+// Carrega detalhes do evento em modal
+function carregarEventoDetalhes(eventoId) {
+    fetch(`/api/eventos/${eventoId}`)
+    .then(response => response.json())
+    .then(evento => {
+        let html = '<div class="row">';
+        
+        // Parse fotos JSON string to array
+        let fotos = [];
+        if (evento.fotos) {
+            try {
+                fotos = typeof evento.fotos === 'string' ? JSON.parse(evento.fotos) : evento.fotos;
+            } catch (e) {
+                fotos = [];
+            }
+        }
+        
+        if (fotos.length > 0) {
+            html += `
+                <div class="col-md-6">
+                    <div id="carouselDetalhes" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+            `;
+            
+            fotos.forEach((foto, idx) => {
+                html += `
+                    <div class="carousel-item ${idx === 0 ? 'active' : ''}">
+                        <img src="data:image/jpeg;base64,${foto}" class="d-block w-100" 
+                             style="height: 300px; object-fit: cover;">
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            if (fotos.length > 1) {
+                html += `
+                    <button class="carousel-control-prev" type="button" 
+                            data-bs-target="#carouselDetalhes" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" 
+                            data-bs-target="#carouselDetalhes" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                    </button>
+                `;
+            }
+            html += `</div></div><div class="col-md-6">`;
+        } else {
+            html += '<div class="col-12">';
+        }
+        
+        html += `
+            <h5 style="color: #FF6B00;">${evento.nome}</h5>
+            <p><strong><i class="fas fa-calendar"></i> Data:</strong> ${evento.data_evento}</p>
+            <p><strong><i class="fas fa-map-marker-alt"></i> Campo:</strong> ${evento.campo}</p>
+            <p><strong>Descrição:</strong></p>
+            <p>${evento.descricao}</p>
+        `;
+        
+        if (evento.valor_pessoa || evento.valor_individual) {
+            html += '<p><strong>Valores:</strong></p>';
+            if (evento.valor_pessoa) {
+                html += `<p>R$ ${evento.valor_pessoa.toFixed(2)} por pessoa</p>`;
+            }
+            if (evento.valor_individual) {
+                html += `<p>R$ ${evento.valor_individual.toFixed(2)} individual</p>`;
+            }
+        }
+        
+        if (evento.brindes.length > 0) {
+            html += '<p><strong><i class="fas fa-gift"></i> Brindes:</strong></p><ul>';
+            evento.brindes.forEach(brinde => {
+                html += `<li>${brinde.descricao}</li>`;
+            });
+            html += '</ul>';
+        }
+        
+        // Adicionar botão de delete para admins
+        if (isAdmin) {
+            html += `
+                <div class="mt-3 pt-3" style="border-top: 1px solid #555;">
+                    <button type="button" class="btn btn-danger btn-sm" 
+                            onclick="deletarEvento(${evento.id})">
+                        <i class="fas fa-trash"></i> Deletar Evento
+                    </button>
+                </div>
+            `;
+        }
+        
+        html += '</div></div>';
+        
+        document.getElementById('conteudoDetalhes').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('modalDetalhesEvento')).show();
+    });
+}
+
+// Deleta um evento (somente para admins)
+function deletarEvento(eventoId) {
+    if (!confirm('Tem certeza que deseja deletar este evento? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+    
+    // Obter CSRF token do meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    fetch(`/api/eventos/${eventoId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Evento deletado com sucesso!');
+            // Fechar modal e recarregar página
+            bootstrap.Modal.getInstance(document.getElementById('modalDetalhesEvento')).hide();
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        } else {
+            alert('Erro ao deletar evento: ' + (data.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao conectar com o servidor');
+    });
+}
+</script>
+
 {% endblock %}

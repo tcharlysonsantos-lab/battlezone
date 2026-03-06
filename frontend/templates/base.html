@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>BattleZone - {% block title %}{% endblock %}</title>
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Flatpickr Datepicker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     
     <style>
         :root {
@@ -214,6 +217,47 @@
             .px-3 {
                 padding: 0 10px !important;
             }
+            
+            /* Botão hamburger para mobile */
+            .sidebar-toggle {
+                display: inline-block !important;
+                background: none;
+                border: none;
+                color: var(--laranja);
+                font-size: 24px;
+                cursor: pointer;
+                padding: 5px 10px;
+                margin-right: 10px;
+            }
+            
+            .sidebar-toggle:hover {
+                color: #fff;
+            }
+            
+            /* Overlay escuro que fecha ao clicar */
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+            }
+            
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+        
+        /* Hide em desktop */
+        .sidebar-toggle {
+            display: none;
+        }
+        
+        .sidebar-overlay {
+            display: none;
         }
         
         @media (max-width: 576px) {
@@ -249,6 +293,11 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
+            <!-- Botão hamburger para mobile (menu lateral) -->
+            <button class="sidebar-toggle" id="sidebarToggle" type="button" title="Abrir menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            
             {% if current_user.is_authenticated %}
                 <a class="navbar-brand" href="{{ url_for('dashboard') }}">
                     <i class="fas fa-crosshairs me-2"></i>BATTLEZONE
@@ -316,6 +365,13 @@
                     {% if current_user.tem_permissao('calendario') %}
                     <a class="nav-link {% if request.endpoint == 'calendario' %}active{% endif %}" href="{{ url_for('calendario') }}">
                         <i class="fas fa-calendar-alt me-2"></i>Calendário
+                    </a>
+                    {% endif %}
+                    
+                    <!-- EVENTOS -->
+                    {% if current_user.tem_permissao('calendario') %}
+                    <a class="nav-link {% if request.endpoint == 'sorteios' %}active{% endif %}" href="{{ url_for('sorteios') }}">
+                        <i class="fas fa-star me-2"></i>Eventos
                     </a>
                     {% endif %}
                     
@@ -395,6 +451,9 @@
         </div>
     </div>
 
+    <!-- Overlay do Sidebar (fecha ao clicar) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Footer -->
     {% if current_user.is_authenticated %}
     <footer class="footer">
@@ -407,6 +466,50 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Flatpickr Datepicker -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    
+    <script>
+        // ===== TOGGLE SIDEBAR MOBILE =====
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        
+        if (sidebarToggle) {
+            // Abrir/fechar ao clicar no botão hamburger
+            sidebarToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                sidebar.classList.toggle('show');
+                sidebarOverlay.classList.toggle('show');
+            });
+            
+            // Fechar ao clicar no overlay
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function() {
+                    sidebar.classList.remove('show');
+                    sidebarOverlay.classList.remove('show');
+                });
+            }
+            
+            // Fechar ao clicar em um link do sidebar
+            const sidebarLinks = document.querySelectorAll('.sidebar .nav-link');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    sidebar.classList.remove('show');
+                    sidebarOverlay.classList.remove('show');
+                });
+            });
+            
+            // Fechar ao redimensionar a janela (voltar para desktop)
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('show');
+                    sidebarOverlay.classList.remove('show');
+                }
+            });
+        }
+    </script>
     
     {% block scripts %}{% endblock %}
 </body>
