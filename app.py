@@ -167,6 +167,12 @@ app.register_blueprint(pagamento_bp, url_prefix='/pagamentos')
 def before_request():
     """Middleware para verificar sessão de operadores"""
     
+    # ⚠️ NÃO bloquear rotas públicas/auth (evitar redirect loop)
+    public_routes = ['index', 'auth.login', 'auth.criar_conta', 'auth.esqueci_senha', 'auth.forgot_password', 'auth.reset_password']
+    
+    if request.endpoint and request.endpoint in public_routes:
+        return  # Deixar passar sem validação
+    
     # Marcar sessão como permanente para renovar o timeout a cada requisição
     if current_user.is_authenticated:
         session.permanent = True

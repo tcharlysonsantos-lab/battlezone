@@ -71,7 +71,7 @@ def login():
         user.generate_session_token()
         user.last_login = datetime.utcnow()
         user.tentativas = 0
-        db.session.commit()
+        # ✅ NÃO fazer commit aqui - deixar pro after_request
         
         login_user(user)
         log_login_attempt(user.username, True, ip, "Login bem-sucedido")
@@ -141,7 +141,7 @@ def criar_conta():
                 detalhes=f"Nova conta criada: {form.nome.data} | Email: {form.email.data} | Termos aceitos"
             )
             db.session.add(log)
-            db.session.commit()
+            # ✅ NÃO fazer commit aqui - deixar pro after_request
             
             flash('✅ Conta criada com sucesso! Você pode fazer login agora.', 'success')
             return redirect(url_for('auth.login'))
@@ -194,7 +194,7 @@ def verify_2fa():
             # Login bem-sucedido com 2FA
             user.generate_session_token()
             user.last_login = datetime.utcnow()
-            db.session.commit()
+            # ✅ NÃO fazer commit aqui - deixar pro after_request
             
             login_user(user)
             
