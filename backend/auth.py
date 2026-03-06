@@ -312,37 +312,87 @@ def forgot_password():
     
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
+        
+        # ===== VALIDAÇÃO PRÉ-ENVIO =====
+        
+        if not email or '@' not in email:
+            flash('Email inválido. Por favor, digite um email válido.', 'danger')
+            return render_template('auth/forgot_password.html')
+        
+        # ===== BUSCAR USUÁRIO =====
+        
         user = User.query.filter_by(email=email).first()
         
-        if user:
-            # Gerar token de reset
-            token = user.gerar_password_reset_token()
-            reset_link = url_for('auth.reset_password', token=token, _external=True)
+        if not user:
+            # 🔐 SEGURANÇA: Mostrar que não existe, mas de forma clara
+            flash(
+                '❌ Não existe nenhuma conta cadastrada com este email.\n'
+                'Verifique se digitou corretamente ou crie uma nova conta.',
+                'danger'
+            )
+            return render_template('auth/forgot_password.html')
+        
+        # ===== EMAIL EXISTE - PROCESSAR RESET =====
+        
+        # Gerar token de reset
+        token = user.gerar_password_reset_token()
+        reset_link = url_for('auth.reset_password', token=token, _external=True)
+        
+        # Log do evento
+        log_security_event('PASSWORD_RESET_SOLICITADO', user.username, request.remote_addr)
+        
+        # Enviar email com link de reset
+        try:
+            from backend.email_service import enviar_email_reset_senha, verificar_saude_email
+            import logging
             
-            # Log do evento
-            log_security_event('PASSWORD_RESET_SOLICITADO', user.username, request.remote_addr)
+            logger = logging.getLogger(__name__)
             
-            # Enviar email com link de reset
-            try:
-                from backend.email_service import enviar_email_reset_senha
-                enviar_email_reset_senha(user.email, user.nome, reset_link)
+            # Verificar saúde do serviço de email antes de enviar
+            is_healthy, health_msg = verificar_saude_email()
+            logger.info(f"[🔍] Saúde Email: {health_msg}")
+            
+            if not is_healthy:
+                logger.warning(f"[⚠️] Email service não está saudável: {health_msg}")
                 flash(
-                    'Um link para redefinir sua senha foi enviado para seu email.\n'
+                    '⚠️ Serviço de email temporariamente indisponível.\n'
+                    'Por favor, tente novamente em alguns minutos.\n'
+                    f'(Detalhes técnicos: {health_msg})',
+                    'warning'
+                )
+                return render_template('auth/forgot_password.html')
+            
+            # Tentar enviar email
+            email_enviado = enviar_email_reset_senha(user.email, user.nome, reset_link)
+            
+            if email_enviado:
+                logger.info(f"[✅] Email de reset enviado para: {user.email}")
+                flash(
+                    '✅ Email será enviado em alguns segundos!\n'
+                    'Verifique sua caixa de entrada (ou spam).\n'
                     'O link é válido por 30 minutos.',
                     'success'
                 )
-            except Exception as e:
-                # Se falhar, mostrar link em flash (backup)
-                print(f'Erro ao enviar email: {e}')
+            else:
+                logger.error(f"[🚨] Falha ao enviar email de reset para: {user.email}")
                 flash(
-                    'Link para reset de senha:\n' + reset_link,
-                    'warning'
+                    '❌ Falha ao enviar email.\n'
+                    'Erros técnicos podem estar ocorrendo.\n'
+                    'Tente novamente em alguns minutos.',
+                    'danger'
                 )
-        else:
-            # Segurança: não revelar se email existe ou não
+                    
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[🚨] Exceção ao tentar enviar email de reset: {str(e)}")
+            logger.error(f"     Tipo: {type(e).__name__}")
+            logger.error(f"     User: {user.email}")
+            
             flash(
-                'Se esta conta existe, um link para reset de senha foi enviado para seu email.',
-                'info'
+                '❌ Erro ao processar o reset de senha.\n'
+                'Por favor, tente novamente mais tarde.',
+                'danger'
             )
         
         return redirect(url_for('auth.login'))
@@ -393,3 +443,99 @@ def reset_password(token):
         return redirect(url_for('auth.login'))
     
     return render_template('auth/reset_password.html', token=token)
+
+
+@auth_bp.route('/health/email', methods=['GET'])
+def health_check_email():
+    """
+    Endpoint para verificar a saúde do serviço de email
+    
+    🔒 SEGURANÇA: Este endpoint retorna informações sensíveis.
+    Em produção, considere restringir acesso apenas para admins.
+    
+    Resposta JSON:
+    {
+        "status": "healthy" | "unhealthy",
+        "service": "email",
+        "is_initialized": bool,
+        "has_flask_mail": bool,
+        "config_valid": bool,
+        "messages": [...]
+    }
+    """
+    from backend.email_service import HAS_FLASK_MAIL, MAIL_INITIALIZED, verificar_saude_email
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # ⚠️ OPTIONAL: Verificar se é admin antes de retornar info
+    # if not current_user.is_authenticated or current_user.nivel != 'admin':
+    #     return jsonify({"error": "Unauthorized"}), 403
+    
+    is_healthy, health_msg = verificar_saude_email()
+    
+    response = {
+        "status": "healthy" if is_healthy else "unhealthy",
+        "service": "email",
+        "is_initialized": MAIL_INITIALIZED,
+        "has_flask_mail": HAS_FLASK_MAIL,
+        "config_valid": is_healthy,
+        "message": health_msg,
+        "timestamp": datetime.now().isoformat(),
+    }
+    
+    # Log do health check
+    logger.info(f"[🔍] Email Health Check: {response['status']}")
+    
+    return jsonify(response), 200 if is_healthy else 503
+
+
+@auth_bp.route('/api/validate-email', methods=['POST'])
+def validate_email_for_reset():
+    """
+    API AJAX: Valida se um email existe no sistema para reset de senha
+    
+    Request:
+        {
+            "email": "user@gmail.com"
+        }
+    
+    Response:
+        {
+            "exists": true/false,
+            "message": "Email encontrado!" / "Email não encontrado"
+        }
+    """
+    from flask import request
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # Receber JSON
+    data = request.get_json() or {}
+    email = data.get('email', '').strip().lower()
+    
+    # Validar email
+    if not email or '@' not in email:
+        return jsonify({
+            "exists": False,
+            "message": "❌ Email inválido"
+        }), 400
+    
+    # Buscar usuário
+    user = User.query.filter_by(email=email).first()
+    
+    if user:
+        logger.info(f"[✅] Email encontrado no sistema: {email}")
+        return jsonify({
+            "exists": True,
+            "message": f"✅ Email encontrado! Será enviado em segundos.",
+            "user_found": True
+        }), 200
+    else:
+        logger.info(f"[ℹ️] Email não encontrado: {email}")
+        return jsonify({
+            "exists": False,
+            "message": f"❌ Não existe nenhuma conta cadastrada com este email",
+            "user_found": False
+        }), 200
