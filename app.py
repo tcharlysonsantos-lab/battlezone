@@ -345,12 +345,17 @@ def dashboard():
         
         # ✅ OTIMIZAÇÃO: Ordenar eventos no SQL (não em Python!)
         # Próximos eventos primeiro, depois eventos passados em ordem reversa
-        todos_eventos = Evento.query.filter_by(
-            ativo=True,
-            deletado=False
-        ).order_by(
-            Evento.data_evento  # SQL faz o ordering
-        ).limit(20).all()  # Limite para não sobrecarregar
+        todos_eventos = []
+        try:
+            todos_eventos = Evento.query.filter_by(
+                ativo=True,
+                deletado=False
+            ).order_by(
+                Evento.data_evento  # SQL faz o ordering
+            ).limit(20).all()  # Limite para não sobrecarregar
+        except Exception as e:
+            app.logger.warning(f"[DASHBOARD] Eventos query erro (tabela pode não existir): {e}")
+            todos_eventos = []
         
         return render_template('dashboard.html',
                              total_operadores=total_operadores,
