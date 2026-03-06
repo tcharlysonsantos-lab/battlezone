@@ -94,6 +94,14 @@ if not app.config['DEBUG']:
 # 1. CSRF Protection
 csrf = CSRFProtect(app)
 
+# CSRF Exemptions - rotas que não precisam de CSRF token
+# (seguro porque não modificam dados do usuário)
+@app.before_request
+def csrf_protection():
+    """Desabilita CSRF para rotas específicas"""
+    if request.path in ['/auth/forgot-password'] or request.path.startswith('/auth/forgot-password'):
+        csrf._exempt_views.add('auth.forgot_password')
+
 # 2. Headers de Segurança (NOVO)
 # Configuração de CSP com todos os domínios necessários
 csp_config = {
