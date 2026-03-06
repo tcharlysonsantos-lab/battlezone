@@ -1379,6 +1379,58 @@ def debug_permissoes():
     <ul>
         {''.join(f'<li>{r}: {"✅" if p else "❌"}</li>' for r, p in permissoes.items())}
     </ul>
+    """
+
+# ==================== DEBUG EMAIL TEST ====================
+@app.route('/debug-email-test')
+def debug_email_test():
+    """Endpoint de debug para testar email - APENAS PARA TESTING"""
+    try:
+        from backend.email_service import enviar_email_reset_senha
+        from backend.models import User
+        
+        # Procurar o usuário de teste
+        user = User.query.filter_by(email='tcharlysonf.f@gmail.com').first()
+        
+        if not user:
+            return f"""
+            <h2>ERRO: Usuário não encontrado</h2>
+            <p>Procurando por: tcharlysonf.f@gmail.com</p>
+            <p><a href="/">Voltar</a></p>
+            """, 404
+        
+        # Gerar token
+        token = user.gerar_password_reset_token()
+        reset_link = f"https://battlezone-production.up.railway.app/auth/reset-password/{token}"
+        
+        # Tentar enviar email
+        print(f"\n[DEBUG EMAIL] Enviando para {user.email}")
+        print(f"[DEBUG EMAIL] Nome: {user.nome}")
+        print(f"[DEBUG EMAIL] Link: {reset_link}")
+        
+        result = enviar_email_reset_senha(user.email, user.nome, reset_link)
+        
+        return f"""
+        <h2>DEBUG EMAIL TEST</h2>
+        <p><strong>Usuário:</strong> {user.username}</p>
+        <p><strong>Email:</strong> {user.email}</p>
+        <p><strong>Nome:</strong> {user.nome}</p>
+        <p><strong>Resultado:</strong> <span style="color: {'green' if result else 'red'}; font-weight: bold;">{result}</span></p>
+        <p><strong>Link gerado:</strong></p>
+        <pre>{reset_link}</pre>
+        <p style="color: blue;">Verifique seu email em 1-2 minutos</p>
+        <p><a href="/">Voltar</a></p>
+        """
+    
+    except Exception as e:
+        import traceback
+        return f"""
+        <h2>ERRO NO DEBUG EMAIL</h2>
+        <p><strong>Erro:</strong> {str(e)}</p>
+        <pre>{traceback.format_exc()}</pre>
+        <p><a href="/">Voltar</a></p>
+        """, 500
+    </ul>
     <p><a href="/operadores">Tentar acessar Operadores</a></p>
     <p><a href="/partidas">Tentar acessar Partidas</a></p>
     """
