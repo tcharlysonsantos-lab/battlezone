@@ -506,36 +506,69 @@ def validate_email_for_reset():
             "message": "Email encontrado!" / "Email não encontrado"
         }
     """
-    from flask import request
     import logging
     
     logger = logging.getLogger(__name__)
     
-    # Receber JSON
-    data = request.get_json() or {}
-    email = data.get('email', '').strip().lower()
+    try:
+        # ===== RECEBER E VALIDAR JSON =====
+        
+        data = request.get_json()
+        
+        if not data:
+            logger.warning("[⚠️] Request sem JSON válido")
+            return jsonify({
+                "exists": False,
+                "message": "❌ Formato de requisição inválido"
+            }), 400
+        
+        email = data.get('email', '').strip().lower() if isinstance(data.get('email'), str) else ''
+        
+        # Validar email
+        if not email:
+            logger.warning("[⚠️] Email vazio na requisição")
+            return jsonify({
+                "exists": False,
+                "message": "❌ Email vazio"
+            }), 400
+        
+        if '@' not in email:
+            logger.warning(f"[⚠️] Email inválido (sem @): {email}")
+            return jsonify({
+                "exists": False,
+                "message": "❌ Email inválido"
+            }), 400
+        
+        # ===== BUSCAR USUÁRIO NO BANCO =====
+        
+        logger.debug(f"[🔍] Buscando email: {email}")
+        user = User.query.filter_by(email=email).first()
+        
+        if user:
+            logger.info(f"[✅] Email encontrado no sistema: {email}")
+            return jsonify({
+                "exists": True,
+                "message": "✅ Email encontrado! Será enviado em segundos.",
+                "user_found": True
+            }), 200
+        else:
+            logger.info(f"[ℹ️] Email não encontrado: {email}")
+            return jsonify({
+                "exists": False,
+                "message": "❌ Não existe nenhuma conta cadastrada com este email",
+                "user_found": False
+            }), 200
     
-    # Validar email
-    if not email or '@' not in email:
+    except Exception as e:
+        # ===== TRATAMENTO DE ERRO =====
+        
+        logger.error(f"[🚨] ERRO ao validar email: {str(e)}")
+        logger.error(f"     Tipo: {type(e).__name__}")
+        logger.error(f"     Stack: {repr(e)}")
+        
+        # Retornar erro JSON em vez de HTML
         return jsonify({
             "exists": False,
-            "message": "❌ Email inválido"
-        }), 400
-    
-    # Buscar usuário
-    user = User.query.filter_by(email=email).first()
-    
-    if user:
-        logger.info(f"[✅] Email encontrado no sistema: {email}")
-        return jsonify({
-            "exists": True,
-            "message": f"✅ Email encontrado! Será enviado em segundos.",
-            "user_found": True
-        }), 200
-    else:
-        logger.info(f"[ℹ️] Email não encontrado: {email}")
-        return jsonify({
-            "exists": False,
-            "message": f"❌ Não existe nenhuma conta cadastrada com este email",
-            "user_found": False
-        }), 200
+            "message": "❌ Erro ao processar validação. Tente novamente.",
+            "error": type(e).__name__
+        }), 500

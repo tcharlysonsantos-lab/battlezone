@@ -1016,28 +1016,62 @@ def index():
         data_hoje = agora.strftime("%d/%m/%Y")
         hora_atual = agora.strftime("%H:%M")
         
-        # Buscar partidas de hoje com horário futuro
-        logger.info("[INDEX] Executando query para partidas")
-        todas_partidas = Partida.query.filter_by(finalizada=False).all()
-        logger.info(f"[INDEX] Query retornou {len(todas_partidas)} partidas")
-        partidas_hoje = []
+        # ===== BUSCAR PARTIDAS DE HOJE COM HORÁRIO FUTURO =====
         
-        for p in todas_partidas:
+        logger.info("[INDEX] Executando query para partidas de hoje")
+        todas_partidas_hoje = Partida.query.filter_by(finalizada=False).all()
+        logger.info(f"[INDEX] Query retornou {len(todas_partidas_hoje)} partidas totais")
+        
+        partidas_hoje = []
+        for p in todas_partidas_hoje:
             if p.data == data_hoje and p.horario > hora_atual:
                 partidas_hoje.append({
+                    'id': p.id,
                     'nome': p.nome,
                     'horario': p.horario,
                     'campo': p.campo,
                     'modo': p.modo,
-                    'total_participantes': len(p.participantes)
+                    'data': p.data,
+                    'total_participantes': len(p.participantes) if p.participantes else 0
                 })
         
-        # Ordenar por horário
+        logger.info(f"[INDEX] Encontradas {len(partidas_hoje)} partidas para hoje")
         partidas_hoje.sort(key=lambda x: x['horario'])
+        
+        # ===== BUSCAR PRÓXIMAS PARTIDAS (PRÓXIMOS 7 DIAS) =====
+        
+        logger.info("[INDEX] Buscando próximas partidas")
+        proximas_partidas = []
+        
+        try:
+            from datetime import timedelta
+            
+            for dias_atraso in range(1, 8):  # Próximos 7 dias
+                data_futura = agora + timedelta(days=dias_atraso)
+                data_futura_str = data_futura.strftime("%d/%m/%Y")
+                
+                for p in todas_partidas_hoje:
+                    # Se a partida é de um futuro próximo e ainda não foi finalizada
+                    if p.data == data_futura_str and not p.finalizada:
+                        proximas_partidas.append({
+                            'id': p.id,
+                            'nome': p.nome,
+                            'horario': p.horario,
+                            'campo': p.campo,
+                            'modo': p.modo,
+                            'data': p.data,
+                            'total_participantes': len(p.participantes) if p.participantes else 0
+                        })
+            
+            logger.info(f"[INDEX] Encontradas {len(proximas_partidas)} próximas partidas")
+            proximas_partidas.sort(key=lambda x: (x['data'], x['horario']))
+            
+        except Exception as e:
+            logger.error(f"[INDEX] Erro ao buscar próximas partidas: {e}")
+            proximas_partidas = []
         
         # Gerar horários disponíveis (a cada 10 minutos)
         horarios_disponiveis = []
-        agora = datetime.now()
         hora_atual_num = agora.hour * 60 + agora.minute
         # Horário de funcionamento: 15:30 às 22:00
         inicio = 15 * 60 + 30  # 15:30 em minutos
@@ -1051,9 +1085,10 @@ def index():
         
         from backend.utils import PLANOS_WARFIELD, PLANOS_REDLINE
         
-        logger.info(f"[INDEX] Renderizando template com {len(partidas_hoje)} partidas")
+        logger.info(f"[INDEX] Renderizando template com {len(partidas_hoje)} partidas hoje + {len(proximas_partidas)} próximas")
         return render_template('public/index.html',
                              partidas_hoje=partidas_hoje,
+                             proximas_partidas=proximas_partidas,
                              horarios_disponiveis=horarios_disponiveis,
                              planos_warfield=PLANOS_WARFIELD,
                              planos_redline=PLANOS_REDLINE)
@@ -1063,6 +1098,7 @@ def index():
         from backend.utils import PLANOS_WARFIELD, PLANOS_REDLINE
         return render_template('public/index.html',
                              partidas_hoje=[],
+                             proximas_partidas=[],
                              horarios_disponiveis=['15:30', '16:30', '17:30', '18:30', '19:30', '20:30', '21:30'],
                              planos_warfield=PLANOS_WARFIELD,
                              planos_redline=PLANOS_REDLINE)
