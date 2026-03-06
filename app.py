@@ -168,7 +168,19 @@ def before_request():
     """Middleware para verificar sessão de operadores"""
     
     # ⚠️ NÃO bloquear rotas públicas/auth (evitar redirect loop)
-    public_routes = ['index', 'auth.login', 'auth.criar_conta', 'auth.esqueci_senha', 'auth.forgot_password', 'auth.reset_password']
+    # Incluir todas as rotas que devem ser acessíveis sem autenticação
+    public_routes = [
+        'index',  # Home public
+        'auth.login',  # Login page
+        'auth.criar_conta',  # Sign up
+        'auth.esqueci_senha',  # Forgot password (PT)
+        'auth.forgot_password',  # Forgot password (EN)
+        'auth.reset_password',  # Reset password with token
+        'auth.terms',  # Terms & conditions
+        'calendario_publico',  # Public calendar
+        'regras',  # Public rules
+        'static'  # CSS, JS, images
+    ]
     
     if request.endpoint and request.endpoint in public_routes:
         return  # Deixar passar sem validação
