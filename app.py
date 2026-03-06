@@ -184,7 +184,7 @@ def before_request():
                 current_user.update_activity()
 
 @app.after_request
-def after_request(response):
+def after_request_batch_commit(response):
     """✅ OTIMIZAÇÃO: Fazer commit em batch ao final da request"""
     try:
         db.session.commit()
@@ -195,7 +195,7 @@ def after_request(response):
     return response
 
 @app.after_request
-def after_request(response):
+def after_request_security(response):
     """Adicionar headers de segurança a TODAS as respostas"""
     return add_security_headers(response)
 
@@ -336,33 +336,6 @@ def dashboard():
     ).filter(Venda.data == hoje, Venda.valor > 0).first()
     
     total_vendas_hoje = float(vendas_resultado.total or 0)
-    
-    # Function to sort eventos: próximos em primeiro (ASC), depois passados (DESC)
-    def sort_eventos_by_proximity(eventos):
-        from datetime import datetime
-        today = datetime.now().date()
-        
-        # Separate into future and past events
-        future_events = []
-        past_events = []
-        
-        for e in eventos:
-            if e.data_evento:
-                # Converter para date se for datetime para comparação
-                evento_date = e.data_evento.date() if isinstance(e.data_evento, datetime) else e.data_evento
-                today_date = today
-                
-                if evento_date >= today_date:
-                    future_events.append(e)
-                else:
-                    past_events.append(e)
-        
-        # Sort each group
-        future_events.sort(key=lambda e: e.data_evento)  # Próximos primeiro (ASC)
-        past_events.sort(key=lambda e: e.data_evento, reverse=True)  # Mais recentes passados primeiro (DESC)
-        
-        # Combine: future first, then past
-        return future_events + past_events
     
     # ✅ OTIMIZAÇÃO: Ordenar eventos no SQL (não em Python!)
     # Próximos eventos primeiro, depois eventos passados em ordem reversa
