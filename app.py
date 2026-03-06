@@ -184,20 +184,19 @@ def before_request():
                 current_user.update_activity()
 
 @app.after_request
-def after_request_batch_commit(response):
-    """✅ OTIMIZAÇÃO: Fazer commit em batch ao final da request"""
+def after_request(response):
+    """✅ Consolidado: Batch commit + Security headers"""
+    # 1. Fazer batch commit
     try:
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Erro ao fazer commit: {e}")
+        app.logger.error(f"[COMMIT ERROR] {str(e)}", exc_info=True)
+    
+    # 2. Adicionar security headers
+    response = add_security_headers(response)
     
     return response
-
-@app.after_request
-def after_request_security(response):
-    """Adicionar headers de segurança a TODAS as respostas"""
-    return add_security_headers(response)
 
 # ==================== CSRF ERROR HANDLER ====================
 @app.errorhandler(CSRFError)
@@ -289,71 +288,78 @@ def regras():
 @operador_session_required
 def dashboard():
     """Dashboard principal"""
-    # ✅ OTIMIZAÇÃO: Criar operador background, não bloquear carregamento dashboard
-    if current_user.nivel == 'operador':
-        operador = Operador.query.filter_by(warname=current_user.username).first()
-        if not operador:
-            # Criar operador automaticamente
-            operador = Operador(
-                nome=current_user.nome,
-                warname=current_user.username,
-                cpf=current_user.cpf or '',
-                email=current_user.email,
-                data_nascimento=current_user.data_nascimento or '',
-                idade=str(current_user.idade) if current_user.idade else '',
-                battlepass='NAO'
-            )
-            db.session.add(operador)
-            db.session.commit()
+    try:
+        # ✅ OTIMIZAÇÃO: Criar operador background, não bloquear carregamento dashboard
+        if current_user.nivel == 'operador':
+            operador = Operador.query.filter_by(warname=current_user.username).first()
+            if not operador:
+                # Criar operador automaticamente
+                operador = Operador(
+                    nome=current_user.nome,
+                    warname=current_user.username,
+                    cpf=current_user.cpf or '',
+                    email=current_user.email,
+                    data_nascimento=current_user.data_nascimento or '',
+                    idade=str(current_user.idade) if current_user.idade else '',
+                    battlepass='NAO'
+                )
+                db.session.add(operador)
+                # ✅ NÃO fazer commit aqui - deixar pro after_request fazer batch commit
+        
+        # ✅ OTIMIZAÇÃO: Uma única query com func.count() agregado
+        stats = db.session.query(
+            func.count(Operador.id).label('total_operadores'),
+            func.count(Equipe.id).label('total_equipes')
+        ).first()
+        
+        total_operadores = stats.total_operadores or 0
+        total_equipes = stats.total_equipes or 0
+        
+        # ✅ OTIMIZAÇÃO: Data como string para comparação eficiente
+        hoje = datetime.now().strftime("%d/%m/%Y")
+        partidas_hoje = Partida.query.filter(Partida.data == hoje).count()
+        
+        # ✅ OTIMIZAÇÃO: Usar select() com limit para não carregar dados desnecessários
+        itens_baixo = Estoque.query.filter(
+            Estoque.quantidade <= Estoque.quantidade_minima,
+            Estoque.ativo == True
+        ).order_by(Estoque.quantidade).limit(10).all()
+        
+        # ✅ OTIMIZAÇÃO: Eager load para próximas partidas
+        proximas_partidas = Partida.query.filter_by(finalizada=False).options(
+            db.joinedload(Partida.criador)  # Eager load criador
+        ).order_by(Partida.data, Partida.horario).limit(5).all()
+        
+        # ✅ OTIMIZAÇÃO: Calcular total de vendas no SQL (não em Python)
+        vendas_resultado = db.session.query(
+            func.sum(Venda.valor).label('total')
+        ).filter(Venda.data == hoje, Venda.valor > 0).first()
+        
+        total_vendas_hoje = float(vendas_resultado.total or 0)
+        
+        # ✅ OTIMIZAÇÃO: Ordenar eventos no SQL (não em Python!)
+        # Próximos eventos primeiro, depois eventos passados em ordem reversa
+        todos_eventos = Evento.query.filter_by(
+            ativo=True,
+            deletado=False
+        ).order_by(
+            Evento.data_evento  # SQL faz o ordering
+        ).limit(20).all()  # Limite para não sobrecarregar
+        
+        return render_template('dashboard.html',
+                             total_operadores=total_operadores,
+                             total_equipes=total_equipes,
+                             partidas_hoje=partidas_hoje,
+                             itens_baixo=itens_baixo,
+                             proximas_partidas=proximas_partidas,
+                             total_vendas_hoje=total_vendas_hoje,
+                             todos_eventos=todos_eventos)
     
-    # ✅ OTIMIZAÇÃO: Uma única query com func.count() agregado
-    stats = db.session.query(
-        func.count(Operador.id).label('total_operadores'),
-        func.count(Equipe.id).label('total_equipes')
-    ).first()
-    
-    total_operadores = stats.total_operadores or 0
-    total_equipes = stats.total_equipes or 0
-    
-    # ✅ OTIMIZAÇÃO: Data como string para comparação eficiente
-    hoje = datetime.now().strftime("%d/%m/%Y")
-    partidas_hoje = Partida.query.filter(Partida.data == hoje).count()
-    
-    # ✅ OTIMIZAÇÃO: Usar select() com limit para não carregar dados desnecessários
-    itens_baixo = Estoque.query.filter(
-        Estoque.quantidade <= Estoque.quantidade_minima,
-        Estoque.ativo == True
-    ).order_by(Estoque.quantidade).limit(10).all()
-    
-    # ✅ OTIMIZAÇÃO: Eager load para próximas partidas
-    proximas_partidas = Partida.query.filter_by(finalizada=False).options(
-        db.joinedload(Partida.criador)  # Eager load criador
-    ).order_by(Partida.data, Partida.horario).limit(5).all()
-    
-    # ✅ OTIMIZAÇÃO: Calcular total de vendas no SQL (não em Python)
-    vendas_resultado = db.session.query(
-        func.sum(Venda.valor).label('total')
-    ).filter(Venda.data == hoje, Venda.valor > 0).first()
-    
-    total_vendas_hoje = float(vendas_resultado.total or 0)
-    
-    # ✅ OTIMIZAÇÃO: Ordenar eventos no SQL (não em Python!)
-    # Próximos eventos primeiro, depois eventos passados em ordem reversa
-    todos_eventos = Evento.query.filter_by(
-        ativo=True,
-        deletado=False
-    ).order_by(
-        Evento.data_evento  # SQL faz o ordering
-    ).limit(20).all()  # Limite para não sobrecarregar
-    
-    return render_template('dashboard.html',
-                         total_operadores=total_operadores,
-                         total_equipes=total_equipes,
-                         partidas_hoje=partidas_hoje,
-                         itens_baixo=itens_baixo,
-                         proximas_partidas=proximas_partidas,
-                         total_vendas_hoje=total_vendas_hoje,
-                         todos_eventos=todos_eventos)
+    except Exception as e:
+        app.logger.error(f"[DASHBOARD ERROR] {str(e)}", exc_info=True)
+        db.session.rollback()
+        flash('Erro ao carregar dashboard. Tente novamente.', 'danger')
+        return redirect(url_for('index'))
 
 # ==================== ROTA PARA DELETAR USUÁRIO ====================
 @app.route('/admin/usuario/<int:id>/deletar', methods=['POST'])
