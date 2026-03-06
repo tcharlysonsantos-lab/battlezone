@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Sorteios - Battlepass{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="text-laranja mb-0">
+                        <i class="fas fa-dice-d20 me-2"></i>Sorteios - Battlepass
+                    </h1>
+                    <small class="text-muted">Acompanhe os resultados dos sorteios mensais</small>
+                </div>
+                <div>
+                    <span class="badge bg-laranja" style="font-size: 1.1rem;">
+                        {{ mes_nome }} / {{ ano }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegação de meses -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="Navegação de meses">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('sorteios', mes=mes-1 if mes > 1 else 12, ano=ano if mes > 1 else ano-1) }}">
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </a>
+                    </li>
+                    <li class="page-item active">
+                        <span class="page-link">{{ mes_nome }} {{ ano }}</span>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('sorteios', mes=mes+1 if mes < 12 else 1, ano=ano if mes < 12 else ano+1) }}">
+                            Próximo <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- BATTLEPASSES DE OPERADORES -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-ninja me-2 text-laranja"></i>Battlepass de Operadores
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if battlepasses_operador %}
+                        {% for bp in battlepasses_operador %}
+                        <div class="mb-5 pb-4 border-bottom">
+                            <h5 class="text-laranja mb-3">{{ bp.nome }}</h5>
+                            
+                            <!-- Resultado do Mês -->
+                            <div class="row mb-3">
+                                <div class="col-12 col-md-3">
+                                    <div class="sorteio-card bg-dark p-3 rounded">
+                                        <small class="text-muted d-block mb-2">Resultado do Mês</small>
+                                        {% set sorteio_mes = sorteios_data.operador.mes[bp.id] %}
+                                        {% if sorteio_mes %}
+                                            <div class="sorteio-resultado">
+                                                <strong class="text-laranja">{{ sorteio_mes.operador.warname if sorteio_mes.operador else 'N/A' }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    {% if é_admin_gerente %}
+                                                        Sorteado por: {{ sorteio_mes.usuario_sorteio.username if sorteio_mes.usuario_sorteio else 'N/A' }}
+                                                        <br>
+                                                        {{ sorteio_mes.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio_mes.sorteado_em else '' }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">Vazio</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Semanas -->
+                                {% for semana in [1, 2, 3, 4] %}
+                                <div class="col-12 col-md-3">
+                                    {% set sorteio_semana = sorteios_data.operador.semanas[semana][bp.id] %}
+                                    <div class="sorteio-card bg-dark p-3 rounded position-relative">
+                                        <small class="text-muted d-block mb-2">Semana {{ semana }}</small>
+                                        {% if sorteio_semana %}
+                                            <div class="sorteio-resultado">
+                                                <strong class="text-laranja">{{ sorteio_semana.operador.warname if sorteio_semana.operador else 'N/A' }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    {% if é_admin_gerente %}
+                                                        Sorteado por: {{ sorteio_semana.usuario_sorteio.username if sorteio_semana.usuario_sorteio else 'N/A' }}
+                                                        <br>
+                                                        {{ sorteio_semana.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio_semana.sorteado_em else '' }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            
+                                            <!-- Ações Admin -->
+                                            {% if é_admin_gerente %}
+                                            <div class="sorteio-actions mt-2">
+                                                <button class="btn btn-sm btn-danger" onclick="deletarSorteio({{ sorteio_semana.id }})">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-info" onclick="verInfoSorteio({{ sorteio_semana.id }})">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </button>
+                                            </div>
+                                            {% endif %}
+                                        {% else %}
+                                            {% if é_admin_gerente %}
+                                            <button class="btn btn-sm btn-laranja w-100" onclick="sortearOperador({{ bp.id }}, {{ semana }})">
+                                                <i class="fas fa-dice"></i> Sortear
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted">Em breve</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Nenhum battlepass de operador cadastrado
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BATTLEPASSES DE EQUIPES -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-flag me-2 text-laranja"></i>Battlepass de Equipes
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if battlepasses_equipe %}
+                        {% for bp in battlepasses_equipe %}
+                        <div class="mb-5 pb-4 border-bottom">
+                            <h5 class="text-laranja mb-3">{{ bp.nome }}</h5>
+                            
+                            <!-- Resultado do Mês -->
+                            <div class="row">
+                                <div class="col-12 col-md-3">
+                                    {% set sorteio_mes = sorteios_data.equipe.mes[bp.id] %}
+                                    <div class="sorteio-card bg-dark p-3 rounded position-relative">
+                                        <small class="text-muted d-block mb-2">Resultado do Mês</small>
+                                        {% if sorteio_mes %}
+                                            <div class="sorteio-resultado">
+                                                <strong class="text-laranja">{{ sorteio_mes.equipe.nome if sorteio_mes.equipe else 'N/A' }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    {% if é_admin_gerente %}
+                                                        Sorteado por: {{ sorteio_mes.usuario_sorteio.username if sorteio_mes.usuario_sorteio else 'N/A' }}
+                                                        <br>
+                                                        {{ sorteio_mes.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio_mes.sorteado_em else '' }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            
+                                            <!-- Ações Admin -->
+                                            {% if é_admin_gerente %}
+                                            <div class="sorteio-actions mt-2">
+                                                <button class="btn btn-sm btn-danger" onclick="deletarSorteio({{ sorteio_mes.id }})">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-info" onclick="verInfoSorteio({{ sorteio_mes.id }})">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </button>
+                                            </div>
+                                            {% endif %}
+                                        {% else %}
+                                            {% if é_admin_gerente %}
+                                            <button class="btn btn-sm btn-laranja w-100" onclick="sortearEquipe({{ bp.id }})">
+                                                <i class="fas fa-dice"></i> Sortear
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted">Em breve</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Nenhum battlepass de equipe cadastrado
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estilos customizados -->
+<style>
+    .sorteio-card {
+        border: 1px solid var(--laranja);
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .sorteio-card:hover {
+        box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+    }
+    
+    .sorteio-resultado {
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .btn-laranja {
+        background-color: var(--laranja);
+        color: white;
+        border: none;
+    }
+    
+    .btn-laranja:hover {
+        background-color: var(--laranja-escuro);
+        color: white;
+    }
+</style>
+
+<!-- Scripts -->
+<script>
+    function sortearOperador(battlepassId, semana) {
+        if (confirm('Tem certeza que deseja sortear um operador?')) {
+            fetch(`/api/sortear-operador`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    battlepass_id: battlepassId,
+                    semana: semana,
+                    mes: {{ mes }},
+                    ano: {{ ano }}
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Sorteio realizado com sucesso!');
+                    location.reload();
+                } else {
+                    alert('Erro ao sortear: ' + data.error);
+                }
+            })
+            .catch(err => alert('Erro: ' + err.message));
+        }
+    }
+    
+    function sortearEquipe(battlepassId) {
+        if (confirm('Tem certeza que deseja sortear uma equipe?')) {
+            fetch(`/api/sortear-equipe`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    battlepass_id: battlepassId,
+                    mes: {{ mes }},
+                    ano: {{ ano }}
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Sorteio realizado com sucesso!');
+                    location.reload();
+                } else {
+                    alert('Erro ao sortear: ' + data.error);
+                }
+            })
+            .catch(err => alert('Erro: ' + err.message));
+        }
+    }
+    
+    function deletarSorteio(sorteioId) {
+        if (confirm('Tem certeza que deseja deletar este sorteio?')) {
+            fetch(`/api/sorteio/${sorteioId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Sorteio deletado com sucesso!');
+                    location.reload();
+                } else {
+                    alert('Erro ao deletar: ' + data.error);
+                }
+            })
+            .catch(err => alert('Erro: ' + err.message));
+        }
+    }
+    
+    function verInfoSorteio(sorteioId) {
+        fetch(`/api/sorteio/${sorteioId}`)
+            .then(r => r.json())
+            .then(data => {
+                alert(`Sorteio Info:\nSorteado por: ${data.sorteado_por}\nData: ${data.sorteado_em}`);
+            })
+            .catch(err => alert('Erro: ' + err.message));
+    }
+</script>
+
+{% endblock %}

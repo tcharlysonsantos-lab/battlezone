@@ -31,10 +31,10 @@
                         <p><strong><i class="fas fa-birthday-cake me-2"></i>Idade:</strong> {{ operador.idade or 'Não informado' }}</p>
                         <p>
                             <strong><i class="fas fa-crown me-2"></i>Battlepass:</strong> 
-                            {% if operador.battlepass == 'SIM' %}
-                                <span class="badge" style="background-color: #FF6B00; color: white;">SIM</span>
+                            {% if operador.battlepass %}
+                                <span class="badge" style="background-color: #FF6B00; color: white;">{{ operador.get_battlepass_info() }}</span>
                             {% else %}
-                                <span class="badge bg-secondary">NÃO</span>
+                                <span class="badge bg-secondary">SEM BATTLEPASS</span>
                             {% endif %}
                         </p>
                     </div>

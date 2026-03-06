@@ -66,10 +66,10 @@
                                 </div>
                                 <div>
                                     <i class="fas fa-crown me-2" style="color: #FF6B00;"></i>
-                                    {% if equipe.battlepass == 'SIM' %}
-                                        <span class="badge" style="background-color: #FF6B00; color: white; font-size: 14px;">BATTLEPASS</span>
+                                    {% if equipe.battlepass %}
+                                        <span class="badge" style="background-color: #FF6B00; color: white; font-size: 14px;">{{ equipe.get_battlepass_info() }}</span>
                                     {% else %}
-                                        <span class="badge bg-secondary" style="font-size: 14px;">SEM BP</span>
+                                        <span class="badge bg-secondary" style="font-size: 14px;">SEM BATTLEPASS</span>
                                     {% endif %}
                                 </div>
                             </div>

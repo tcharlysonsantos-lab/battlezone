@@ -39,10 +39,10 @@
                     </div>
                     <div class="col-md-6">
                         <p><strong><i class="fas fa-crown me-2" style="color: #FF6B00;"></i>Battlepass:</strong> 
-                            {% if equipe.battlepass == 'SIM' %}
-                                <span class="badge" style="background-color: #FF6B00; color: white;">SIM</span>
+                            {% if equipe.battlepass %}
+                                <span class="badge" style="background-color: #FF6B00; color: white;">{{ equipe.get_battlepass_info() }}</span>
                             {% else %}
-                                <span class="badge bg-secondary">NÃO</span>
+                                <span class="badge bg-secondary">SEM BATTLEPASS</span>
                             {% endif %}
                         </p>
                     </div>

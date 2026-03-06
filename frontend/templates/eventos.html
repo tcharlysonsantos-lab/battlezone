@@ -1,0 +1,1142 @@
+{% extends "base.html" %}
+
+{% block title %}Eventos da Battlezone{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- TÍTULO PRINCIPAL -->
+    <div class="mb-5">
+        <h1 class="display-4" style="color: #FF6B00;">
+            <i class="fas fa-star"></i> EVENTOS DA BATTLEZONE
+        </h1>
+    </div>
+
+    <!-- BOTÃO ADICIONAR EVENTO (Admin/Gerente) -->
+    {% if é_admin_gerente %}
+    <div class="mb-5">
+        <button class="btn btn-lg" style="background-color: var(--laranja); color: white; border: none;" data-bs-toggle="modal" data-bs-target="#modalNovoEvento">
+            <i class="fas fa-plus"></i> Adicionar Novo Evento
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- ====== SEÇÃO 1: EVENTOS DO CAMPO WARFIELD ====== -->
+    <section class="mb-5">
+        <div class="card border-danger">
+            <div class="card-header" style="background-color: #FF6B00; color: white;">
+                <h3 class="mb-0"><i class="fas fa-map-marker-alt"></i> Eventos do Campo Warfield</h3>
+            </div>
+            <div class="card-body">
+                {% if eventos_warfield %}
+                <div class="row">
+                    {% for evento in eventos_warfield %}
+                    <div class="col-12 mb-2">
+                        <div class="card h-100 shadow-sm" style="min-height: 450px; display: flex; flex-direction: column;">
+                            <!-- HEADER COM NOME DO EVENTO -->
+                            <div class="card-header" style="background-color: #FF6B00; border: none; padding: 1.5rem 1rem; cursor: pointer; text-align: center;"
+                                 onclick="carregarEventoDetalhes({{ evento.id }})">
+                                <h5 class="card-title mb-0 text-white" style="font-weight: 700; font-size: 1.15rem; letter-spacing: 0.5px;">
+                                    {{ evento.nome }}
+                                </h5>
+                            </div>
+
+                            <!-- CAROUSEL DE FOTOS -->
+                            <div style="flex: 1; min-height: 300px;">
+                                {% if evento.fotos_list and evento.fotos_list | length > 0 %}
+                                <div id="carousel-{{ evento.id }}" class="carousel slide h-100" data-bs-ride="carousel" data-bs-interval="5000">
+                                    <div class="carousel-inner h-100">
+                                        {% for foto_idx in range(evento.fotos_list | length) %}
+                                        <div class="carousel-item h-100 {% if foto_idx == 0 %}active{% endif %}" onclick="if(event.target.closest('button') === null) carregarEventoDetalhes({{ evento.id }})" style="cursor: pointer;">
+                                            <img src="data:image/jpeg;base64,{{ evento.fotos_list[foto_idx] }}" 
+                                                 alt="Foto {{ foto_idx + 1 }}" 
+                                                 style="width: 100%; height: 100%; object-fit: cover;">
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if evento.fotos_list | length > 1 %}
+                                    <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ evento.id }}" data-bs-slide="prev">
+                                        <span class="carousel-control-prev-icon"></span>
+                                    </button>
+                                    <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ evento.id }}" data-bs-slide="next">
+                                        <span class="carousel-control-next-icon"></span>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div style="flex: 1; width: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; cursor: pointer; min-height: 300px;"
+                                     onclick="carregarEventoDetalhes({{ evento.id }})">
+                                    <i class="fas fa-image" style="font-size: 4rem; color: #ccc;"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {% if é_admin_gerente %}
+                            <div class="card-body p-2">
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-sm btn-warning" 
+                                            onclick="event.stopPropagation(); editarEvento({{ evento.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" 
+                                            onclick="event.stopPropagation(); deletarEvento({{ evento.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle"></i> Nenhum evento agendado para o campo Warfield.
+                </div>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== SEÇÃO 2: EVENTOS DO CAMPO REDLINE ====== -->
+    <section class="mb-5">
+        <div class="card border-danger">
+            <div class="card-header" style="background-color: #FF6B00; color: white;">
+                <h3 class="mb-0"><i class="fas fa-map-marker-alt"></i> Eventos do Campo Redline</h3>
+            </div>
+            <div class="card-body">
+                {% if eventos_redline %}
+                <div class="row">
+                    {% for evento in eventos_redline %}
+                    <div class="col-12 mb-2">
+                        <div class="card h-100 shadow-sm" style="min-height: 450px; display: flex; flex-direction: column;">
+                            <!-- HEADER COM NOME DO EVENTO -->
+                            <div class="card-header" style="background-color: #FF6B00; border: none; padding: 1.5rem 1rem; cursor: pointer; text-align: center;"
+                                 onclick="carregarEventoDetalhes({{ evento.id }})">
+                                <h5 class="card-title mb-0 text-white" style="font-weight: 700; font-size: 1.15rem; letter-spacing: 0.5px;">
+                                    {{ evento.nome }}
+                                </h5>
+                            </div>
+
+                            <!-- CAROUSEL DE FOTOS -->
+                            <div style="flex: 1; min-height: 300px;">
+                                {% if evento.fotos_list and evento.fotos_list | length > 0 %}
+                                <div id="carousel-{{ evento.id }}" class="carousel slide h-100" data-bs-ride="carousel" data-bs-interval="5000">
+                                    <div class="carousel-inner h-100">
+                                        {% for foto_idx in range(evento.fotos_list | length) %}
+                                        <div class="carousel-item h-100 {% if foto_idx == 0 %}active{% endif %}" onclick="if(event.target.closest('button') === null) carregarEventoDetalhes({{ evento.id }})" style="cursor: pointer;">
+                                            <img src="data:image/jpeg;base64,{{ evento.fotos_list[foto_idx] }}" 
+                                                 alt="Foto {{ foto_idx + 1 }}" 
+                                                 style="width: 100%; height: 100%; object-fit: cover;">
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if evento.fotos_list | length > 1 %}
+                                    <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ evento.id }}" data-bs-slide="prev">
+                                        <span class="carousel-control-prev-icon"></span>
+                                    </button>
+                                    <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ evento.id }}" data-bs-slide="next">
+                                        <span class="carousel-control-next-icon"></span>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div style="flex: 1; width: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; cursor: pointer; min-height: 300px;"
+                                     onclick="carregarEventoDetalhes({{ evento.id }})">
+                                    <i class="fas fa-image" style="font-size: 4rem; color: #ccc;"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {% if é_admin_gerente %}
+                            <div class="card-body p-2">
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-sm btn-warning" 
+                                            onclick="event.stopPropagation(); editarEvento({{ evento.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" 
+                                            onclick="event.stopPropagation(); deletarEvento({{ evento.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle"></i> Nenhum evento agendado para o campo Redline.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== SEÇÃO 3: EVENTOS DA BATTLEZONE (GERAL) ====== -->
+    <section class="mb-5">
+        <div class="card border-danger">
+            <div class="card-header" style="background-color: #FF6B00; color: white;">
+                <h3 class="mb-0"><i class="fas fa-globe"></i> Eventos da Battlezone (Geral)</h3>
+            </div>
+            <div class="card-body">
+                {% if eventos_geral %}
+                <div class="row">
+                    {% for evento in eventos_geral %}
+                    <div class="col-12 mb-2">
+                        <div class="card h-100 shadow-sm" style="min-height: 450px; display: flex; flex-direction: column;">
+                            <!-- HEADER COM NOME DO EVENTO -->
+                            <div class="card-header" style="background-color: #FF6B00; border: none; padding: 1.5rem 1rem; cursor: pointer; text-align: center;"
+                                 onclick="carregarEventoDetalhes({{ evento.id }})">
+                                <h5 class="card-title mb-0 text-white" style="font-weight: 700; font-size: 1.15rem; letter-spacing: 0.5px;">
+                                    {{ evento.nome }}
+                                </h5>
+                            </div>
+
+                            <!-- CAROUSEL DE FOTOS -->
+                            <div style="flex: 1; min-height: 300px;">
+                                {% if evento.fotos_list and evento.fotos_list | length > 0 %}
+                                <div id="carousel-{{ evento.id }}" class="carousel slide h-100" data-bs-ride="carousel" data-bs-interval="5000">
+                                    <div class="carousel-inner h-100">
+                                        {% for foto_idx in range(evento.fotos_list | length) %}
+                                        <div class="carousel-item h-100 {% if foto_idx == 0 %}active{% endif %}" onclick="if(event.target.closest('button') === null) carregarEventoDetalhes({{ evento.id }})" style="cursor: pointer;">
+                                            <img src="data:image/jpeg;base64,{{ evento.fotos_list[foto_idx] }}" 
+                                                 alt="Foto {{ foto_idx + 1 }}" 
+                                                 style="width: 100%; height: 100%; object-fit: cover;">
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if evento.fotos_list | length > 1 %}
+                                    <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ evento.id }}" data-bs-slide="prev">
+                                        <span class="carousel-control-prev-icon"></span>
+                                    </button>
+                                    <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ evento.id }}" data-bs-slide="next">
+                                        <span class="carousel-control-next-icon"></span>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div style="flex: 1; width: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; cursor: pointer; min-height: 300px;"
+                                     onclick="carregarEventoDetalhes({{ evento.id }})">
+                                    <i class="fas fa-image" style="font-size: 4rem; color: #ccc;"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {% if é_admin_gerente %}
+                            <div class="card-body p-2">
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-sm btn-warning" 
+                                            onclick="event.stopPropagation(); editarEvento({{ evento.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" 
+                                            onclick="event.stopPropagation(); deletarEvento({{ evento.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle"></i> Nenhum evento geral da Battlezone agendado.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== SEÇÃO 4: SORTEIOS & RESULTADOS ====== -->
+    <section class="mb-5">
+        <div class="card border-warning">
+            <div class="card-header" style="background-color: #FF6B00; color: white;">
+                <h3 class="mb-0"><i class="fas fa-dice"></i> Sorteios & Resultados</h3>
+                <small class="text-white-50">Semana {{ semana }} de {{ ano }}</small>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- COLUNA 1: SORTEIOS DE OPERADORES (SEMANAIS) -->
+                    <div class="col-lg-6 mb-4">
+                        <h5 class="mb-4" style="color: #00C851;">
+                            <i class="fas fa-users"></i> Sorteios - Operadores (Semana {{ semana }})
+                        </h5>
+                        {% if battlepasses_operador %}
+                            {% for bp in battlepasses_operador %}
+                            <div class="card mb-3" style="background-color: var(--cinza-claro); border: none;">
+                                <div class="card-header" style="background-color: var(--cinza-escuro); border-bottom: 2px solid #00C851; cursor: pointer;" onclick="irParaHistoricoOperador({{ bp.id }}, '{{ bp.nome }}')">
+                                    <h6 class="mb-0" style="cursor: pointer; margin: 0; color: #00C851; font-weight: bold;">{{ bp.nome }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    {% set sorteio = sorteios_data['operador']['semana_atual'].get(bp.id) %}
+                                    {% if sorteio and sorteio.operador %}
+                                    <div class="text-center py-3">
+                                        <i class="fas fa-trophy" style="font-size: 32px; color: #00C851; margin-bottom: 15px; display: block;"></i>
+                                        <h6 style="color: white; font-weight: bold; margin-bottom: 8px;">
+                                            {{ sorteio.operador.nome }}
+                                        </h6>
+                                        <small class="text-white-50 d-block mb-3">
+                                            @{{ sorteio.operador.warname }}
+                                        </small>
+                                        <small class="text-white-50 d-block mb-2">
+                                            {{ sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A' }}
+                                        </small>
+                                        {% if é_admin_gerente %}
+                                        <div class="d-flex gap-2 justify-content-center">
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    onclick="verSorteioOperador({{ sorteio.id }}, '{{ bp.nome }}', '{{ sorteio.operador.nome }}', '{{ sorteio.operador.warname }}', '{{ sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') }}', '{{ sorteio.usuario_sorteio.username if sorteio.usuario_sorteio else 'N/A' }}')">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="deletarSorteio({{ sorteio.id }})">
+                                                <i class="fas fa-trash"></i> Remover
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <button class="btn w-100" style="background-color: #00C851; color: white;"
+                                            onclick="sortearOperador({{ bp.id }}, {{ semana }}, {{ mes }}, {{ ano }})">
+                                        <i class="fas fa-dice me-2"></i> Sortear Operador
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="alert alert-info">
+                            <small>Nenhuma battlepass de operador configurada</small>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- COLUNA 2: SORTEIOS DE EQUIPES (MENSAIS) -->
+                    <div class="col-lg-6 mb-4">
+                        <h5 class="mb-4" style="color: #0066CC;">
+                            <i class="fas fa-shield-alt"></i> Sorteios - Equipes (Mês)
+                        </h5>
+                        {% if battlepasses_equipe %}
+                            {% for bp in battlepasses_equipe %}
+                            <div class="card mb-3" style="background-color: var(--cinza-claro); border: none;">
+                                <div class="card-header" style="background-color: var(--cinza-escuro); border-bottom: 2px solid #0066CC; cursor: pointer;" onclick="irParaHistoricoEquipe({{ bp.id }}, '{{ bp.nome }}')">
+                                    <h6 class="mb-0" style="cursor: pointer; margin: 0; color: #0066CC; font-weight: bold;">{{ bp.nome }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    {% set sorteio = sorteios_data['equipe']['mes'].get(bp.id) %}
+                                    {% if sorteio and sorteio.equipe %}
+                                    <div class="text-center py-3">
+                                        <i class="fas fa-shield-alt" style="font-size: 32px; color: #C0C0C0; margin-bottom: 15px; display: block;"></i>
+                                        <h6 style="color: white; font-weight: bold; margin-bottom: 8px;">
+                                            {{ sorteio.equipe.nome }}
+                                        </h6>
+                                        <small class="text-white-50 d-block mb-2">
+                                            {{ sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A' }}
+                                        </small>
+                                        {% if é_admin_gerente %}
+                                        <div class="d-flex gap-2 justify-content-center">
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    onclick="verSorteioEquipe({{ sorteio.id }}, '{{ bp.nome }}', '{{ sorteio.equipe.nome }}', '{{ sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') }}', '{{ sorteio.usuario_sorteio.username if sorteio.usuario_sorteio else 'N/A' }}')">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="deletarSorteio({{ sorteio.id }})">
+                                                <i class="fas fa-trash"></i> Remover
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <button class="btn w-100" style="background-color: #0066CC; color: white;"
+                                            onclick="sortearEquipe({{ bp.id }}, {{ mes }}, {{ ano }})">
+                                        <i class="fas fa-dice me-2"></i> Sortear Equipe
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="alert alert-info">
+                            <small>Nenhuma battlepass de equipe configurada</small>
+                        </div>
+                        {% endif %}
+                    </div> <!-- fecha col-lg-6 equipes -->
+                </div> <!-- fecha row sorteios -->
+            </div> <!-- fecha card-body sorteios -->
+        </div> <!-- fecha card sorteios -->
+
+<!-- MODAL: HISTÓRICO SORTEIOS OPERADORES -->
+<div class="modal fade" id="modalHistoricoOperador" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background-color: var(--cinza-claro);">
+            <div class="modal-header" style="background-color: var(--cinza-escuro); border-bottom: 2px solid var(--laranja);">
+                <h5 class="modal-title" id="historicoOperadorTitle" style="color: var(--laranja);">
+                    <i class="fas fa-history me-2"></i> Histórico Operadores
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="historicoOperadorBody">
+                <p class="text-center"><i class="fas fa-spinner fa-spin"></i> Carregando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: HISTÓRICO SORTEIOS EQUIPES -->
+<div class="modal fade" id="modalHistoricoEquipe" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background-color: var(--cinza-claro);">
+            <div class="modal-header" style="background-color: var(--cinza-escuro); border-bottom: 2px solid var(--laranja);">
+                <h5 class="modal-title" id="historicoEquipeTitle" style="color: var(--laranja);">
+                    <i class="fas fa-history me-2"></i> Histórico Equipes
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="historicoEquipeBody">
+                <p class="text-center"><i class="fas fa-spinner fa-spin"></i> Carregando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: NOVO/EDITAR EVENTO -->
+<div class="modal fade" id="modalNovoEvento" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background-color: var(--laranja);">
+                <h5 class="modal-title" id="tituloModal">
+                    <i class="fas fa-plus"></i> Novo Evento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEvento" enctype="multipart/form-data">
+                    <!-- Nome -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome do Evento*</label>
+                        <input type="text" class="form-control" id="inputNome" name="nome" required>
+                    </div>
+
+                    <!-- Data -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Data do Evento*</label>
+                        <input type="date" class="form-control" id="inputData" name="data_evento" required>
+                    </div>
+
+                    <!-- Hora -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Hora do Evento*</label>
+                        <input type="time" class="form-control" id="inputHora" name="hora_evento" required>
+                    </div>
+
+                    <!-- Campo -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Campo*</label>
+                        <select class="form-select" id="inputCampo" name="campo" required>
+                            <option value="">Selecione...</option>
+                            <option value="Warfield">Warfield</option>
+                            <option value="Redline">Redline</option>
+                            <option value="GERAL">Geral (Battlezone)</option>
+                        </select>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Descrição</label>
+                        <textarea class="form-control" id="inputDescricao" name="descricao" rows="3"></textarea>
+                    </div>
+
+                    <!-- Fotos -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fotos (até 5)</label>
+                        <input type="file" class="form-control" id="inputFotos" name="fotos" 
+                               multiple accept="image/*">
+                        <small class="text-muted">Máximo 5 imagens. As fotos já upadas aparecerão abaixo.</small>
+                        <div id="previewFotos" class="mt-3"></div>
+                    </div>
+
+                    <!-- Valores -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Valor por Pessoa (R$)</label>
+                            <input type="number" class="form-control" id="inputValorPessoa" 
+                                   name="valor_pessoa" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Valor Individual (R$)</label>
+                            <input type="number" class="form-control" id="inputValorIndividual" 
+                                   name="valor_individual" step="0.01" min="0">
+                        </div>
+                    </div>
+
+                    <!-- Brindes -->
+                    <div class="mb-3 mt-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-gift"></i> Brindes
+                        </label>
+                        <div id="containerBrindes">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" name="brindes" 
+                                       placeholder="Digite um brinde...">
+                                <button class="btn btn-outline-danger" type="button" 
+                                        onclick="removerBrinde(this)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-success" type="button" 
+                                onclick="adicionarBrinde()">
+                            <i class="fas fa-plus"></i> Adicionar Brinde
+                        </button>
+                    </div>
+
+                    <input type="hidden" id="inputEventoId" name="evento_id" value="">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-lg" style="background-color: var(--laranja); color: white; border: none;" onclick="salvarEvento()">
+                    <i class="fas fa-save"></i> Salvar Evento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: DETALHES DO EVENTO -->
+<div class="modal fade" id="modalDetalhesEvento" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="tituloDetalhes">Detalhes do Evento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="conteudoDetalhes">
+                <!-- Carregado via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== FUNÇÕES DE EVENTO ====================
+
+// Preview de fotos
+document.getElementById('inputFotos').addEventListener('change', function(e) {
+    const preview = document.getElementById('previewFotos');
+    preview.innerHTML = '';
+    
+    for (let file of e.target.files) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = document.createElement('img');
+            img.src = event.target.result;
+            img.style.height = '100px';
+            img.style.marginRight = '10px';
+            img.style.borderRadius = '4px';
+            preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Adicionar brinde
+function adicionarBrinde() {
+    const container = document.getElementById('containerBrindes');
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+        <input type="text" class="form-control" name="brindes" placeholder="Digite um brinde...">
+        <button class="btn btn-outline-danger" type="button" onclick="removerBrinde(this)">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    container.appendChild(div);
+}
+
+// Remover brinde
+function removerBrinde(btn) {
+    btn.closest('.input-group').remove();
+}
+
+// Salvar evento
+function salvarEvento() {
+    const form = document.getElementById('formEvento');
+    const eventoId = document.getElementById('inputEventoId').value;
+    const formData = new FormData(form);
+    
+    // Coletar brindes
+    const brindes = [];
+    document.querySelectorAll('input[name="brindes"]').forEach(input => {
+        if (input.value.trim()) {
+            brindes.push(input.value.trim());
+        }
+    });
+    
+    // Converter data de d/m/Y para Y-m-d
+    let dataEventoFormatada = document.getElementById('inputData').value;
+    const horaEvento = document.getElementById('inputHora').value;
+    
+    if (!dataEventoFormatada || !horaEvento) {
+        alert('Por favor, preencha data e hora do evento');
+        return;
+    }
+    
+    if (dataEventoFormatada) {
+        const [dia, mes, ano] = dataEventoFormatada.split('/');
+        dataEventoFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+    }
+    
+    // Combinar data e hora: 2026-03-05 18:30
+    const dataHoraCompleta = `${dataEventoFormatada} ${horaEvento}`;
+    
+    // Cria nova FormData com brindes
+    const data = new FormData();
+    data.append('nome', document.getElementById('inputNome').value);
+    data.append('data_evento', dataHoraCompleta);
+    data.append('campo', document.getElementById('inputCampo').value);
+    data.append('descricao', document.getElementById('inputDescricao').value);
+    data.append('valor_pessoa', document.getElementById('inputValorPessoa').value || 0);
+    data.append('valor_individual', document.getElementById('inputValorIndividual').value || 0);
+    
+    brindes.forEach(brinde => {
+        data.append('brindes', brinde);
+    });
+    
+    // Adicionar fotos
+    const fotos = document.getElementById('inputFotos').files;
+    for (let foto of fotos) {
+        data.append('fotos', foto);
+    }
+    
+    // Enviar com CSRF token
+    const url = eventoId ? `/api/eventos/${eventoId}/editar` : '/api/eventos/criar';
+    const method = eventoId ? 'POST' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        body: data,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Evento salvo com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao salvar evento');
+    });
+}
+
+// Editar evento
+function editarEvento(eventoId) {
+    fetch(`/api/eventos/${eventoId}`)
+    .then(response => response.json())
+    .then(evento => {
+        document.getElementById('tituloModal').innerHTML = '<i class="fas fa-edit"></i> Editar Evento';
+        
+        // Extrair data e hora do datetime
+        const dataHora = new Date(evento.data_evento);
+        const dataStr = dataHora.toISOString().split('T')[0]; // YYYY-MM-DD
+        const horas = String(dataHora.getHours()).padStart(2, '0');
+        const minutos = String(dataHora.getMinutes()).padStart(2, '0');
+        const horaStr = `${horas}:${minutos}`;
+        
+        document.getElementById('inputNome').value = evento.nome;
+        document.getElementById('inputData').value = dataStr;
+        document.getElementById('inputHora').value = horaStr;
+        document.getElementById('inputCampo').value = evento.campo;
+        document.getElementById('inputDescricao').value = evento.descricao;
+        document.getElementById('inputValorPessoa').value = evento.valor_pessoa;
+        document.getElementById('inputValorIndividual').value = evento.valor_individual;
+        document.getElementById('inputEventoId').value = evento.id;
+        
+        // Exibir fotos já upadas
+        const previewFotos = document.getElementById('previewFotos');
+        previewFotos.innerHTML = '';
+        
+        if (evento.fotos) {
+            try {
+                const fotos = typeof evento.fotos === 'string' ? JSON.parse(evento.fotos) : evento.fotos;
+                const titulo = document.createElement('div');
+                titulo.className = 'mb-2';
+                titulo.innerHTML = '<small class="text-muted"><strong>Fotos já upadas:</strong></small>';
+                previewFotos.appendChild(titulo);
+                
+                fotos.forEach((foto, idx) => {
+                    const container = document.createElement('div');
+                    container.style.display = 'inline-block';
+                    container.style.position = 'relative';
+                    container.style.marginRight = '10px';
+                    container.style.marginBottom = '10px';
+                    
+                    const img = document.createElement('img');
+                    img.src = `data:image/jpeg;base64,${foto}`;
+                    img.style.height = '100px';
+                    img.style.borderRadius = '4px';
+                    
+                    container.appendChild(img);
+                    previewFotos.appendChild(container);
+                });
+            } catch(e) {
+                console.log('Erro ao parsear fotos', e);
+            }
+        }
+        
+        // Limpar brindes
+        const containerBrindes = document.getElementById('containerBrindes');
+        containerBrindes.innerHTML = '';
+        
+        // Preencher brindes
+        evento.brindes.forEach((brinde, idx) => {
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2';
+            div.innerHTML = `
+                <input type="text" class="form-control" name="brindes" value="${brinde.descricao}">
+                <button class="btn btn-outline-danger" type="button" onclick="removerBrinde(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+            containerBrindes.appendChild(div);
+        });
+        
+        // Reset input de fotos
+        document.getElementById('inputFotos').value = '';
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalNovoEvento'));
+        modal.show();
+    });
+}
+
+// Deletar evento
+function deletarEvento(eventoId) {
+    if (!confirm('Tem certeza que deseja deletar este evento?')) return;
+    
+    fetch(`/api/eventos/${eventoId}`, { method: 'DELETE' })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Evento deletado!');
+            location.reload();
+        }
+    });
+}
+
+// Carrega detalhes do evento em modal
+function carregarEventoDetalhes(eventoId) {
+    fetch(`/api/eventos/${eventoId}`)
+    .then(response => response.json())
+    .then(evento => {
+        let html = '<div class="row">';
+        
+        // Parse fotos JSON string to array
+        let fotos = [];
+        if (evento.fotos) {
+            try {
+                fotos = typeof evento.fotos === 'string' ? JSON.parse(evento.fotos) : evento.fotos;
+            } catch (e) {
+                fotos = [];
+            }
+        }
+        
+        if (fotos.length > 0) {
+            html += `
+                <div class="col-md-6">
+                    <div id="carouselDetalhes" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+            `;
+            
+            fotos.forEach((foto, idx) => {
+                html += `
+                    <div class="carousel-item ${idx === 0 ? 'active' : ''}">
+                        <img src="data:image/jpeg;base64,${foto}" class="d-block w-100" 
+                             style="height: 300px; object-fit: cover;">
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            if (fotos.length > 1) {
+                html += `
+                    <button class="carousel-control-prev" type="button" 
+                            data-bs-target="#carouselDetalhes" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" 
+                            data-bs-target="#carouselDetalhes" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                    </button>
+                `;
+            }
+            html += `</div></div><div class="col-md-6">`;
+        } else {
+            html += '<div class="col-12">';
+        }
+        
+        html += `
+            <h5 style="color: #FF6B00;">${evento.nome}</h5>
+            <p><strong><i class="fas fa-calendar"></i> Data:</strong> ${evento.data_evento}</p>
+            <p><strong><i class="fas fa-map-marker-alt"></i> Campo:</strong> ${evento.campo}</p>
+            <p><strong>Descrição:</strong></p>
+            <p>${evento.descricao}</p>
+        `;
+        
+        if (evento.valor_pessoa || evento.valor_individual) {
+            html += '<p><strong>Valores:</strong></p>';
+            if (evento.valor_pessoa) {
+                html += `<p>R$ ${evento.valor_pessoa.toFixed(2)} por pessoa</p>`;
+            }
+            if (evento.valor_individual) {
+                html += `<p>R$ ${evento.valor_individual.toFixed(2)} individual</p>`;
+            }
+        }
+        
+        if (evento.brindes.length > 0) {
+            html += '<p><strong><i class="fas fa-gift"></i> Brindes:</strong></p><ul>';
+            evento.brindes.forEach(brinde => {
+                html += `<li>${brinde.descricao}</li>`;
+            });
+            html += '</ul>';
+        }
+        
+        html += '</div></div>';
+        
+        document.getElementById('conteudoDetalhes').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('modalDetalhesEvento')).show();
+    });
+}
+
+// ==================== FUNÇÕES DE SORTEIO ====================
+
+function deletarSorteio(sorteioId) {
+    if (!confirm('Tem certeza que deseja remover este sorteio?')) return;
+    
+    fetch(`/api/sorteio/${sorteioId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('[OK] Sorteio removido com sucesso!');
+                location.reload();
+            } else {
+                alert('[ERRO] ' + (data.error || 'Erro ao remover sorteio'));
+            }
+        })
+        .catch(e => {
+            console.error('Erro ao deletar:', e);
+            alert('[ERRO] Falha na comunicação com servidor');
+        });
+}
+
+function verSorteioOperador(sorteioId, battlepassNome, operadorNome, operadorWarname, dataSorteio, usuarioSorteio) {
+    // Criar modal dinamicamente
+    const modalHtml = `
+    <div class="modal fade" id="modalVerSorteio-${sorteioId}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="background-color: var(--cinza-escuro); color: white; border: 2px solid #00C851;">
+                <div class="modal-header" style="border-bottom: 2px solid #00C851;">
+                    <h5 class="modal-title" style="color: #00C851;">
+                        <i class="fas fa-trophy"></i> Detalhes do Sorteio
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center pb-3">
+                        <i class="fas fa-trophy" style="font-size: 48px; color: #00C851; margin-bottom: 20px; display: block;"></i>
+                    </div>
+                    
+                    <p class="mb-3">
+                        <strong>Battlepass:</strong><br>
+                        <span style="color: #00C851;">${battlepassNome}</span>
+                    </p>
+                    
+                    <p class="mb-3">
+                        <strong>Operador Sorteado:</strong><br>
+                        <span style="color: #00C851; font-size: 18px; font-weight: bold;">${operadorNome}</span><br>
+                        <span style="color: #999;">@${operadorWarname}</span>
+                    </p>
+                    
+                    <p class="mb-3">
+                        <strong>Data do Sorteio:</strong><br>
+                        <span>${dataSorteio}</span>
+                    </p>
+                    
+                    <p class="mb-3">
+                        <strong>Sorteado por:</strong><br>
+                        <span style="color: #00C851;">${usuarioSorteio}</span>
+                    </p>
+                </div>
+                <div class="modal-footer" style="border-top: 2px solid #00C851;">
+                    <button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+    
+    // Adicionar ao DOM e mostrar
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    new bootstrap.Modal(document.getElementById(`modalVerSorteio-${sorteioId}`)).show();
+    
+    // Remover do DOM quando fechar
+    document.getElementById(`modalVerSorteio-${sorteioId}`).addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+
+function verSorteioEquipe(sorteioId, battlepassNome, equipeName, dataSorteio, usuarioSorteio) {
+    // Criar modal dinamicamente
+    const modalHtml = `
+    <div class="modal fade" id="modalVerSorteio-${sorteioId}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="background-color: var(--cinza-escuro); color: white; border: 2px solid #0066CC;">
+                <div class="modal-header" style="border-bottom: 2px solid #0066CC;">
+                    <h5 class="modal-title" style="color: #0066CC;">
+                        <i class="fas fa-shield-alt"></i> Detalhes do Sorteio
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center pb-3">
+                        <i class="fas fa-shield-alt" style="font-size: 48px; color: #C0C0C0; margin-bottom: 20px; display: block;"></i>
+                    </div>
+                    
+                    <p class="mb-3">
+                        <strong>Battlepass:</strong><br>
+                        <span style="color: #0066CC;">${battlepassNome}</span>
+                    </p>
+                    
+                    <p class="mb-3">
+                        <strong>Equipe Sorteada:</strong><br>
+                        <span style="color: #0066CC; font-size: 18px; font-weight: bold;">${equipeName}</span>
+                    </p>
+                    
+                    <p class="mb-3">
+                        <strong>Data do Sorteio:</strong><br>
+                        <span>${dataSorteio}</span>
+                    </p>
+                    
+                    <p class="mb-3">
+                        <strong>Sorteado por:</strong><br>
+                        <span style="color: #0066CC;">${usuarioSorteio}</span>
+                    </p>
+                </div>
+                <div class="modal-footer" style="border-top: 2px solid #0066CC;">
+                    <button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+    
+    // Adicionar ao DOM e mostrar
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    new bootstrap.Modal(document.getElementById(`modalVerSorteio-${sorteioId}`)).show();
+    
+    // Remover do DOM quando fechar
+    document.getElementById(`modalVerSorteio-${sorteioId}`).addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+
+// ==================== FUNÇÕES DE SORTEIO - OPERADOR E EQUIPE ====================
+
+function sortearOperador(battlepassId, semana, mes, ano) {
+    if (!confirm('Deseja sortear um operador para esta semana?')) return;
+    
+    fetch('/api/sortear-operador', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            battlepass_id: battlepassId,
+            semana: semana,
+            mes: mes,
+            ano: ano
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`[OK] Sorteado: ${data.sorteado.nome} (@${data.sorteado.warname})`);
+            location.reload();
+        } else {
+            alert(`[ERRO] ${data.error}`);
+        }
+    })
+    .catch(e => {
+        console.error(e);
+        alert('[ERRO] Falha ao sortear operador');
+    });
+}
+
+function sortearEquipe(battlepassId, mes, ano) {
+    if (!confirm('Deseja sortear uma equipe para este mês?')) return;
+    
+    fetch('/api/sortear-equipe', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            battlepass_id: battlepassId,
+            mes: mes,
+            ano: ano
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`[OK] Sorteada: ${data.sorteado.nome}`);
+            location.reload();
+        } else {
+            alert(`[ERRO] ${data.error}`);
+        }
+    })
+    .catch(e => {
+        console.error(e);
+        alert('[ERRO] Falha ao sortear equipe');
+    });
+}
+
+// Resetar form ao abrir modal novo evento
+document.getElementById('modalNovoEvento').addEventListener('show.bs.modal', function() {
+    if (!document.getElementById('inputEventoId').value) {
+        document.getElementById('formEvento').reset();
+        document.getElementById('tituloModal').innerHTML = '<i class="fas fa-plus"></i> Novo Evento';
+        document.getElementById('inputEventoId').value = '';
+        
+        const container = document.getElementById('containerBrindes');
+        container.innerHTML = `
+            <div class="input-group mb-2">
+                <input type="text" class="form-control" name="brindes" placeholder="Digite um brinde...">
+                <button class="btn btn-outline-danger" type="button" onclick="removerBrinde(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+    }
+    
+    // Inicializar Flatpickr para o campo de data
+    const dataInput = document.getElementById('inputData');
+    if (dataInput && !dataInput._flatpickr) {
+        flatpickr(dataInput, {
+            locale: 'pt',
+            dateFormat: 'd/m/Y',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            minDate: 'today',
+            weekNumbers: true,
+            monthSelectorType: 'dropdown',
+            enableTime: false,
+            allowInput: true
+        });
+    }
+});
+
+// Funções de histórico de sorteios
+function abrirHistoricoOperador(battlepassId, battlepassNome) {
+    const modal = new bootstrap.Modal(document.getElementById('modalHistoricoOperador'));
+    document.getElementById('historicoOperadorTitle').textContent = `Histórico - ${battlepassNome}`;
+    document.getElementById('historicoOperadorBody').innerHTML = '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Carregando...</p>';
+    
+    fetch(`/api/historico-sorteios-operador?battlepass_id=${battlepassId}&mes={{mes}}&ano={{ano}}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.historico && data.historico.length > 0) {
+                let html = '<div class="list-group">';
+                data.historico.forEach(sorteio => {
+                    html += `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1" style="color: #28A745;"><strong>${sorteio.operador_nome}</strong></h6>
+                                    <small class="text-muted">Semana ${sorteio.semana}</small>
+                                </div>
+                                <small class="text-muted">${sorteio.data_sorteio}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                document.getElementById('historicoOperadorBody').innerHTML = html;
+            } else {
+                document.getElementById('historicoOperadorBody').innerHTML = '<p class="text-center text-muted">Nenhum sorteio registrado este mês</p>';
+            }
+        })
+        .catch(e => {
+            document.getElementById('historicoOperadorBody').innerHTML = '<p class="text-danger">Erro ao carregar histórico</p>';
+            console.error(e);
+        });
+    
+    modal.show();
+}
+
+function abrirHistoricoEquipe(battlepassId, battlepassNome) {
+    const modal = new bootstrap.Modal(document.getElementById('modalHistoricoEquipe'));
+    document.getElementById('historicoEquipeTitle').textContent = `Histórico - ${battlepassNome}`;
+    document.getElementById('historicoEquipeBody').innerHTML = '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Carregando...</p>';
+    
+    fetch(`/api/historico-sorteios-equipe?battlepass_id=${battlepassId}&mes={{mes}}&ano={{ano}}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.historico && data.historico.length > 0) {
+                let html = '<div class="list-group">';
+                data.historico.forEach(sorteio => {
+                    html += `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1" style="color: #0066CC;"><strong>${sorteio.equipe_nome}</strong></h6>
+                                </div>
+                                <small class="text-muted">${sorteio.data_sorteio}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                document.getElementById('historicoEquipeBody').innerHTML = html;
+            } else {
+                document.getElementById('historicoEquipeBody').innerHTML = '<p class="text-center text-muted">Nenhum sorteio registrado este mês</p>';
+            }
+        })
+        .catch(e => {
+            document.getElementById('historicoEquipeBody').innerHTML = '<p class="text-danger">Erro ao carregar histórico</p>';
+            console.error(e);
+        });
+    
+    modal.show();
+}
+
+// Redirecionamento para histórico
+function irParaHistoricoOperador(battlepassId, battlepassNome) {
+    window.location.href = `/historico-sorteios?tipo=operador&battlepass_id=${battlepassId}&mes={{mes}}&ano={{ano}}`;
+}
+
+function irParaHistoricoEquipe(battlepassId, battlepassNome) {
+    window.location.href = `/historico-sorteios?tipo=equipe&battlepass_id=${battlepassId}&mes={{mes}}&ano={{ano}}`;
+}
+
+</script>
+{% endblock %}

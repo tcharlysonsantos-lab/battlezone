@@ -393,12 +393,467 @@
 </div>
 
 <script>
+// Cache-Buster: 2026-03-05-v3 (Diagnostic+Init-Global)
 let operadores = [];
 const selectedOp = {
     individual: new Set(),
     eq1: new Set(),
     eq2: new Set()
 };
+
+// ===== DIAGNÓSTICO IMEDIATO =====
+console.log('%c🔧 FORM NOVA PARTIDA - DIAGNÓSTICO', 'color: #FF6B00; font-size: 14px; font-weight: bold;');
+console.log('Document.readyState:', document.readyState);
+console.log('DOM Loaded:', document.readyState !== 'loading');
+console.log('Script executado em:', new Date().toLocaleTimeString());
+
+// ===== INICIALIZAÇÃO GLOBAL: Buscar elementos do DOM =====
+let campo, plano, planoEq, tempo, tempoEq, modo, modoEq;
+
+function inicializarElementos() {
+    campo = document.getElementById('campo');
+    plano = document.getElementById('plano');
+    planoEq = document.getElementById('plano_equipe');
+    tempo = document.getElementById('tempo');
+    tempoEq = document.getElementById('tempo_equipe');
+    modo = document.getElementById('modo');
+    modoEq = document.getElementById('modo_equipe');
+    
+    console.log('[INIT] Elementos capturados:', {
+        campo: !!campo,
+        plano: !!plano,
+        planoEq: !!planoEq,
+        tempo: !!tempo,
+        tempoEq: !!tempoEq,
+        modo: !!modo,
+        modoEq: !!modoEq
+    });
+    
+    // Agora que elementos estão prontos, configurar os listeners
+    configurarListenerCampo();
+}
+
+// Tentar inicializar assim que possível
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarElementos);
+} else {
+    inicializarElementos();
+}
+
+// ===== LISTENER DO CAMPO (Executa IMEDIATAMENTE após elementos serem capturados) =====
+function configurarListenerCampo() {
+    if (!campo) {
+        console.error('[ERRO] campo não foi capturado');
+        return;
+    }
+    
+    console.log('[CAMPO] Adicionando listener de change');
+    
+    // ===== LISTENER CAMPO → PLANO =====
+    campo.addEventListener('change', function() {
+        const campoValue = this.value.trim();
+        console.log('[CAMPO CHANGE] Valor selecionado:', campoValue);
+        
+        if (!campoValue) {
+            console.warn('[CAMPO] Campo vazio');
+            if (plano) plano.innerHTML = '<option value="">Selecione campo</option>';
+            if (planoEq) planoEq.innerHTML = '<option value="">Selecione campo</option>';
+            return;
+        }
+        
+        if (!['Warfield', 'Redline'].includes(campoValue)) {
+            console.error('[CAMPO] Valor inválido:', campoValue);
+            return;
+        }
+        
+        console.log('[CAMPO] Buscando planos para:', campoValue);
+        const url = `/api/planos/${encodeURIComponent(campoValue)}`;
+        console.log('[CAMPO] URL:', url);
+        
+        fetch(url)
+            .then(response => {
+                console.log('[FETCH] Status:', response.status, 'OK:', response.ok);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('[FETCH] Dados de planos recebidos:', data);
+                
+                if (!Array.isArray(data)) {
+                    console.error('[FETCH] Data não é array:', typeof data, data);
+                    throw new Error('Data não é array');
+                }
+                
+                if (data.length === 0) {
+                    console.warn('[FETCH] Nenhum plano encontrado');
+                    if (plano) plano.innerHTML = '<option value="">Nenhum plano disponível</option>';
+                    if (planoEq) planoEq.innerHTML = '<option value="">Nenhum plano disponível</option>';
+                    return;
+                }
+                
+                const html = '<option value="">Selecione</option>' + 
+                            data.map(p => `<option value="${p}">${p}</option>`).join('');
+                
+                console.log('[FETCH] Atualizando selects com',  data.length, 'opções');
+                if (plano) {
+                    plano.innerHTML = html;
+                    plano.style.borderColor = '#FF6B00';
+                }
+                if (planoEq) planoEq.innerHTML = html;
+                
+                // Limpar dependentes
+                if (tempo) tempo.innerHTML = '<option value="">Selecione plano</option>';
+                if (modo) modo.innerHTML = '<option value="">Selecione tempo</option>';
+                if (tempoEq) tempoEq.innerHTML = '<option value="">Selecione plano</option>';
+                if (modoEq) modoEq.innerHTML = '<option value="">Selecione tempo</option>';
+                
+                console.log('[✓] Planos carregados com sucesso');
+            })
+            .catch(err => {
+                console.error('[ERRO] Falha ao carregar planos:', err.message, err);
+                if (plano) plano.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+                if (planoEq) planoEq.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+            });
+    });
+    
+    // ===== LISTENER PLANO → TEMPO =====
+    if (plano) {
+        plano.addEventListener('change', function() {
+            const planoValue = this.value.trim();
+            const campoValue = campo?.value?.trim();
+            
+            console.log('[PLANO CHANGE] Valor selecionado:', planoValue, 'Campo:', campoValue);
+            
+            if (!planoValue || !campoValue) {
+                console.warn('[PLANO] Plano ou campo vazio');
+                if (tempo) tempo.innerHTML = '<option value="">Selecione plano</option>';
+                if (modo) modo.innerHTML = '<option value="">Selecione tempo</option>';
+                return;
+            }
+            
+            // Buscar tempos da API
+            const url = `/api/tempos?campo=${encodeURIComponent(campoValue)}&plano=${encodeURIComponent(planoValue)}`;
+            console.log('[PLANO] Buscando tempos:', url);
+            
+            fetch(url)
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('[PLANO] Tempos recebidos:', data);
+                    
+                    if (!Array.isArray(data) || data.length === 0) {
+                        console.error('[PLANO] Nenhum tempo retornado');
+                        if (tempo) tempo.innerHTML = '<option value="">Nenhum tempo disponível</option>';
+                        return;
+                    }
+                    
+                    const html = '<option value="">Selecione</option>' + 
+                                data.map(t => `<option value="${t}">${t}</option>`).join('');
+                    
+                    if (tempo) tempo.innerHTML = html;
+                    if (modo) modo.innerHTML = '<option value="">Selecione tempo</option>';
+                    
+                    console.log('[✓] Tempos carregados com sucesso');
+                })
+                .catch(err => {
+                    console.error('[ERRO] Erro ao carregar tempos:', err);
+                    if (tempo) tempo.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+                });
+        });
+    }
+    
+    if (planoEq) {
+        planoEq.addEventListener('change', function() {
+            const planoValue = this.value.trim();
+            const campoValue = campo?.value?.trim();
+            
+            console.log('[PLANO EQUIPE CHANGE] Valor:', planoValue, 'Campo:', campoValue);
+            
+            if (!planoValue || !campoValue) {
+                console.warn('[PLANO EQUIPE] Plano ou campo vazio');
+                if (tempoEq) tempoEq.innerHTML = '<option value="">Selecione plano</option>';
+                if (modoEq) modoEq.innerHTML = '<option value="">Selecione tempo</option>';
+                return;
+            }
+            
+            const url = `/api/tempos?campo=${encodeURIComponent(campoValue)}&plano=${encodeURIComponent(planoValue)}`;
+            console.log('[PLANO EQUIPE] Buscando tempos:', url);
+            
+            fetch(url)
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('[PLANO EQUIPE] Tempos recebidos:', data);
+                    
+                    if (!Array.isArray(data) || data.length === 0) {
+                        console.error('[PLANO EQUIPE] Nenhum tempo retornado');
+                        if (tempoEq) tempoEq.innerHTML = '<option value="">Nenhum tempo disponível</option>';
+                        return;
+                    }
+                    
+                    const html = '<option value="">Selecione</option>' + 
+                                data.map(t => `<option value="${t}">${t}</option>`).join('');
+                    
+                    if (tempoEq) tempoEq.innerHTML = html;
+                    if (modoEq) modoEq.innerHTML = '<option value="">Selecione tempo</option>';
+                    
+                    console.log('[✓] Tempos equipe carregados com sucesso');
+                })
+                .catch(err => {
+                    console.error('[ERRO] Erro ao carregar tempos equipe:', err);
+                    if (tempoEq) tempoEq.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+                });
+        });
+    }
+    
+    // ===== LISTENER TEMPO → MODO + VALORES =====
+    if (tempo) {
+        tempo.addEventListener('change', function() {
+            const tempoValue = this.value.trim();
+            const planoValue = plano?.value?.trim();
+            const campoValue = campo?.value?.trim();
+            
+            console.log('[TEMPO CHANGE] Valor:', tempoValue, 'Plano:', planoValue, 'Campo:', campoValue);
+            
+            if (!tempoValue || !planoValue || !campoValue) {
+                console.warn('[TEMPO] Tempo, plano ou campo vazio');
+                if (modo) modo.innerHTML = '<option value="">Selecione tempo</option>';
+                return;
+            }
+            
+            // Buscar modos
+            const urlModos = `/api/modos?tempo=${encodeURIComponent(tempoValue)}&plano=${encodeURIComponent(planoValue)}`;
+            console.log('[TEMPO] Buscando modos:', urlModos);
+            
+            fetch(urlModos)
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('[TEMPO] Modos recebidos:', data);
+                    
+                    if (!Array.isArray(data) || data.length === 0) {
+                        console.error('[TEMPO] Nenhum modo retornado');
+                        if (modo) modo.innerHTML = '<option value="">Nenhum modo disponível</option>';
+                        return;
+                    }
+                    
+                    const html = '<option value="">Selecione</option>' + 
+                                data.map(m => `<option value="${m}">${m}</option>`).join('');
+                    
+                    if (modo) modo.innerHTML = html;
+                    
+                    console.log('[✓] Modos carregados com sucesso');
+                })
+                .catch(err => {
+                    console.error('[ERRO] Erro ao carregar modos:', err);
+                    if (modo) modo.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+                });
+            
+            // Buscar valores/BBs
+            const urlValores = `/api/valores?campo=${encodeURIComponent(campoValue)}&plano=${encodeURIComponent(planoValue)}&tempo=${encodeURIComponent(tempoValue)}`;
+            console.log('[TEMPO] Buscando valores:', urlValores);
+            
+            fetch(urlValores)
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('[TEMPO] Valores recebidos:', data);
+                    
+                    const valorInfo = document.getElementById('valor-info');
+                    const bbsInfo = document.getElementById('bbs-info');
+                    
+                    if (valorInfo) valorInfo.textContent = `R$ ${data.valor}`;
+                    if (bbsInfo) bbsInfo.textContent = `${data.bbs} BBs`;
+                    
+                    console.log('[✓] Valores carregados com sucesso');
+                })
+                .catch(err => {
+                    console.error('[ERRO] Erro ao carregar valores:', err);
+                });
+        });
+    }
+    
+    if (tempoEq) {
+        tempoEq.addEventListener('change', function() {
+            const tempoValue = this.value.trim();
+            const planoValue = planoEq?.value?.trim();
+            const campoValue = campo?.value?.trim();
+            
+            console.log('[TEMPO EQUIPE CHANGE] Valor:', tempoValue, 'Plano:', planoValue, 'Campo:', campoValue);
+            
+            if (!tempoValue || !planoValue || !campoValue) {
+                console.warn('[TEMPO EQUIPE] Tempo, plano ou campo vazio');
+                if (modoEq) modoEq.innerHTML = '<option value="">Selecione tempo</option>';
+                return;
+            }
+            
+            // Buscar modos
+            const urlModos = `/api/modos?tempo=${encodeURIComponent(tempoValue)}&plano=${encodeURIComponent(planoValue)}`;
+            console.log('[TEMPO EQUIPE] Buscando modos:', urlModos);
+            
+            fetch(urlModos)
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('[TEMPO EQUIPE] Modos recebidos:', data);
+                    
+                    if (!Array.isArray(data) || data.length === 0) {
+                        console.error('[TEMPO EQUIPE] Nenhum modo retornado');
+                        if (modoEq) modoEq.innerHTML = '<option value="">Nenhum modo disponível</option>';
+                        return;
+                    }
+                    
+                    const html = '<option value="">Selecione</option>' + 
+                                data.map(m => `<option value="${m}">${m}</option>`).join('');
+                    
+                    if (modoEq) modoEq.innerHTML = html;
+                    
+                    console.log('[✓] Modos equipe carregados com sucesso');
+                })
+                .catch(err => {
+                    console.error('[ERRO] Erro ao carregar modos equipe:', err);
+                    if (modoEq) modoEq.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+                });
+            
+            // Buscar valores/BBs
+            const urlValores = `/api/valores?campo=${encodeURIComponent(campoValue)}&plano=${encodeURIComponent(planoValue)}&tempo=${encodeURIComponent(tempoValue)}`;
+            console.log('[TEMPO EQUIPE] Buscando valores:', urlValores);
+            
+            fetch(urlValores)
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('[TEMPO EQUIPE] Valores recebidos:', data);
+                    
+                    const valorInfo = document.getElementById('valor-info-eq');
+                    const bbsInfo = document.getElementById('bbs-info-eq');
+                    
+                    if (valorInfo) valorInfo.textContent = `R$ ${data.valor}`;
+                    if (bbsInfo) bbsInfo.textContent = `${data.bbs} BBs`;
+                    
+                    console.log('[✓] Valores equipe carregados com sucesso');
+                })
+                .catch(err => {
+                    console.error('[ERRO] Erro ao carregar valores equipe:', err);
+                });
+        });
+    }
+    
+    // ===== LISTENER MODO EQUIPE → VALORES =====
+    if (modoEq) {
+        modoEq.addEventListener('change', function() {
+            const modoValue = this.value.trim();
+            const tempoValue = tempoEq?.value?.trim();
+            const planoValue = planoEq?.value?.trim();
+            const campoValue = campo?.value?.trim();
+            
+            console.log('[MODO EQUIPE CHANGE] Valor:', modoValue);
+            
+            if (!tempoValue || !planoValue || !campoValue) {
+                console.warn('[MODO EQUIPE] Tempo, plano ou campo vazio');
+                return;
+            }
+            
+            // Buscar valores/BBs para equipe
+            const urlValores = `/api/valores?campo=${encodeURIComponent(campoValue)}&plano=${encodeURIComponent(planoValue)}&tempo=${encodeURIComponent(tempoValue)}`;
+            console.log('[MODO EQUIPE] Buscando valores:', urlValores);
+            
+            fetch(urlValores)
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('[MODO EQUIPE] Valores recebidos:', data);
+                    
+                    const valorInfo = document.getElementById('valor-info-eq');
+                    const bbsInfo = document.getElementById('bbs-info-eq');
+                    
+                    if (valorInfo) valorInfo.textContent = `R$ ${data.valor}`;
+                    if (bbsInfo) bbsInfo.textContent = `${data.bbs} BBs`;
+                    
+                    console.log('[✓] Valores equipe atualizados');
+                })
+                .catch(err => {
+                    console.error('[ERRO] Erro ao carregar valores modo equipe:', err);
+                });
+        });
+    }
+    
+    // ===== LISTENER MODO → MOSTRAR/ESCONDER CAÇADA NOTURNA =====
+    if (modo) {
+        modo.addEventListener('change', function() {
+            const modoValue = this.value.trim();
+            console.log('[MODO CHANGE] Valor:', modoValue);
+            
+            const planoValue = plano?.value?.trim();
+            const tempoValue = tempo?.value?.trim();
+            
+            // Verificar se é CAÇADA NOTURNA (apenas aparece para Avulso + 10 min)
+            const secaoCacada = document.getElementById('secao_cacada_selecionada');
+            
+            if (modoValue === 'CAÇADA NOTURNA' && planoValue === 'Avulso' && tempoValue === '10 min') {
+                console.log('[MODO] Mostrando seção CAÇADA NOTURNA');
+                if (secaoCacada) secaoCacada.style.display = 'block';
+            } else {
+                console.log('[MODO] Escondendo seção CAÇADA NOTURNA');
+                if (secaoCacada) {
+                    secaoCacada.style.display = 'none';
+                    // Limpar seleção
+                    document.getElementById('cacada_valor').value = '';
+                    document.querySelectorAll('.cacada-btn-valor').forEach(btn => btn.classList.remove('selecionado'));
+                }
+            }
+        });
+    }
+    
+    // ===== LISTENER PARA BOTÕES DE VALOR CAÇADA NOTURNA =====
+    document.querySelectorAll('.cacada-btn-valor').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const valor = this.dataset.valor;
+            
+            console.log('[CAÇADA] Selecionado valor:', valor);
+            
+            // Remover seleção anterior
+            document.querySelectorAll('.cacada-btn-valor').forEach(b => b.classList.remove('selecionado'));
+            
+            // Selecionar este botão
+            this.classList.add('selecionado');
+            
+            // Atualizar campo oculto
+            document.getElementById('cacada_valor').value = valor;
+            
+            // Atualizar display de preço
+            const valorInfo = document.getElementById('valor-info');
+            if (valorInfo) {
+                if (valor === '3') {
+                    valorInfo.textContent = 'R$ 3 (por pessoa)';
+                } else if (valor === '30') {
+                    valorInfo.textContent = 'R$ 30 (dividido)';
+                }
+            }
+            
+            console.log('[✓] Valor CAÇADA selecionado:', valor);
+        });
+    });
+    
+    console.log('[✓] Todos os listeners da cascata foram configurados');
+}
 
 // ===== CARREGAR OPERADORES =====
 async function carregarOperadores() {
@@ -514,65 +969,74 @@ function cambiarTipoParticipacao(tipo) {
         document.getElementById('modo').innerHTML = '<option value="">Selecione tempo</option>';
         document.getElementById('participantes-individual').value = '';
         
+        // NÃO limpar selects de equipe - eles já foram preenchidos pelo listener do campo
+        // Se há campo selecionado, os selects de equipe já terão os dados corretos
+        
         renderizarOperadores('eq1');
         renderizarOperadores('eq2');
     }
 }
 
-// ===== BUSCA =====
-document.addEventListener('DOMContentLoaded', function() {
+// ===== CARREGAR OPERADORES E CONFIGURAR LISTENERS POS-DOM =====
+function executarAposDOM() {
+    console.log('[INIT] Executando inicialização pós-DOM');
     carregarOperadores();
+    console.log('[DEBUG] carregarOperadores chamado');
         
-        // ===== RESTAURAR VALORES ANTERIORES (se houver erro) =====
-        const campoSelecionado = '{{ request.form.get("campo", "") }}';
-        const planoSelecionado = '{{ request.form.get("plano", "") }}';
-        const tempoSelecionado = '{{ request.form.get("tempo", "") }}';
-        const modoSelecionado = '{{ request.form.get("modo", "") }}';
+    // ===== RESTAURAR VALORES ANTERIORES (se houver erro) =====
+    const campoSelecionado = '{{ request.form.get("campo", "") }}';
+    const planoSelecionado = '{{ request.form.get("plano", "") }}';
+    const tempoSelecionado = '{{ request.form.get("tempo", "") }}';
+    const modoSelecionado = '{{ request.form.get("modo", "") }}';
+    
+    if (campoSelecionado) {
+        document.getElementById('campo').value = campoSelecionado;
         
-        if (campoSelecionado) {
-            document.getElementById('campo').value = campoSelecionado;
-            
-            // Carregar planos após campo
-            setTimeout(() => {
-                fetch(`/api/planos/${campoSelecionado}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        const html = '<option value="">Selecione</option>' + data.map(p => `<option value="${p}">${p}</option>`).join('');
-                        document.getElementById('plano').innerHTML = html;
+        // Carregar planos após campo
+        setTimeout(() => {
+            fetch(`/api/planos/${campoSelecionado}`)
+                .then(r => r.json())
+                .then(data => {
+                    const html = '<option value="">Selecione</option>' + data.map(p => `<option value="${p}">${p}</option>`).join('');
+                    document.getElementById('plano').innerHTML = html;
+                    
+                    if (planoSelecionado) {
+                        document.getElementById('plano').value = planoSelecionado;
                         
-                        if (planoSelecionado) {
-                            document.getElementById('plano').value = planoSelecionado;
-                            
-                            // Carregar tempos após plano
-                            setTimeout(() => {
-                                fetch(`/api/tempos?campo=${campoSelecionado}&plano=${planoSelecionado}`)
-                                    .then(r => r.json())
-                                    .then(data => {
-                                        const html = '<option value="">Selecione tempo</option>' + data.map(t => `<option value="${t}">${t}</option>`).join('');
-                                        document.getElementById('tempo').innerHTML = html;
+                        // Carregar tempos após plano
+                        setTimeout(() => {
+                            fetch(`/api/tempos?campo=${campoSelecionado}&plano=${planoSelecionado}`)
+                                .then(r => r.json())
+                                .then(data => {
+                                    const html = '<option value="">Selecione tempo</option>' + data.map(t => `<option value="${t}">${t}</option>`).join('');
+                                    document.getElementById('tempo').innerHTML = html;
+                                    
+                                    if (tempoSelecionado) {
+                                        document.getElementById('tempo').value = tempoSelecionado;
                                         
-                                        if (tempoSelecionado) {
-                                            document.getElementById('tempo').value = tempoSelecionado;
-                                            
-                                            // Carregar modos após tempo
-                                            fetch(`/api/modos?tempo=${tempoSelecionado}&plano=${planoSelecionado}`)
-                                                .then(r => r.json())
-                                                .then(data => {
-                                                    const html = '<option value="">Selecione</option>' + data.map(m => `<option value="${m}">${m}</option>`).join('');
-                                                    document.getElementById('modo').innerHTML = html;
-                                                    
-                                                    if (modoSelecionado) {
-                                                        document.getElementById('modo').value = modoSelecionado;
-                                                    }
-                                                });
-                                        }
-                                    });
-                            }, 100);
-                        }
-                    });
-            }, 100);
-        }
+                                        // Carregar modos após tempo
+                                        fetch(`/api/modos?tempo=${tempoSelecionado}&plano=${planoSelecionado}`)
+                                            .then(r => r.json())
+                                            .then(data => {
+                                                const html = '<option value="">Selecione</option>' + data.map(m => `<option value="${m}">${m}</option>`).join('');
+                                                document.getElementById('modo').innerHTML = html;
+                                                
+                                                if (modoSelecionado) {
+                                                    document.getElementById('modo').value = modoSelecionado;
+                                                }
+                                            });
+                                    }
+                                });
+                        }, 100);
+                    }
+                });
+        }, 100);
+    }
+
+    // Adicionar listeners de busca
+    document.getElementById('busca-eq1')?.addEventListener('input', () => renderizarOperadores('eq1'));
     document.getElementById('busca-eq2')?.addEventListener('input', () => renderizarOperadores('eq2'));
+    document.getElementById('busca-individual')?.addEventListener('input', () => renderizarOperadores('individual'));
     
     // ===== VALIDAÇÃO DO SUBMIT =====
     const form = document.getElementById('partidaForm');
@@ -676,18 +1140,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Listener para cambio de tipo participacao
-    const tipoParticipacao = document.getElementById('tipo_participacao');
-    if (tipoParticipacao) {
-        tipoParticipacao.addEventListener('change', function() {
-            cambiarTipoParticipacao(this.value);
-        });
-    }
-
     // ===== TIPO PARTICIPACAO =====
     document.getElementById('tipo_participacao').addEventListener('change', function() {
         document.getElementById('secao_individual').style.display = this.value === 'individual' ? 'block' : 'none';
         document.getElementById('secao_equipe').style.display = this.value === 'equipe' ? 'block' : 'none';
+        cambiarTipoParticipacao(this.value);
     });
 
     // ===== EQUIPES DIFERENTES =====
@@ -712,159 +1169,18 @@ document.addEventListener('DOMContentLoaded', function() {
         renderizarOperadores('eq2');
     });
 
-    // ===== PLANOS =====
-    const campo = document.getElementById('campo');
-    const plano = document.getElementById('plano');
-    const planoEq = document.getElementById('plano_equipe');
-
-    campo.addEventListener('change', function() {
-        fetch(`/api/planos/${this.value}`)
-            .then(r => r.json())
-            .then(data => {
-                const html = '<option value="">Selecione</option>' + data.map(p => `<option value="${p}">${p}</option>`).join('');
-                plano.innerHTML = html;
-                if (planoEq) planoEq.innerHTML = html;
-            });
-    });
-
-    // ===== TEMPOS =====
-    plano.addEventListener('change', function() {
-        fetch(`/api/tempos?campo=${campo.value}&plano=${this.value}`)
-            .then(r => r.json())
-            .then(data => {
-                const html = '<option value="">Selecione</option>' + data.map(t => `<option value="${t}">${t}</option>`).join('');
-                document.getElementById('tempo').innerHTML = html;
-            });
-    });
-
-    if (planoEq) {
-        planoEq.addEventListener('change', function() {
-            fetch(`/api/tempos?campo=${campo.value}&plano=${this.value}`)
-                .then(r => r.json())
-                .then(data => {
-                    const html = '<option value="">Selecione</option>' + data.map(t => `<option value="${t}">${t}</option>`).join('');
-                    document.getElementById('tempo_equipe').innerHTML = html;
-                });
-        });
-    }
-
-    // ===== MODOS E VALORES =====
-    const tempo = document.getElementById('tempo');
-    const tempoEq = document.getElementById('tempo_equipe');
-
-    tempo?.addEventListener('change', function() {
-        const planoValue = plano.value;
-        const tempoValue = this.value;
-        
-        // Carregar valores normais
-        fetch(`/api/valores?campo=${campo.value}&plano=${planoValue}&tempo=${tempoValue}`)
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('valor-info').textContent = `R$ ${data.valor}`;
-                document.getElementById('bbs-info').textContent = data.bbs;
-            });
-
-        // Carregar modos
-        fetch(`/api/modos?tempo=${tempoValue}&plano=${planoValue}`)
-            .then(r => r.json())
-            .then(data => {
-                const html = '<option value="">Selecione</option>' + data.map(m => `<option value="${m}">${m}</option>`).join('');
-                document.getElementById('modo').innerHTML = html;
-            });
-    });
-
-    if (tempoEq) {
-        tempoEq.addEventListener('change', function() {
-            const planoValue = planoEq.value;
-            const tempoValue = this.value;
-            
-            // Carregar valores normais
-            fetch(`/api/valores?campo=${campo.value}&plano=${planoValue}&tempo=${tempoValue}`)
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('valor-info-eq').textContent = `R$ ${data.valor}`;
-                    document.getElementById('bbs-info-eq').textContent = data.bbs;
-                });
-
-            // Carregar modos
-            fetch(`/api/modos?tempo=${tempoValue}&plano=${planoValue}`)
-                .then(r => r.json())
-                .then(data => {
-                    const html = '<option value="">Selecione</option>' + data.map(m => `<option value="${m}">${m}</option>`).join('');
-                    document.getElementById('modo_equipe').innerHTML = html;
-                });
-        });
-    }
-
-    // ===== LISTENER PARA MODO - Mostrar CAÇADA apenas se selecionado =====
-    const modo = document.getElementById('modo');
-    const modoEq = document.getElementById('modo_equipe');
-
-    modo?.addEventListener('change', function() {
-        const modoValue = this.value;
-        
-        // Mostrar seção CAÇADA apenas se modo selecionado for CAÇADA NOTURNA
-        document.getElementById('secao_cacada_selecionada').style.display = modoValue === 'CAÇADA NOTURNA' ? 'block' : 'none';
-        
-        // Se for CAÇADA, mostrar valores em R$
-        if (modoValue === 'CAÇADA NOTURNA') {
-            document.getElementById('valor-info').textContent = `R$ 0`;
-            document.getElementById('bbs-info').textContent = '0 BBs';
-        }
-    });
-
-    modoEq?.addEventListener('change', function() {
-        const modoValue = this.value;
-        
-        // Mostrar seção CAÇADA apenas se modo selecionado for CAÇADA NOTURNA
-        document.getElementById('secao_cacada_selecionada').style.display = modoValue === 'CAÇADA NOTURNA' ? 'block' : 'none';
-        
-        // Se for CAÇADA, mostrar valores em R$
-        if (modoValue === 'CAÇADA NOTURNA') {
-            document.getElementById('valor-info-eq').textContent = `R$ 0`;
-            document.getElementById('bbs-info-eq').textContent = '0 BBs';
-        }
-    });
-});
-
-    // ===== CAÇADA NOTURNA - Seleção de Valor =====
-    document.querySelectorAll('.cacada-btn-valor').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const valor = this.dataset.valor;
-            
-            // Remover seleção anterior
-            document.querySelectorAll('.cacada-btn-valor').forEach(b => b.classList.remove('selecionado'));
-            
-            // Selecionar este botão
-            this.classList.add('selecionado');
-            
-            // Atualizar valor oculto
-            document.getElementById('cacada_valor').value = valor;
-            
-            // Atualizar display conforme o valor
-            if (valor === '3') {
-                document.getElementById('valor-info').textContent = `R$ 3 (por pessoa)`;
-            } else if (valor === '30') {
-                document.getElementById('valor-info').textContent = `R$ 30 (dividido)`;
-            }
-        });
-        
-        // Se houver valor pré-selecionado, marcar o botão
-        if (btn.dataset.valor === document.getElementById('cacada_valor').value) {
-            btn.classList.add('selecionado');
-        }
-    });
-
-// ===== CAÇADA NOTURNA =====
-function selecionarCacada(event, valor) {
-    event.preventDefault();
-    document.querySelectorAll('.cacada-btn').forEach(btn => btn.classList.remove('selecionado'));
-    event.target.closest('.cacada-btn').classList.add('selecionado');
-    document.getElementById('cacada_valor').value = valor;
+    console.log('[✓] Todos os listeners foram configurados com sucesso');
 }
 
-// ===== MÁSCARA DE DATA E HORA =====
+// ===== EXECUTAR SEMPRE (não apenas em DOMContentLoaded) =====
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', executarAposDOM);
+} else {
+    // DOM já está pronto
+    executarAposDOM();
+}
+
+// ===== MÁSCARA DE DATA E HORA (Executa ao carregar o script) =====
 const dataInput = document.querySelector('input[name="data"]');
 const horarioInput = document.querySelector('input[name="horario"]');
 
@@ -952,13 +1268,13 @@ if (horarioInput) {
     });
 }
 
-// Inicializar tooltips Bootstrap 5
-const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-});
-}
-
-
+// ===== INICIALIZAR TOOLTIPS BOOTSTRAP 5 =====
+// Esperar um pouco para o DOM estar completamente pronto
+setTimeout(() => {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+}, 100);
 </script>
 {% endblock %}
