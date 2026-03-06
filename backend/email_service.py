@@ -197,10 +197,14 @@ def enviar_notificacao_solicitacao(solicitacao, app):
             """
             
             # Enviar email
+            from flask import current_app
+            mail_username = current_app.config.get('MAIL_USERNAME', 'noreply@battlezone.local')
+            
             sucesso = enviar_email(
                 emails_destinatarios,
                 f"🔔 Nova Solicitação de Acesso - {solicitacao.usuario}",
-                html_email
+                html_email,
+                remetente=mail_username
             )
             
             return sucesso
@@ -275,10 +279,14 @@ def enviar_confirmacao_solicitacao(usuario_email: str, nome_usuario: str, app):
             </html>
             """
             
+            from flask import current_app
+            mail_username = current_app.config.get('MAIL_USERNAME', 'noreply@battlezone.local')
+            
             sucesso = enviar_email(
                 usuario_email,
                 "✅ Solicitação Recebida - Battlezone",
-                html_email
+                html_email,
+                remetente=mail_username
             )
             
             return sucesso
@@ -391,10 +399,15 @@ def enviar_email_reset_senha(usuario_email: str, nome_usuario: str, reset_link: 
         </html>
         """
         
+        # Usar o email real do Gmail como remetente (não domínio fake)
+        from flask import current_app
+        mail_username = current_app.config.get('MAIL_USERNAME', 'noreply@battlezone.local')
+        
         sucesso = enviar_email(
             [usuario_email],
             "Redefinir Senha - BattleZone",
-            html_email
+            html_email,
+            remetente=mail_username
         )
         
         return sucesso
