@@ -303,6 +303,7 @@ def terms():
 # ==================== PASSWORD RESET ROUTES ====================
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+@auth_bp.route('/esqueci-senha', methods=['GET', 'POST'])  # ALIAS para URL antiga
 def forgot_password():
     """Requisitar reset de senha"""
     
