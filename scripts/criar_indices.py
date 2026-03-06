@@ -9,8 +9,15 @@ Script para criar índices críticos no banco de dados
 3. Estoque.quantidade - para alertas de baixo estoque
 """
 
+import sys
+import os
+
+# Adicionar o diretório pai ao path para importar app
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app import app, db
 from backend.models import Partida, Estoque
+from sqlalchemy import text
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -21,7 +28,7 @@ def criar_indices():
     
     with app.app_context():
         try:
-            logger.info("🔧 Iniciando criação de índices...")
+            logger.info("[INDEX] Iniciando criacao de indices...")
             
             # Usar raw SQL para criar índices (mais compatível)
             engine = db.engine
@@ -55,28 +62,27 @@ def criar_indices():
             
             for indice in indices:
                 try:
-                    logger.info(f"  Criando índice: {indice['nome']} ({indice['tabela']}.{indice['coluna']})")
-                    with engine.connect() as conn:
-                        conn.execute(indice['sql'])
-                        conn.commit()
-                    logger.info(f"  ✅ Índice {indice['nome']} criado com sucesso")
+                    logger.info(f"[INDEX] Criando: {indice['nome']} ({indice['tabela']}.{indice['coluna']})")
+                    with engine.begin() as conn:
+                        conn.execute(text(indice['sql']))
+                    logger.info(f"[OK] Indice {indice['nome']} criado com sucesso")
                 except Exception as e:
-                    logger.warning(f"  ⚠️ Índice {indice['nome']} pode já existir: {e}")
+                    logger.warning(f"[SKIP] Indice {indice['nome']} pode ja existir: {e}")
             
-            logger.info("✅ Índices criados com sucesso!")
-            logger.info("\n📊 Próximas otimizações a implementar:")
-            logger.info("  1. ✅ Throttle de session.update_activity() - FEITO")
-            logger.info("  2. ✅ SQL-level date filtering em calendario_publico - FEITO")
-            logger.info("  3. ✅ Dashboard queries consolidadas - FEITO")
-            logger.info("  4. ✅ Eager loading de participantes - FEITO")
-            logger.info("  5. ✅ Índices no banco de dados - FEITO")
-            logger.info("\n💾 Próximas etapas:")
-            logger.info("  6. Implementar caching com Flask-Caching")
-            logger.info("  7. Adicionar paginação em endpoints pesados")
-            logger.info("  8. Monitorar queries com SQLAlchemy event listeners")
+            logger.info("[OK] Indices criados com sucesso!")
+            logger.info("[INFO] Proximas otimizacoes implementadas:")
+            logger.info("[OK] 1. Throttle de session.update_activity() - FEITO")
+            logger.info("[OK] 2. SQL-level date filtering em calendario_publico - FEITO")
+            logger.info("[OK] 3. Dashboard queries consolidadas - FEITO")
+            logger.info("[OK] 4. Eager loading de participantes - FEITO")
+            logger.info("[OK] 5. Indices no banco de dados - FEITO")
+            logger.info("[INFO] Proximas etapas:")
+            logger.info("[TODO] 6. Implementar caching com Flask-Caching")
+            logger.info("[TODO] 7. Adicionar paginacao em endpoints pesados")
+            logger.info("[TODO] 8. Monitorar queries com SQLAlchemy event listeners")
             
         except Exception as e:
-            logger.error(f"❌ Erro ao criar índices: {e}")
+            logger.error(f"[ERROR] Erro ao criar indices: {e}")
             raise
 
 if __name__ == '__main__':
