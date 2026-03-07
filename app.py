@@ -3789,7 +3789,34 @@ def api_criar_evento():
         if not all([data.get('nome'), data.get('data_evento'), data.get('campo')]):
             return jsonify({'success': False, 'error': 'Campos obrigatórios faltando'}), 400
         
-        # Processar fotos (base64 string no campo fotos)
+        # Processar data com múltiplos formatos possíveis
+        data_evento_str = data.get('data_evento', '').strip()
+        data_evento = None
+        
+        # Tentar diferentes formatos de data
+        formatos_data = [
+            '%Y-%m-%d %H:%M',      # 2026-03-07 19:30
+            '%Y-%m-%dT%H:%M',      # 2026-03-07T19:30
+            '%d/%m/%Y %H:%M',      # 07/03/2026 19:30
+            '%Y-%m-%d %H:%M:%S',   # 2026-03-07 19:30:45
+            '%Y-%m-%dT%H:%M:%S',   # 2026-03-07T19:30:45
+        ]
+        
+        for formato in formatos_data:
+            try:
+                data_evento = dt.strptime(data_evento_str, formato)
+                app.logger.info(f"[EVENTO] Data parseada com sucesso: {formato} → {data_evento}")
+                break
+            except ValueError:
+                continue
+        
+        if not data_evento:
+            return jsonify({
+                'success': False, 
+                'error': f'Formato de data inválido: "{data_evento_str}". Esperado: YYYY-MM-DD HH:MM'
+            }), 400
+        
+        # Processar fotos
         fotos = []
         if 'fotos' in request.files:
             files = request.files.getlist('fotos')
@@ -3802,10 +3829,10 @@ def api_criar_evento():
         evento = Evento(
             nome=data.get('nome'),
             descricao=data.get('descricao', ''),
-            data_evento=dt.strptime(data.get('data_evento'), '%Y-%m-%d %H:%M'),
-            campo=data.get('campo'),
-            valor_pessoa=float(data.get('valor_pessoa', 0)),
-            valor_individual=float(data.get('valor_individual', 0)),
+            data_evento=data_evento,
+            campo=data.get('campo', 'GERAL'),
+            valor_pessoa=float(data.get('valor_pessoa', 0)) if data.get('valor_pessoa') else None,
+            valor_individual=float(data.get('valor_individual', 0)) if data.get('valor_individual') else None,
             fotos=json.dumps(fotos) if fotos else None,
             criado_por=current_user.id,
             ativo=True
@@ -3814,7 +3841,7 @@ def api_criar_evento():
         db.session.add(evento)
         db.session.flush()
         
-        # Adicionar brindes - usar getlist do request.form, não do dict
+        # Adicionar brindes
         brindes = request.form.getlist('brindes')
         for idx, brinde_desc in enumerate(brindes):
             if brinde_desc.strip():
@@ -3827,16 +3854,23 @@ def api_criar_evento():
         
         db.session.commit()
         
+        app.logger.info(f"[EVENTO] Evento criado: {evento.nome} (ID: {evento.id})")
+        
         return jsonify({
             'success': True,
             'evento_id': evento.id,
             'message': 'Evento criado com sucesso!'
         })
     
+    except ValueError as ve:
+        db.session.rollback()
+        app.logger.error(f'[EVENTO] Erro de validação: {str(ve)}')
+        return jsonify({'success': False, 'error': f'Erro de validação: {str(ve)}'}), 400
+    
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f'Erro ao criar evento: {str(e)}')
-        return jsonify({'success': False, 'error': str(e)}), 500
+        app.logger.error(f'[EVENTO] Erro ao criar evento: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'error': f'Erro: {str(e)}'}), 500
 
 
 @app.route('/api/eventos/<int:evento_id>/editar', methods=['POST'])
