@@ -4596,6 +4596,81 @@ def criar_todas_tabelas(secret_key):
         }), 500
 
 
+@app.route('/setup/corrigir-colunas/<secret_key>')
+def corrigir_colunas(secret_key):
+    """Corrige tamanho das colunas de STRING no banco de dados"""
+    import os
+    
+    # Segurança: verificar secret key correta
+    if secret_key != os.environ.get('SECRET_KEY', ''):
+        return jsonify({'error': 'Invalid secret key'}), 403
+    
+    try:
+        print("\n[INFO] 🔨 Corrigindo colunas de STRING...")
+        
+        # Lista de alterações a fazer
+        alteracoes = [
+            # (tabela, coluna, novo_tamanho)
+            ('operadores', 'battlepass', 50),
+            ('equipes', 'battlepass', 50),
+        ]
+        
+        resultado = {
+            'success': True,
+            'alteracoes': [],
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        for tabela, coluna, novo_tamanho in alteracoes:
+            try:
+                # Usar SQL bruto para alterar a coluna
+                # Para PostgreSQL
+                if 'postgresql' in str(db.engine.url):
+                    sql = f"ALTER TABLE {tabela} ALTER COLUMN {coluna} TYPE character varying({novo_tamanho})"
+                # Para SQLite
+                elif 'sqlite' in str(db.engine.url):
+                    sql = f"ALTER TABLE {tabela} MODIFY {coluna} VARCHAR({novo_tamanho})"
+                else:
+                    # Dialeto desconhecido, tenta PostgreSQL por padrão
+                    sql = f"ALTER TABLE {tabela} ALTER COLUMN {coluna} TYPE character varying({novo_tamanho})"
+                
+                db.session.execute(db.text(sql))
+                db.session.commit()
+                
+                print(f"  ✅ {tabela}.{coluna} alterado para VARCHAR({novo_tamanho})")
+                resultado['alteracoes'].append({
+                    'tabela': tabela,
+                    'coluna': coluna,
+                    'novo_tamanho': novo_tamanho,
+                    'status': 'OK'
+                })
+            except Exception as e:
+                db.session.rollback()
+                print(f"  ❌ Erro ao alterar {tabela}.{coluna}: {str(e)}")
+                resultado['alteracoes'].append({
+                    'tabela': tabela,
+                    'coluna': coluna,
+                    'novo_tamanho': novo_tamanho,
+                    'status': 'ERRO',
+                    'erro': str(e)
+                })
+        
+        print(f"\n✅ Correção de colunas concluída!")
+        
+        return jsonify(resultado), 200
+        
+    except Exception as e:
+        logger.error(f"[ERROR] Falha ao corrigir colunas: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': type(e).__name__,
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
 if __name__ == '__main__':
     # Em desenvolvimento, apenas rodar
     app.run(debug=False, host='0.0.0.0', port=5000)
