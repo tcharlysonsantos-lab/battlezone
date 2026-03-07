@@ -101,6 +101,9 @@ csrf = CSRFProtect(app)
 # CSRF Exemptions - rotas que não precisam de CSRF token
 # OBS: DEVE ser feito AQUI, antes de qualquer request, não em before_request!
 csrf._exempt_views.add('auth.forgot_password')
+csrf._exempt_views.add('auth.validate_email_for_reset')  # API AJAX - sem CSRF
+csrf._exempt_views.add('auth.debug_usuarios')  # DEBUG ONLY
+csrf._exempt_views.add('auth.health_check_email')  # Health check API
 
 # 2. Headers de Segurança (NOVO)
 # Configuração de CSP com todos os domínios necessários
@@ -161,6 +164,20 @@ create_upload_directory(app.config['UPLOAD_FOLDER'])
 # Registrar blueprints
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(pagamento_bp, url_prefix='/pagamentos')
+
+# ==================== CSRF EXEMPTIONS PARA APIs ====================
+# Exemption via view functions (após blueprints registrados)
+if hasattr(app.view_functions.get('auth.validate_email_for_reset'), '__wrapped__'):
+    # Se a função foi decorada, obter a função original
+    csrf.exempt(app.view_functions['auth.validate_email_for_reset'])
+else:
+    # Senão, decorar diretamente
+    app.view_functions['auth.validate_email_for_reset'] = csrf.exempt(app.view_functions['auth.validate_email_for_reset'])
+
+if hasattr(app.view_functions.get('auth.debug_usuarios'), '__wrapped__'):
+    csrf.exempt(app.view_functions['auth.debug_usuarios'])
+else:
+    app.view_functions['auth.debug_usuarios'] = csrf.exempt(app.view_functions['auth.debug_usuarios'])
 
 # ==================== MIDDLEWARE ====================
 @app.before_request
