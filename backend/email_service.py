@@ -579,61 +579,134 @@ def enviar_email_reset_senha(usuario_email: str, nome_usuario: str, reset_link: 
     
     try:
         # ===== PREPARAR HTML DO EMAIL =====
+        # Verificar se reset_link nao eh None (DEBUG)
+        if not reset_link:
+            logger.error("[ERROR] reset_link eh None ou vazio! Nao pode enviar email.")
+            return False
+        
+        # IMPORTANTE: Logear o reset_link para debug
+        logger.info(f"[DEBUG] reset_link = {reset_link[:50]}...")
         
         html_email = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-        .header h1 {{ margin: 0; font-size: 28px; letter-spacing: 1px; }}
-        .header p {{ margin: 5px 0 0 0; font-size: 14px; opacity: 0.9; }}
-        .content {{ background-color: white; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        .content p {{ line-height: 1.6; color: #333; margin: 15px 0; }}
-        .button-box {{ text-align: center; margin: 35px 0 25px 0; }}
-        .btn {{ 
-            display: inline-block;
-            padding: 14px 48px;
+    <title>Redefinir Senha - BattleZone</title>
+    <style type="text/css">
+        body {{ 
+            font-family: Arial, Helvetica, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f5f5f5; 
+            color: #333;
+        }}
+        .container {{ 
+            max-width: 600px; 
+            margin: 20px auto; 
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }}
+        .header {{ 
+            background-color: #FF6B00; 
+            color: white; 
+            padding: 30px 20px; 
+            text-align: center; 
+        }}
+        .header h1 {{ 
+            margin: 0; 
+            font-size: 28px;
+            font-weight: bold;
+        }}
+        .content {{ 
+            padding: 30px 20px;
+            line-height: 1.6;
+        }}
+        .content p {{
+            margin: 15px 0;
+            color: #333;
+        }}
+        .button-section {{
+            margin: 30px 0;
+            text-align: center;
+        }}
+        .reset-btn {{
             background-color: #FF6B00;
             color: white;
+            padding: 15px 40px;
             text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
             font-size: 16px;
-            border: 2px solid #FF6B00;
-            transition: all 0.3s ease;
-            mso-padding-alt: 14px 48px;
-            mso-border-alt: medium none #FF6B00;
         }}
-        .btn:hover {{ background-color: #ff7d1a; border-color: #ff7d1a; text-decoration: none; }}
-        .link-box {{ 
-            background-color: #f9f9f9; 
-            padding: 15px; 
-            border-left: 4px solid #FF6B00; 
-            margin: 20px 0; 
-            border-radius: 4px; 
-            text-align: center;
+        .reset-btn:hover {{
+            background-color: #E65A00;
+        }}
+        .link-section {{
+            background-color: #f9f9f9;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #FF6B00;
             font-size: 12px;
             color: #666;
+            word-break: break-all;
         }}
-        .link-box a {{ color: #FF6B00; text-decoration: none; word-break: break-all; }}
-        .warning-box {{ background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 4px; color: #856404; font-size: 14px; }}
-        .security-tips {{ background-color: #e8f4f8; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0; border-radius: 4px; font-size: 13px; }}
-        .security-tips strong {{ color: #1a5276; display: block; margin-bottom: 10px; }}
-        .security-tips ul {{ margin: 8px 0; padding-left: 20px; }}
-        .security-tips li {{ margin: 4px 0; }}
-        .footer {{ color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; line-height: 1.5; }}
-        .footer a {{ color: #FF6B00; text-decoration: none; }}
+        .link-section a {{
+            color: #FF6B00;
+            text-decoration: underline;
+        }}
+        .warning {{
+            background-color: #FFF3CD;
+            color: #856404;
+            padding: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #FFC107;
+            font-size: 13px;
+        }}
+        .warning strong {{
+            display: block;
+            margin-bottom: 8px;
+        }}
+        .security {{
+            background-color: #E8F4F8;
+            color: #1a5276;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+            font-size: 13px;
+        }}
+        .security strong {{
+            display: block;
+            margin-bottom: 10px;
+        }}
+        .security ul {{
+            margin: 8px 0;
+            padding-left: 20px;
+        }}
+        .security li {{
+            margin: 5px 0;
+        }}
+        .footer {{
+            background-color: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            border-top: 1px solid #eee;
+            line-height: 1.5;
+        }}
+        .footer a {{
+            color: #FF6B00;
+            text-decoration: none;
+        }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>BATTLEZONE</h1>
-            <p>Redefinir Senha</p>
+            <p style="margin: 8px 0 0 0; font-size: 14px;">Redefinir Senha</p>
         </div>
         
         <div class="content">
@@ -641,31 +714,27 @@ def enviar_email_reset_senha(usuario_email: str, nome_usuario: str, reset_link: 
             
             <p>Voce solicitou a redefinicao de sua senha no BattleZone. Clique no botao abaixo para criar uma nova senha:</p>
             
-            <div class="button-box">
-                <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
-                    <tr>
-                        <td style="border-radius: 6px; background: #FF6B00;" align="center">
-                            <a href="{reset_link}" style="display: inline-block; padding: 14px 48px; background: #FF6B00; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                                Redefinir Minha Senha
-                            </a>
-                        </td>
-                    </tr>
-                </table>
+            <!-- BOTAO PRINCIPAL - ACESSIVEL EM TODOS OS CLIENTES DE EMAIL -->
+            <div class="button-section">
+                <a href="{reset_link}" class="reset-btn">
+                    Redefinir Minha Senha
+                </a>
             </div>
             
+            <!-- LINK ALTERNATIVO CASO O BOTAO NAO FUNCIONE -->
             <p style="text-align: center; color: #999; font-size: 12px; margin: 20px 0;">
-                Ou copie e cole este link no seu navegador:
+                Ou copie e cole este link no seu navegador se o botao acima nao funcionar:
             </p>
             
-            <div class="link-box">
+            <div class="link-section">
                 <a href="{reset_link}">{reset_link}</a>
             </div>
             
-            <div class="warning-box">
+            <div class="warning">
                 <strong>ATENCAO:</strong> Este link e valido por apenas 30 minutos. Se nao redefinir sua senha dentro deste prazo, voce precisara solicitar um novo link.
             </div>
             
-            <div class="security-tips">
+            <div class="security">
                 <strong>Dicas de Seguranca:</strong>
                 <ul>
                     <li>Sua nova senha deve ter no minimo 8 caracteres</li>
@@ -675,17 +744,17 @@ def enviar_email_reset_senha(usuario_email: str, nome_usuario: str, reset_link: 
                 </ul>
             </div>
             
-            <p style="margin-top: 25px; color: #666; font-size: 13px;">
+            <p style="color: #666; font-size: 13px;">
                 Nao solicitou esta redefinicao de senha? Pode ignorar este email com seguranca. Apenas alguem com acesso ao seu email pode redefinir sua senha.
             </p>
-            
-            <div class="footer">
-                <p style="margin: 0 0 10px 0;">Este e um email automatico. Nao responda este email.</p>
-                <p style="margin: 10px 0;">
-                    Precisa de ajuda? Entre em contato conosco por WhatsApp ou atraves do site.
-                </p>
-                <p style="margin-top: 15px; font-style: italic; font-size: 11px;">BattleZone 2026 - Todos os direitos reservados</p>
-            </div>
+        </div>
+        
+        <div class="footer">
+            <p style="margin: 0 0 10px 0;">Este e um email automatico. Nao responda este email.</p>
+            <p style="margin: 10px 0;">
+                Precisa de ajuda? Entre em contato conosco por WhatsApp ou atraves do site.
+            </p>
+            <p style="margin-top: 15px; font-style: italic; font-size: 11px;">BattleZone 2026 - Todos os direitos reservados</p>
         </div>
     </div>
 </body>
