@@ -311,62 +311,62 @@ def forgot_password():
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
+        import logging
+        logger = logging.getLogger(__name__)
         
-        # ===== VALIDAÇÃO PRÉ-ENVIO =====
+        logger.info("[INFO] forgot_password POST - inicio")
         
-        if not email or '@' not in email:
-            flash('Email inválido. Por favor, digite um email válido.', 'danger')
-            return render_template('auth/forgot_password.html')
-        
-        # ===== BUSCAR USUÁRIO =====
-        
-        user = User.query.filter(User.email.ilike(email)).first()
-        
-        if not user:
-            # 🔐 SEGURANÇA: Mostrar que não existe, mas de forma clara
-            flash(
-                '❌ Não existe nenhuma conta cadastrada com este email.\n'
-                'Verifique se digitou corretamente ou crie uma nova conta.',
-                'danger'
-            )
-            return render_template('auth/forgot_password.html')
-        
-        # ===== EMAIL EXISTE - PROCESSAR RESET =====
-        
-        # Gerar token de reset
-        token = user.gerar_password_reset_token()
-        reset_link = url_for('auth.reset_password', token=token, _external=True)
-        
-        # Log do evento
-        log_security_event('PASSWORD_RESET_SOLICITADO', user.username, request.remote_addr)
-        
-        # Enviar email com link de reset
         try:
-            from backend.email_service import enviar_email_reset_senha, verificar_saude_email
-            import logging
+            email = request.form.get('email', '').strip().lower()
+            logger.info(f"[INFO] Email recebido: {email[:5]}***")
             
-            logger = logging.getLogger(__name__)
+            # ===== VALIDAÇÃO PRÉ-ENVIO =====
             
-            # Verificar saude do servico de email antes de enviar
-            is_healthy, health_msg = verificar_saude_email()
-            logger.info(f"[INFO] Saude Email: {health_msg}")
+            if not email or '@' not in email:
+                logger.warning("[WARNING] Email invalido")
+                flash('Email inválido. Por favor, digite um email válido.', 'danger')
+                return render_template('auth/forgot_password.html')
             
-            if not is_healthy:
-                logger.warning(f"[WARNING] Email service nao esta saudavel: {health_msg}")
+            logger.info("[INFO] Email valido, buscando usuario...")
+            
+            # ===== BUSCAR USUÁRIO =====
+            
+            user = User.query.filter(User.email.ilike(email)).first()
+            
+            if not user:
+                logger.warning(f"[WARNING] Usuario nao encontrado: {email[:5]}***")
                 flash(
-                    'Servico de email temporariamente indisponivel.\n'
-                    'Por favor, tente novamente em alguns minutos.\n'
-                    f'(Detalhes tecnicos: {health_msg})',
-                    'warning'
+                    'Não existe nenhuma conta cadastrada com este email.\n'
+                    'Verifique se digitou corretamente ou crie uma nova conta.',
+                    'danger'
                 )
                 return render_template('auth/forgot_password.html')
             
-            # Tentar enviar email
+            logger.info(f"[OK] Usuario encontrado: {user.email[:5]}***")
+            
+            # ===== EMAIL EXISTE - PROCESSAR RESET =====
+            
+            # Gerar token de reset
+            logger.info("[INFO] Gerando token de reset...")
+            token = user.gerar_password_reset_token()
+            reset_link = url_for('auth.reset_password', token=token, _external=True)
+            logger.info(f"[OK] Token gerado, reset_link: {reset_link[:40]}...")
+            
+            # Log do evento
+            log_security_event('PASSWORD_RESET_SOLICITADO', user.username, request.remote_addr)
+            logger.info("[OK] Evento de seguranca registrado")
+            
+            # ===== ENVIAR EMAIL COM LINK DE RESET =====
+            
+            logger.info("[INFO] Iniciando envio de email...")
+            from backend.email_service import enviar_email_reset_senha
+            
+            # Tentar enviar email (DEVE ser rapido agora - assincronamente!)
             email_enviado = enviar_email_reset_senha(user.email, user.nome, reset_link)
+            logger.info(f"[OK] Funcao de envio retornou: {email_enviado}")
             
             if email_enviado:
-                logger.info(f"[OK] Email de reset enviado para: {user.email}")
+                logger.info(f"[OK] Email agendado para envio: {user.email[:5]}***")
                 flash(
                     'Email sera enviado em alguns segundos!\n'
                     'Verifique sua caixa de entrada (ou spam).\n'
@@ -374,28 +374,29 @@ def forgot_password():
                     'success'
                 )
             else:
-                logger.error(f"[ERROR] Falha ao enviar email de reset para: {user.email}")
+                logger.error(f"[ERROR] Funcao de envio retornou False para: {user.email}")
                 flash(
-                    'Falha ao enviar email.\n'
-                    'Erros tecnicos podem estar ocorrendo.\n'
+                    'Falha ao agendar envio de email.\n'
                     'Tente novamente em alguns minutos.',
                     'danger'
                 )
+            
+            logger.info("[INFO] Redirect para login...")
+            return redirect(url_for('auth.login'))
                     
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"[ERROR] Excecao ao tentar enviar email de reset: {str(e)}")
+            logger.error(f"[ERROR] EXCECAO em forgot_password: {str(e)}")
             logger.error(f"     Tipo: {type(e).__name__}")
-            logger.error(f"     User: {user.email}")
+            import traceback
+            logger.error(f"     Traceback: {traceback.format_exc()}")
             
             flash(
                 'Erro ao processar o reset de senha.\n'
                 'Por favor, tente novamente mais tarde.',
                 'danger'
             )
-        
-        return redirect(url_for('auth.login'))
+            logger.info("[INFO] Redirect para forgot_password apos erro...")
+            return redirect(url_for('auth.forgot_password'))
     
     return render_template('auth/forgot_password.html')
 
