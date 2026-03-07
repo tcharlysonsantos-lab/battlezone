@@ -30,6 +30,9 @@ from backend.security_utils import allowed_file_secure, safe_filename_with_times
 from backend.email_service import init_mail
 from backend.health_check import db_health_check
 
+# Importar auto-migration
+from backend.auto_migrate import auto_migrate_battlepass
+
 # Importar segurança (NOVO)
 from backend.security_middleware import (
     add_security_headers, 
@@ -164,6 +167,11 @@ create_upload_directory(app.config['UPLOAD_FOLDER'])
 # Registrar blueprints
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(pagamento_bp, url_prefix='/pagamentos')
+
+# ==================== AUTO-MIGRATION ====================
+# Executar migrações automáticas em produção (PostgreSQL)
+with app.app_context():
+    auto_migrate_battlepass(app, db)
 
 # ==================== CSRF EXEMPTIONS PARA APIs ====================
 # Exemption via view functions (após blueprints registrados)

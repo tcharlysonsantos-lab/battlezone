@@ -31,7 +31,7 @@
 user = User.query.filter_by(email=email).first()
 if user:
     token = user.gerar_password_reset_token()
-    reset_link = url_for('auth.reset_password', token=token, _external=True)
+    reset_link = url_for('auth.reset_password', token=token, py _external=True)
 ```
 
 **Status da Função**: ✅ Localizada na `backend/models.py`
