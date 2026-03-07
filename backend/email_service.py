@@ -5,6 +5,8 @@ Email Service - Envia notificações via email
 from flask import url_for, current_app
 import logging
 import os
+import threading
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -126,9 +128,37 @@ def verificar_saude_email(app=None):
     return True, "Email service operacional"
 
 
+def _enviar_email_thread(destinatarios: list, assunto: str, html: str, remetente: str = None):
+    """
+    Função interna para enviar email em thread separada (NÃO BLOQUEIA)
+    
+    Esta função é chamada em uma thread separada para não bloquear a requisição HTTP
+    """
+    try:
+        if not mail:
+            logger.error("[ERROR] Email service nao inicializado - nao pode enviar")
+            return
+        
+        # Preparar mensagem
+        msg = Message(
+            subject=assunto,
+            recipients=destinatarios,
+            html=html,
+            sender=remetente
+        )
+        
+        # ENVIAR (pode levar tempo - mas em thread separada!)
+        mail.send(msg)
+        logger.info(f"[OK] Email enviado com sucesso (async)")
+        
+    except Exception as e:
+        logger.error(f"[ERROR] Falha ao enviar email (async): {str(e)}")
+        logger.error(f"        Tipo: {type(e).__name__}")
+
+
 def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = None) -> bool:
     """
-    Envia um email com tratamento robusto de erro
+    Envia um email ASSINCRONAMENTE (não bloqueia a requisição)
     
     Args:
         destinatarios: Lista de emails ou string com email único
@@ -137,7 +167,7 @@ def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = 
         remetente: Email do remetente (opcional)
     
     Returns:
-        True se enviado com sucesso, False caso contrário
+        True se agendado para envio, False caso erro na preparação
     """
     
     # ===== VALIDACAO PRE-ENVIO =====
@@ -188,24 +218,21 @@ def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = 
         
         # Log detalhado (sem expor email real dos usuários)
         destinatarios_masked = [d[:3] + '***' + d[d.find('@'):] if '@' in d else d for d in destinatarios]
-        logger.debug(f"[📧] Preparando email:")
+        logger.debug(f"[INFO] Preparando email:")
         logger.debug(f"     Para: {destinatarios_masked}")
         logger.debug(f"     Assunto: {assunto[:50]}...")
         logger.debug(f"     Remetente: {remetente}")
         
-        # Criar mensagem
-        msg = Message(
-            subject=assunto,
-            recipients=destinatarios,
-            html=html,
-            sender=remetente
+        # ===== ENVIAR EMAIL ASSINCRONAMENTE (NÃO BLOQUEIA) =====
+        # Inicia thread para enviar, função retorna imediatamente
+        thread = threading.Thread(
+            target=_enviar_email_thread,
+            args=(destinatarios, assunto, html, remetente),
+            daemon=True
         )
+        thread.start()
         
-        # ===== ENVIAR EMAIL =====
-        
-        mail.send(msg)
-        
-        logger.info(f"[✅] Email enviado com sucesso")
+        logger.info(f"[OK] Email agendado para envio (async)")
         logger.info(f"     Para: {len(destinatarios)} destinatário(s)")
         logger.info(f"     Assunto: {assunto[:50]}...")
         
