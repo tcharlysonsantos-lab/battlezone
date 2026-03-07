@@ -580,90 +580,116 @@ def enviar_email_reset_senha(usuario_email: str, nome_usuario: str, reset_link: 
     try:
         # ===== PREPARAR HTML DO EMAIL =====
         
-        html_email = f"""
-        <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                .header {{ background: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%); color: white; padding: 30px; text-align: center; border-radius: 5px 5px 0 0; }}
-                .header h1 {{ margin: 0; font-size: 28px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }}
-                .content {{ background-color: white; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }}
-                .warning-box {{ background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 3px; color: #856404; }}
-                .button-container {{ text-align: center; margin: 30px 0; }}
-                .reset-button {{ 
-                    display: inline-block;
-                    padding: 15px 40px;
-                    background-color: #FF6B00;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
-                    font-weight: bold;
-                    font-size: 16px;
-                    transition: background-color 0.3s;
-                }}
-                .reset-button:hover {{ background-color: #FF8C00; }}
-                .footer {{ color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }}
-                .security-tips {{ background-color: #e8f4f8; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0; border-radius: 3px; }}
-                .security-tips strong {{ color: #1a5276; }}
-                .security-tips ul {{ margin: 10px 0; padding-left: 20px; }}
-                .security-tips li {{ margin: 5px 0; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>🎮 BATTLEZONE</h1>
-                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Redefinir Senha</p>
-                </div>
-                
-                <div class="content">
-                    <p>Olá <strong>{nome_usuario}</strong>,</p>
-                    
-                    <p>Você solicitou a redefinição de sua senha no BattleZone. Clique no botão abaixo para criar uma nova senha:</p>
-                    
-                    <div class="button-container">
-                        <a href="{reset_link}" class="reset-button">Redefinir Minha Senha</a>
-                    </div>
-                    
-                    <p style="text-align: center; color: #666; font-size: 13px; margin-top: 15px;">
-                        Ou copie e cole este link no seu navegador:<br>
-                        <code style="background-color: #f5f5f5; padding: 5px 10px; border-radius: 3px; word-break: break-all;">
-                            {reset_link}
-                        </code>
-                    </p>
-                    
-                    <div class="warning-box">
-                        <strong>⏰ ATENÇÃO:</strong> Este link é válido por apenas 30 minutos. Se não redefinir sua senha dentro deste prazo, você precisará solicitar um novo link.
-                    </div>
-                    
-                    <div class="security-tips">
-                        <strong>🔒 Dicas de Segurança:</strong>
-                        <ul>
-                            <li>Sua nova senha deve ter no mínimo 8 caracteres</li>
-                            <li>Inclua letras maiúsculas, minúsculas e números</li>
-                            <li>Use uma senha que você não utiliza em outros sites</li>
-                            <li>Nunca compartilhe sua senha com outras pessoas</li>
-                        </ul>
-                    </div>
-                    
-                    <p style="margin-top: 25px; color: #666;">
-                        Não solicitou esta redefinição de senha? Pode ignorar este email com segurança. 
-                        Apenas alguém com acesso ao seu email pode redefinir sua senha.
-                    </p>
-                    
-                    <div class="footer">
-                        <p style="margin: 0 0 10px 0;">Este é um email automático. Não responda este email.</p>
-                        <p style="margin: 0;">
-                            <strong>Precisa de ajuda?</strong><br>
-                            Entre em contato conosco por WhatsApp ou através do site
-                        </p>
-                        <p style="margin-top: 15px; font-style: italic;">BattleZone © 2026 - Todos os direitos reservados</p>
-                    </div>
-                </div>
+        html_email = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .header h1 {{ margin: 0; font-size: 28px; letter-spacing: 1px; }}
+        .header p {{ margin: 5px 0 0 0; font-size: 14px; opacity: 0.9; }}
+        .content {{ background-color: white; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .content p {{ line-height: 1.6; color: #333; margin: 15px 0; }}
+        .button-box {{ text-align: center; margin: 35px 0 25px 0; }}
+        .btn {{ 
+            display: inline-block;
+            padding: 14px 48px;
+            background-color: #FF6B00;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            border: 2px solid #FF6B00;
+            transition: all 0.3s ease;
+            mso-padding-alt: 14px 48px;
+            mso-border-alt: medium none #FF6B00;
+        }}
+        .btn:hover {{ background-color: #ff7d1a; border-color: #ff7d1a; text-decoration: none; }}
+        .link-box {{ 
+            background-color: #f9f9f9; 
+            padding: 15px; 
+            border-left: 4px solid #FF6B00; 
+            margin: 20px 0; 
+            border-radius: 4px; 
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }}
+        .link-box a {{ color: #FF6B00; text-decoration: none; word-break: break-all; }}
+        .warning-box {{ background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 4px; color: #856404; font-size: 14px; }}
+        .security-tips {{ background-color: #e8f4f8; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0; border-radius: 4px; font-size: 13px; }}
+        .security-tips strong {{ color: #1a5276; display: block; margin-bottom: 10px; }}
+        .security-tips ul {{ margin: 8px 0; padding-left: 20px; }}
+        .security-tips li {{ margin: 4px 0; }}
+        .footer {{ color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; line-height: 1.5; }}
+        .footer a {{ color: #FF6B00; text-decoration: none; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>BATTLEZONE</h1>
+            <p>Redefinir Senha</p>
+        </div>
+        
+        <div class="content">
+            <p>Ola <strong>{nome_usuario}</strong>,</p>
+            
+            <p>Voce solicitou a redefinicao de sua senha no BattleZone. Clique no botao abaixo para criar uma nova senha:</p>
+            
+            <div class="button-box">
+                <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                    <tr>
+                        <td style="border-radius: 6px; background: #FF6B00;" align="center">
+                            <a href="{reset_link}" style="display: inline-block; padding: 14px 48px; background: #FF6B00; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                                Redefinir Minha Senha
+                            </a>
+                        </td>
+                    </tr>
+                </table>
             </div>
-        </body>
-        </html>
+            
+            <p style="text-align: center; color: #999; font-size: 12px; margin: 20px 0;">
+                Ou copie e cole este link no seu navegador:
+            </p>
+            
+            <div class="link-box">
+                <a href="{reset_link}">{reset_link}</a>
+            </div>
+            
+            <div class="warning-box">
+                <strong>ATENCAO:</strong> Este link e valido por apenas 30 minutos. Se nao redefinir sua senha dentro deste prazo, voce precisara solicitar um novo link.
+            </div>
+            
+            <div class="security-tips">
+                <strong>Dicas de Seguranca:</strong>
+                <ul>
+                    <li>Sua nova senha deve ter no minimo 8 caracteres</li>
+                    <li>Inclua letras maiusculas, minusculas, numeros e simbolos</li>
+                    <li>Use uma senha unica que nao utiliza em outros sites</li>
+                    <li>Nunca compartilhe sua senha com outras pessoas</li>
+                </ul>
+            </div>
+            
+            <p style="margin-top: 25px; color: #666; font-size: 13px;">
+                Nao solicitou esta redefinicao de senha? Pode ignorar este email com seguranca. Apenas alguem com acesso ao seu email pode redefinir sua senha.
+            </p>
+            
+            <div class="footer">
+                <p style="margin: 0 0 10px 0;">Este e um email automatico. Nao responda este email.</p>
+                <p style="margin: 10px 0;">
+                    Precisa de ajuda? Entre em contato conosco por WhatsApp ou atraves do site.
+                </p>
+                <p style="margin-top: 15px; font-style: italic; font-size: 11px;">BattleZone 2026 - Todos os direitos reservados</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
         """
         
         # ===== OBTER REMETENTE COM APP CONTEXT =====
