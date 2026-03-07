@@ -3073,27 +3073,38 @@ def sorteios():
         # Combine: future first, then past
         return future_events + past_events
     
-    # Buscar eventos por campo
-    eventos_warfield_raw = Evento.query.filter_by(
-        campo='Warfield',
-        ativo=True,
-        deletado=False
-    ).all()
-    eventos_warfield = sort_eventos_by_proximity(eventos_warfield_raw)
+    # Buscar eventos por campo (com try/except em caso de tabela não existir)
+    eventos_warfield = []
+    eventos_redline = []
+    eventos_geral = []
     
-    eventos_redline_raw = Evento.query.filter_by(
-        campo='Redline',
-        ativo=True,
-        deletado=False
-    ).all()
-    eventos_redline = sort_eventos_by_proximity(eventos_redline_raw)
-    
-    eventos_geral_raw = Evento.query.filter_by(
-        campo='GERAL',
-        ativo=True,
-        deletado=False
-    ).all()
-    eventos_geral = sort_eventos_by_proximity(eventos_geral_raw)
+    try:
+        eventos_warfield_raw = Evento.query.filter_by(
+            campo='Warfield',
+            ativo=True,
+            deletado=False
+        ).all()
+        eventos_warfield = sort_eventos_by_proximity(eventos_warfield_raw)
+        
+        eventos_redline_raw = Evento.query.filter_by(
+            campo='Redline',
+            ativo=True,
+            deletado=False
+        ).all()
+        eventos_redline = sort_eventos_by_proximity(eventos_redline_raw)
+        
+        eventos_geral_raw = Evento.query.filter_by(
+            campo='GERAL',
+            ativo=True,
+            deletado=False
+        ).all()
+        eventos_geral = sort_eventos_by_proximity(eventos_geral_raw)
+    except Exception as e:
+        logger.warning(f"[WARNING] Tabela de eventos pode não existir: {str(e)}")
+        # Continuar sem eventos se tabela não existir
+        eventos_warfield = []
+        eventos_redline = []
+        eventos_geral = []
     
     # Buscar battlepasses
     battlepasses_operador = Battlepass.query.filter(
