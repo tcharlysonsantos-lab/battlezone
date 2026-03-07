@@ -3107,15 +3107,26 @@ def sorteios():
         eventos_geral = []
     
     # Buscar battlepasses
-    battlepasses_operador = Battlepass.query.filter(
-        Battlepass.categoria == 'operador',
-        Battlepass.ativo == True
-    ).all()
+    battlepasses_operador = []
+    battlepasses_equipe = []
     
-    battlepasses_equipe = Battlepass.query.filter(
-        Battlepass.categoria == 'equipe',
-        Battlepass.ativo == True
-    ).all()
+    try:
+        battlepasses_operador = Battlepass.query.filter(
+            Battlepass.categoria == 'operador',
+            Battlepass.ativo == True
+        ).all()
+    except Exception as e:
+        logger.warning(f"[WARNING] Erro ao buscar battlepasses de operador: {str(e)}")
+        battlepasses_operador = []
+    
+    try:
+        battlepasses_equipe = Battlepass.query.filter(
+            Battlepass.categoria == 'equipe',
+            Battlepass.ativo == True
+        ).all()
+    except Exception as e:
+        logger.warning(f"[WARNING] Erro ao buscar battlepasses de equipe: {str(e)}")
+        battlepasses_equipe = []
     
     # Preparar dados de sorteios
     sorteios_data = {
@@ -4518,7 +4529,13 @@ def criar_partidas_teste():
 
 @app.route('/setup/criar-tabelas-eventos/<secret_key>')
 def criar_tabelas_eventos(secret_key):
-    """Cria as tabelas de Evento e EventoBrinde - use SECRET_KEY para segurança"""
+    """Cria as tabelas de Evento e EventoBrinde - use SECRET_KEY para segurança (LEGACY)"""
+    return criar_todas_tabelas(secret_key)
+
+
+@app.route('/setup/criar-todas-tabelas/<secret_key>')
+def criar_todas_tabelas(secret_key):
+    """Cria TODAS as tabelas do banco de dados - use SECRET_KEY para segurança"""
     import os
     
     # Segurança: verificar secret key correta
@@ -4526,49 +4543,55 @@ def criar_tabelas_eventos(secret_key):
         return jsonify({'error': 'Invalid secret key'}), 403
     
     try:
-        from backend.models import Evento, EventoBrinde
+        print("\n[INFO] 🔧 Criando TODAS as tabelas do banco de dados...")
         
-        print("[INFO] 📊 Criando tabelas de Evento e EventoBrinde...")
-        
-        # Criar as tabelas
+        # Criar as tabelas usando db.create_all()
         db.create_all()
         
-        # Verificar se as tabelas existem
+        # Verificar quais tabelas foram criadas
         inspector = db.inspect(db.engine)
         tabelas_existentes = inspector.get_table_names()
         
+        # Tabelas críticas esperadas
+        tabelas_criticas = [
+            'users', 'operadores', 'equipes', 'equipemembros',
+            'partidas', 'partida_participantes', 'vendas', 'estoque',
+            'logs', 'solicitacoes', 'pagamento_operador',
+            'eventos', 'evento_brindes', 'battlepasses', 'sorteios'
+        ]
+        
+        tabelas_status = {}
+        for tabela_critica in tabelas_criticas:
+            existe = tabela_critica in tabelas_existentes
+            tabelas_status[tabela_critica] = existe
+            status_emoji = "✅" if existe else "❌"
+            print(f"  {status_emoji} {tabela_critica}")
+        
+        # Contar tabelas criadas
+        total_criadas = sum(1 for v in tabelas_status.values() if v)
+        
         resultado = {
             'success': True,
-            'message': 'Tabelas criadas com sucesso!',
+            'message': f'Tabelas criadas! {total_criadas}/{len(tabelas_criticas)} tabelas essenciais detectadas.',
             'timestamp': datetime.now().isoformat(),
-            'tabelas': {
-                'eventos': 'eventos' in tabelas_existentes,
-                'evento_brindes': 'evento_brindes' in tabelas_existentes
-            }
+            'tabelas': tabelas_status,
+            'total_criadas': total_criadas,
+            'total_esperadas': len(tabelas_criticas)
         }
         
-        if 'eventos' in tabelas_existentes:
-            colunas = [col['name'] for col in inspector.get_columns('eventos')]
-            resultado['tabelas']['eventos_colunas'] = colunas
-            print("✅ Tabela 'eventos' criada com sucesso!")
-        else:
-            print("❌ Falha ao criar tabela 'eventos'")
-            resultado['success'] = False
-        
-        if 'evento_brindes' in tabelas_existentes:
-            print("✅ Tabela 'evento_brindes' criada com sucesso!")
-        else:
-            print("❌ Falha ao criar tabela 'evento_brindes'")
-            resultado['success'] = False
+        print(f"\n✅ Total de {total_criadas}/{len(tabelas_criticas)} tabelas criadas com sucesso!")
         
         status_code = 200 if resultado['success'] else 400
         return jsonify(resultado), status_code
         
     except Exception as e:
         logger.error(f"[ERROR] Falha ao criar tabelas: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e),
+            'error_type': type(e).__name__,
             'timestamp': datetime.now().isoformat()
         }), 500
 
