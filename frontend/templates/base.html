@@ -370,7 +370,7 @@
                     
                     <!-- EVENTOS -->
                     {% if current_user.tem_permissao('calendario') %}
-                    <a class="nav-link {% if request.endpoint == 'sorteios' %}active{% endif %}" href="{{ url_for('sorteios') }}">
+                    <a class="nav-link {% if request.endpoint == 'eventos' %}active{% endif %}" href="{{ url_for('eventos') }}">
                         <i class="fas fa-star me-2"></i>Eventos
                     </a>
                     {% endif %}
