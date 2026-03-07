@@ -646,3 +646,51 @@ def debug_usuarios():
             "error": type(e).__name__,
             "message": str(e)
         }), 500
+
+
+@auth_bp.route('/api/test-email', methods=['GET', 'POST'])
+def test_email():
+    """
+    DEBUG ONLY: Testa envio de email
+    Use para diagnosticar problemas de SMTP
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info("[DEBUG] Endpoint /api/test-email acessada")
+        
+        # Pegar email para testar
+        email = request.args.get('email') or request.form.get('email') or 'tcharlysonf.f@gmail.com'
+        
+        logger.info(f"[DEBUG] Testando envio para: {email}")
+        
+        from backend.email_service import enviar_email
+        
+        # Tentar enviar email de teste
+        logger.info("[DEBUG] Chamando enviar_email...")
+        resultado = enviar_email(
+            [email],
+            'TESTE - BattleZone Email System',
+            '<h1>Teste de Email</h1><p>Se você recebeu este email, o sistema de email está funcionando!</p>',
+            remetente=current_app.config.get('MAIL_USERNAME')
+        )
+        
+        logger.info(f"[DEBUG] enviar_email retornou: {resultado}")
+        
+        return jsonify({
+            "status": "agendado",
+            "message": f"Email agendado para {email}",
+            "resultado": resultado
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"[ERROR] Erro em /api/test-email: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        return jsonify({
+            "status": "erro",
+            "error": type(e).__name__,
+            "message": str(e)
+        }), 500

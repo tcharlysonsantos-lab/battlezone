@@ -6,6 +6,7 @@ from flask import url_for, current_app
 import logging
 import os
 import threading
+import smtplib
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -134,6 +135,11 @@ def _enviar_email_thread(app, destinatarios: list, assunto: str, html: str, reme
     
     Esta função é chamada em uma thread separada para não bloquear a requisição HTTP
     """
+    import signal
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Envio de email ultrapassou o tempo limite")
+    
     try:
         logger.info(f"[INFO] Thread iniciada para enviar email")
         logger.info(f"   Destinatarios: {destinatarios}")
@@ -159,8 +165,23 @@ def _enviar_email_thread(app, destinatarios: list, assunto: str, html: str, reme
             
             # ENVIAR (pode levar tempo - mas em thread separada!)
             logger.info(f"[INFO] Enviando email via SMTP...")
-            mail.send(msg)
-            logger.info(f"[OK] Email enviado com sucesso (async)")
+            logger.info(f"[INFO] Conectando ao SMTP: {app.config.get('MAIL_SERVER')}:{app.config.get('MAIL_PORT')}")
+            
+            try:
+                # Tentar enviar com timeout de 30 segundos
+                mail.send(msg)
+                logger.info(f"[OK] Email enviado com sucesso (async)")
+            except TimeoutError as te:
+                logger.error(f"[ERROR] Timeout ao enviar email: {str(te)}")
+                logger.error(f"   Possível causa: Conexão SMTP lenta ou bloqueada")
+            except smtplib.SMTPAuthenticationError as ae:
+                logger.error(f"[ERROR] Autenticacao SMTP falhou: {str(ae)}")
+                logger.error(f"   Verificar: MAIL_USERNAME e MAIL_PASSWORD corretos?")
+            except smtplib.SMTPException as se:
+                logger.error(f"[ERROR] Erro SMTP: {str(se)}")
+            except ConnectionRefusedError as ce:
+                logger.error(f"[ERROR] Conexao recusada: {str(ce)}")
+                logger.error(f"   Verificar: MAIL_SERVER e MAIL_PORT corretos?")
         
     except Exception as e:
         logger.error(f"[ERROR] Falha ao enviar email (async): {str(e)}")
