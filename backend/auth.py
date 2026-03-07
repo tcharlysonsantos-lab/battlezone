@@ -541,22 +541,45 @@ def validate_email_for_reset():
         
         # ===== BUSCAR USUARIO NO BANCO =====
         
-        logger.debug(f"[INFO] Buscando email: {email}")
+        logger.info(f"[INFO] Email recebido (bruto): {repr(data.get('email'))}")
+        logger.info(f"[INFO] Email processado: {email}")
+        logger.info(f"[INFO] Iniciando busca por email: {email}")
+        
+        # Verificar se User model está disponível
+        logger.info(f"[INFO] Modelo User carregado: {User}")
+        
+        # Executar query com debugging detalhado
+        logger.info(f"[INFO] Executando query: User.query.filter_by(email='{email}').first()")
         user = User.query.filter_by(email=email).first()
         
+        logger.info(f"[INFO] Resultado da query: {user}")
+        
         if user:
-            logger.info(f"[OK] Email encontrado no sistema: {email}")
+            logger.info(f"[OK] Email encontrado no sistema: {email} (user_id={user.id})")
             return jsonify({
                 "exists": True,
                 "message": "OK: Email encontrado! Sera enviado em segundos.",
-                "user_found": True
+                "user_found": True,
+                "debug_user_id": user.id
             }), 200
         else:
             logger.info(f"[INFO] Email nao encontrado: {email}")
+            
+            # Debug: contar total de usuarios
+            total_users = User.query.count()
+            logger.info(f"[DEBUG] Total de usuarios no banco: {total_users}")
+            
+            # Debug: listar alguns emails (primeiros 5)
+            if total_users > 0:
+                sample_users = User.query.limit(5).all()
+                sample_emails = [u.email for u in sample_users if hasattr(u, 'email')]
+                logger.info(f"[DEBUG] Amostra de emails no banco: {sample_emails}")
+            
             return jsonify({
                 "exists": False,
                 "message": "Nao existe nenhuma conta cadastrada com este email",
-                "user_found": False
+                "user_found": False,
+                "debug_total_users": total_users
             }), 200
     
     except Exception as e:
@@ -566,9 +589,58 @@ def validate_email_for_reset():
         logger.error(f"     Tipo: {type(e).__name__}")
         logger.error(f"     Stack: {repr(e)}")
         
+        import traceback
+        logger.error(f"     Traceback: {traceback.format_exc()}")
+        
         # Retornar erro JSON em vez de HTML
         return jsonify({
             "exists": False,
             "message": "Erro ao processar validacao. Tente novamente.",
-            "error": type(e).__name__
+            "error": type(e).__name__,
+            "error_detail": str(e)
+        }), 500
+
+
+@auth_bp.route('/api/debug/usuarios', methods=['GET'])
+def debug_usuarios():
+    """
+    DEBUG ONLY: Lista todos os usuarios para diagnostico
+    Remove apos resolver o problema!
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info("[DEBUG] Endpoint /api/debug/usuarios acessada")
+        
+        # Query: contar total
+        total = User.query.count()
+        logger.info(f"[DEBUG] Total de usuarios: {total}")
+        
+        # Query: listar todos
+        usuarios = User.query.all()
+        
+        dados = {
+            "total_usuarios": total,
+            "usuarios": []
+        }
+        
+        for user in usuarios:
+            dados["usuarios"].append({
+                "id": user.id,
+                "username": user.username,
+                "nome": user.nome,
+                "email": user.email,
+                "status": user.status
+            })
+        
+        logger.info(f"[DEBUG] Retornando {len(usuarios)} usuarios")
+        
+        return jsonify(dados), 200
+        
+    except Exception as e:
+        logger.error(f"[ERROR] Erro em /api/debug/usuarios: {str(e)}")
+        return jsonify({
+            "error": type(e).__name__,
+            "message": str(e)
         }), 500
