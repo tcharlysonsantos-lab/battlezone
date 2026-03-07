@@ -3190,7 +3190,7 @@ def sorteios():
              'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
     mes_nome = meses[mes] if 1 <= mes <= 12 else 'Inválido'
     
-    return render_template('sorteios.html',
+    return render_template('eventos.html',
                          semana=semana,
                          mes=mes,
                          mes_nome=mes_nome,
