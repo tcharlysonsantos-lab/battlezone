@@ -4527,10 +4527,10 @@ def criar_partidas_teste():
         return jsonify({'error': str(e), 'type': type(e).__name__}), 500
 
 
-@app.route('/setup/criar-tabelas-eventos/<secret_key>')
-def criar_tabelas_eventos(secret_key):
-    """Cria as tabelas de Evento e EventoBrinde - use SECRET_KEY para segurança (LEGACY)"""
-    return criar_todas_tabelas(secret_key)
+@app.route('/setup/corrigir-colunas/<secret_key>')
+def corrigir_colunas(secret_key):
+    """Redireciona para a versão FORCE (mais robusta)"""
+    return corrigir_colunas_force(secret_key)
 
 
 @app.route('/setup/criar-todas-tabelas/<secret_key>')
@@ -4596,183 +4596,171 @@ def criar_todas_tabelas(secret_key):
         }), 500
 
 
-@app.route('/setup/corrigir-colunas/<secret_key>')
-def corrigir_colunas(secret_key):
-    """Corrige tamanho das colunas de STRING no banco de dados - FORÇA ALTERAÇÃO"""
+@app.route('/setup/corrigir-colunas-force/<secret_key>')
+def corrigir_colunas_force(secret_key):
+    """Corrige FORÇA as colunas - versão agressiva com connection raw"""
     import os
     
-    # Segurança: verificar secret key correta
+    # Segurança
     if secret_key != os.environ.get('SECRET_KEY', ''):
         return jsonify({'error': 'Invalid secret key'}), 403
     
     try:
-        print("\n[INFO] 🔨 Corrigindo colunas de STRING...")
+        print("\n" + "="*70)
+        print("[FORCE FIX] 🔨 CORRIGINDO COLUNAS - VERSÃO AGRESSIVA")
+        print("="*70)
+        
+        # Obter conexão raw (não SQLAlchemy)
+        connection = db.engine.raw_connection()
+        cursor = connection.cursor()
         
         resultado = {
-            'success': True,
-            'operacoes': [],
+            'sucesso': True,
+            'etapas': [],
             'timestamp': datetime.now().isoformat()
         }
         
-        # Detectar tipo de banco de dados
-        db_url_str = str(db.engine.url)
-        is_postgresql = 'postgresql' in db_url_str
+        try:
+            # ===== ETAPA 1: Virar tudo NULL se for muito longo =====
+            print("\n[ETAPA 1] Preparando dados...")
+            
+            try:
+                cursor.execute("""
+                    UPDATE operadores 
+                    SET battlepass = NULL
+                    WHERE battlepass IS NOT NULL AND LENGTH(battlepass) > 10
+                """)
+                rowcount = cursor.rowcount
+                connection.commit()
+                print(f"  ✅ Truncados {rowcount} registros de operadores.battlepass")
+                resultado['etapas'].append({
+                    'etapa': 1,
+                    'descricao': 'Preparar dados operadores',
+                    'resultado': f'{rowcount} registros'
+                })
+            except Exception as e:
+                print(f"  ⚠️ Erro em etapa 1: {str(e)}")
+                resultado['etapas'].append({
+                    'etapa': 1,
+                    'resultado': f'ERRO: {str(e)}'
+                })
+            
+            # ===== ETAPA 2: Alterar coluna operadores.battlepass =====
+            print("\n[ETAPA 2] Alterando operadores.battlepass...")
+            
+            try:
+                cursor.execute("""
+                    ALTER TABLE operadores 
+                    ALTER COLUMN battlepass 
+                    TYPE character varying(50)
+                """)
+                connection.commit()
+                print("  ✅ Coluna operadores.battlepass alterada para VARCHAR(50)")
+                resultado['etapas'].append({
+                    'etapa': 2,
+                    'descricao': 'Alterar operadores.battlepass',
+                    'resultado': 'VARCHAR(10) → VARCHAR(50) OK'
+                })
+            except Exception as e:
+                print(f"  ❌ ERRO: {str(e)}")
+                resultado['etapas'].append({
+                    'etapa': 2,
+                    'resultado': f'ERRO: {str(e)}'
+                })
+                resultado['sucesso'] = False
+            
+            # ===== ETAPA 3: Alterar coluna equipes.battlepass =====
+            print("\n[ETAPA 3] Alterando equipes.battlepass...")
+            
+            try:
+                # Truncar equipes também sela for necessário
+                cursor.execute("""
+                    UPDATE equipes 
+                    SET battlepass = NULL
+                    WHERE battlepass IS NOT NULL AND LENGTH(battlepass) > 10
+                """)
+                connection.commit()
+                
+                cursor.execute("""
+                    ALTER TABLE equipes 
+                    ALTER COLUMN battlepass 
+                    TYPE character varying(50)
+                """)
+                connection.commit()
+                print("  ✅ Coluna equipes.battlepass alterada para VARCHAR(50)")
+                resultado['etapas'].append({
+                    'etapa': 3,
+                    'descricao': 'Alterar equipes.battlepass',
+                    'resultado': 'VARCHAR(10) → VARCHAR(50) OK'
+                })
+            except Exception as e:
+                print(f"  ❌ ERRO: {str(e)}")
+                resultado['etapas'].append({
+                    'etapa': 3,
+                    'resultado': f'ERRO: {str(e)}'
+                })
+                resultado['sucesso'] = False
+            
+            # ===== ETAPA 4: Verificar colunas =====
+            print("\n[ETAPA 4] Verificando colunas após alteração...")
+            
+            try:
+                cursor.execute("""
+                    SELECT column_name, data_type, character_maximum_length
+                    FROM information_schema.columns
+                    WHERE table_name = 'operadores' AND column_name = 'battlepass'
+                """)
+                
+                resultado_query = cursor.fetchone()
+                if resultado_query:
+                    col_name, data_type, max_len = resultado_query
+                    print(f"  ✅ operadores.battlepass: {data_type}({max_len})")
+                    resultado['etapas'].append({
+                        'etapa': 4,
+                        'descricao': 'Verificação operadores.battlepass',
+                        'resultado': f'{data_type}({max_len})'
+                    })
+                
+                cursor.execute("""
+                    SELECT column_name, data_type, character_maximum_length
+                    FROM information_schema.columns
+                    WHERE table_name = 'equipes' AND column_name = 'battlepass'
+                """)
+                
+                resultado_query = cursor.fetchone()
+                if resultado_query:
+                    col_name, data_type, max_len = resultado_query
+                    print(f"  ✅ equipes.battlepass: {data_type}({max_len})")
+                    resultado['etapas'].append({
+                        'etapa': 4,
+                        'descricao': 'Verificação equipes.battlepass',
+                        'resultado': f'{data_type}({max_len})'
+                    })
+            except Exception as e:
+                print(f"  ⚠️ Erro na verificação: {str(e)}")
         
-        print(f"Banco de dados detectado: {'PostgreSQL' if is_postgresql else 'Outro'}")
+        finally:
+            cursor.close()
+            connection.close()
         
-        if is_postgresql:
-            # ===== OPERADORES =====
-            try:
-                print("\n[1/4] Corrigindo operadores.battlepass...")
-                
-                # Truncar valores que excedem 50 (só por segurança)
-                sql1 = """
-                UPDATE operadores 
-                SET battlepass = LEFT(battlepass, 50)
-                WHERE battlepass IS NOT NULL AND LENGTH(battlepass) > 50
-                """
-                db.session.execute(db.text(sql1))
-                
-                # Alterar a coluna
-                sql2 = """
-                ALTER TABLE operadores 
-                ALTER COLUMN battlepass 
-                TYPE character varying(50)
-                """
-                db.session.execute(db.text(sql2))
-                db.session.commit()
-                
-                print("  ✅ operadores.battlepass: VARCHAR(10) → VARCHAR(50)")
-                resultado['operacoes'].append({
-                    'tabela': 'operadores',
-                    'coluna': 'battlepass',
-                    'antes': 'VARCHAR(10)',
-                    'depois': 'VARCHAR(50)',
-                    'status': 'OK'
-                })
-                
-            except Exception as e:
-                db.session.rollback()
-                print(f"  ⚠️ Erro (continuando): {str(e)[:100]}")
-                resultado['operacoes'].append({
-                    'tabela': 'operadores',
-                    'coluna': 'battlepass',
-                    'status': 'ERRO',
-                    'erro': str(e)[:100]
-                })
-            
-            # ===== EQUIPES =====
-            try:
-                print("[2/4] Corrigindo equipes.battlepass...")
-                
-                # Truncar valores que excedem 50 (só por segurança)
-                sql1 = """
-                UPDATE equipes 
-                SET battlepass = LEFT(battlepass, 50)
-                WHERE battlepass IS NOT NULL AND LENGTH(battlepass) > 50
-                """
-                db.session.execute(db.text(sql1))
-                
-                # Alterar a coluna
-                sql2 = """
-                ALTER TABLE equipes 
-                ALTER COLUMN battlepass 
-                TYPE character varying(50)
-                """
-                db.session.execute(db.text(sql2))
-                db.session.commit()
-                
-                print("  ✅ equipes.battlepass: VARCHAR(10) → VARCHAR(50)")
-                resultado['operacoes'].append({
-                    'tabela': 'equipes',
-                    'coluna': 'battlepass',
-                    'antes': 'VARCHAR(10)',
-                    'depois': 'VARCHAR(50)',
-                    'status': 'OK'
-                })
-                
-            except Exception as e:
-                db.session.rollback()
-                print(f"  ⚠️ Erro (continuando): {str(e)[:100]}")
-                resultado['operacoes'].append({
-                    'tabela': 'equipes',
-                    'coluna': 'battlepass',
-                    'status': 'ERRO',
-                    'erro': str(e)[:100]
-                })
-            
-            # ===== IDADE (operadores) =====
-            try:
-                print("[3/4] Corrigindo operadores.idade...")
-                
-                # Idade também pode ter problema - aumentar para 10
-                sql = """
-                ALTER TABLE operadores 
-                ALTER COLUMN idade 
-                TYPE character varying(10)
-                """
-                db.session.execute(db.text(sql))
-                db.session.commit()
-                
-                print("  ✅ operadores.idade: ajustado para VARCHAR(10)")
-                resultado['operacoes'].append({
-                    'tabela': 'operadores',
-                    'coluna': 'idade',
-                    'status': 'OK'
-                })
-                
-            except Exception as e:
-                db.session.rollback()
-                print(f"  ⚠️ Erro (continuando): {str(e)[:100]}")
-            
-            # ===== TELEFONE (operadores) =====
-            try:
-                print("[4/4] Corrigindo operadores.telefone...")
-                
-                # Telefone pode ser maior - aumentar para 20
-                sql = """
-                ALTER TABLE operadores 
-                ALTER COLUMN telefone 
-                TYPE character varying(20)
-                """
-                db.session.execute(db.text(sql))
-                db.session.commit()
-                
-                print("  ✅ operadores.telefone: ajustado para VARCHAR(20)")
-                resultado['operacoes'].append({
-                    'tabela': 'operadores',
-                    'coluna': 'telefone',
-                    'status': 'OK'
-                })
-                
-            except Exception as e:
-                db.session.rollback()
-                print(f"  ⚠️ Erro (continuando): {str(e)[:100]}")
-            
-            total_ok = sum(1 for op in resultado['operacoes'] if op.get('status') == 'OK')
-            
-            print(f"\n{'='*60}")
-            print(f"✅ Correção concluída! {total_ok}/{len(resultado['operacoes'])} operações bem-sucedidas")
-            print(f"{'='*60}")
-            
-            resultado['success'] = total_ok > 0
-            
+        print("\n" + "="*70)
+        if resultado['sucesso']:
+            print("✅✅✅ CORREÇÃO CONCLUÍDA COM SUCESSO! ✅✅✅")
         else:
-            resultado['success'] = False
-            resultado['erro'] = 'Banco de dados não é PostgreSQL'
-            print("❌ Este fix é apenas para PostgreSQL")
+            print("⚠️ CORREÇÃO PARCIAL - Alguns erros ocorreram")
+        print("="*70 + "\n")
         
-        status_code = 200 if resultado['success'] else 400
-        return jsonify(resultado), status_code
+        return jsonify(resultado), 200 if resultado['sucesso'] else 400
         
     except Exception as e:
-        logger.error(f"[ERROR] Falha ao corrigir colunas: {str(e)}")
+        print(f"\n❌ ERRO GERAL: {str(e)}")
         import traceback
         traceback.print_exc()
+        
         return jsonify({
-            'success': False,
-            'error': str(e),
-            'error_type': type(e).__name__,
+            'sucesso': False,
+            'erro': str(e),
+            'tipo_erro': type(e).__name__,
             'timestamp': datetime.now().isoformat()
         }), 500
 
