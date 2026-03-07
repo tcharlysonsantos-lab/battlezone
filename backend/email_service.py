@@ -135,27 +135,38 @@ def _enviar_email_thread(app, destinatarios: list, assunto: str, html: str, reme
     Esta função é chamada em uma thread separada para não bloquear a requisição HTTP
     """
     try:
+        logger.info(f"[INFO] Thread iniciada para enviar email")
+        logger.info(f"   Destinatarios: {destinatarios}")
+        logger.info(f"   Assunto: {assunto[:40]}...")
+        
         if not mail:
             logger.error("[ERROR] Email service nao inicializado - nao pode enviar")
             return
         
         # Usar app context fornecido
         with app.app_context():
+            logger.info(f"[INFO] App context ativado na thread")
+            
             # Preparar mensagem
+            logger.info(f"[INFO] Preparando mensagem...")
             msg = Message(
                 subject=assunto,
                 recipients=destinatarios,
                 html=html,
                 sender=remetente
             )
+            logger.info(f"[INFO] Mensagem preparada")
             
             # ENVIAR (pode levar tempo - mas em thread separada!)
+            logger.info(f"[INFO] Enviando email via SMTP...")
             mail.send(msg)
             logger.info(f"[OK] Email enviado com sucesso (async)")
         
     except Exception as e:
         logger.error(f"[ERROR] Falha ao enviar email (async): {str(e)}")
         logger.error(f"        Tipo: {type(e).__name__}")
+        import traceback
+        logger.error(f"        Traceback: {traceback.format_exc()}")
 
 
 def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = None) -> bool:
