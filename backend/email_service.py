@@ -1,43 +1,43 @@
 """
-Email Service - Envia notificações via email
+Email Service - Envia notificações via SendGrid API
+Substituiu Flask-Mail por SendGrid para contornar limitações de SMTP em Railway
 """
 
 from flask import url_for, current_app
 import logging
 import os
 import threading
-import smtplib
+import sys
+import time
 from functools import wraps
 
 logger = logging.getLogger(__name__)
 
-# Tentar importar Flask-Mail, mas fazer fallback se não disponível
+# Importar SendGrid
 try:
-    from flask_mail import Mail, Message
-    HAS_FLASK_MAIL = True
+    from sendgrid import SendGridAPIClient
+    from sendgrid.helpers.mail import Mail, Email, Content
+    HAS_SENDGRID = True
 except ImportError:
-    HAS_FLASK_MAIL = False
-    logger.warning("[WARNING] Flask-Mail nao instalado. Emails nao serao enviados. Instale com: pip install Flask-Mail")
-    Mail = None
-    Message = None
+    HAS_SENDGRID = False
+    logger.warning("[WARNING] SendGrid nao instalado. Emails nao serao enviados. Instale com: pip install sendgrid")
+    SendGridAPIClient = None
 
-mail = None
+sg_client = None
 MAIL_INITIALIZED = False
 
 def _validar_configuracao_email(app):
     """
-    Valida se as configurações de email estão corretas
+    Valida se as configurações de email estão corretas para SendGrid
     
     Returns:
         (is_valid: bool, message: str)
     """
-    mail_server = app.config.get('MAIL_SERVER', '').strip()
+    sendgrid_api_key = app.config.get('SENDGRID_API_KEY', '').strip()
     mail_username = app.config.get('MAIL_USERNAME', '').strip()
-    mail_password = app.config.get('MAIL_PASSWORD', '').strip()
     
-    # Verificar se variáveis de ambiente estão vazias ou como placeholder
-    if not mail_server or mail_server == 'localhost':
-        return False, "MAIL_SERVER não configurado"
+    if not sendgrid_api_key or sendgrid_api_key == 'sua-chave-sendgrid-aqui':
+        return False, "SENDGRID_API_KEY não configurado"
     
     if not mail_username or mail_username == 'seu-email@gmail.com' or mail_username == 'noreply@battlezone.local':
         return False, f"MAIL_USERNAME inválido ou não configurado: '{mail_username}'"
@@ -46,32 +46,22 @@ def _validar_configuracao_email(app):
     if '@' not in mail_username:
         return False, f"MAIL_USERNAME invalido - nao eh um email: '{mail_username}' (falta @ no email!)"
     
-    # Validar formato basico de email
-    if not mail_username.endswith('@gmail.com') and not mail_username.endswith('@outlook.com') and '@' in mail_username:
-        logger.warning(f"[WARNING] MAIL_USERNAME nao eh Gmail/Outlook, pode nao funcionar: '{mail_username}'")
-    
-    if not mail_password or mail_password == 'sua-app-password':
-        return False, "MAIL_PASSWORD não configurado"
-    
     return True, "✅ Configuração de email válida"
 
 
 def init_mail(app):
     """
-    Inicializa o servico de email com a aplicacao Flask
+    Inicializa o servico de email SendGrid com a aplicacao Flask
     
     [INFO] IMPORTANTE: Variaveis de ambiente devem estar configuradas:
-       - MAIL_SERVER (ex: smtp.gmail.com)
-       - MAIL_PORT (ex: 587)
-       - MAIL_USE_TLS (ex: true)
-       - MAIL_USERNAME (ex: seu-email@gmail.com)
-       - MAIL_PASSWORD (ex: senha-de-app-16-caracteres)
+       - SENDGRID_API_KEY (chave de API do SendGrid)
+       - MAIL_USERNAME (email do remetente verificado no SendGrid)
     """
-    global mail, MAIL_INITIALIZED
+    global sg_client, MAIL_INITIALIZED
     
-    if not HAS_FLASK_MAIL:
-        logger.error("[ERROR] Flask-Mail nao instalado!")
-        logger.error("   Instale com: pip install Flask-Mail")
+    if not HAS_SENDGRID:
+        logger.error("[ERROR] SendGrid nao instalado!")
+        logger.error("   Instale com: pip install sendgrid")
         return
     
     # Validar configuracao
@@ -80,27 +70,25 @@ def init_mail(app):
     if not is_valid:
         logger.error(f"[ERROR] Configuracao de email invalida: {message}")
         logger.error("   [WARNING] Desabilitar emails ate que as variaveis de ambiente sejam configuradas.")
-        logger.error("   [INFO] Copie RAILWAY_DEPLOYMENT.env para Railway Settings > Environment")
+        logger.error("   [INFO] Configure SENDGRID_API_KEY e MAIL_USERNAME em Railway Settings > Environment")
         return
     
     try:
-        mail = Mail(app)
+        sendgrid_api_key = app.config.get('SENDGRID_API_KEY')
+        sg_client = SendGridAPIClient(sendgrid_api_key)
         MAIL_INITIALIZED = True
         
-        # Log de sucesso com informacoes (sem expor senha)
-        logger.info("[OK] Email service initialized successfully")
-        logger.info(f"   MAIL_SERVER: {app.config.get('MAIL_SERVER')}")
-        logger.info(f"   MAIL_USERNAME: {app.config.get('MAIL_USERNAME')}")
-        logger.info(f"   MAIL_PORT: {app.config.get('MAIL_PORT')}")
-        logger.info(f"   MAIL_USE_TLS: {app.config.get('MAIL_USE_TLS')}")
+        # Log de sucesso com informacoes (sem expor chave)
+        logger.info("[OK] Email service (SendGrid) initialized successfully")
+        logger.info(f"   MAIL_USERNAME (From): {app.config.get('MAIL_USERNAME')}")
+        logger.info(f"   SENDGRID_API_KEY: {'***' + sendgrid_api_key[-6:]}")
         
     except Exception as e:
-        logger.error(f"[ERROR] Falha ao inicializar Flask-Mail: {str(e)}")
+        logger.error(f"[ERROR] Falha ao inicializar SendGrid: {str(e)}")
         logger.error(f"   Tipo de erro: {type(e).__name__}")
         logger.error("   Possiveis causas:")
-        logger.error("   - Variaveis de ambiente mal formatadas")
-        logger.error("   - Servidor SMTP inacessivel")
-        logger.error("   - Firewall/Network bloqueando SMTP")
+        logger.error("   - SENDGRID_API_KEY inválida ou expirada")
+        logger.error("   - MAIL_USERNAME não verificado no SendGrid")
 
 
 def verificar_saude_email(app=None):
@@ -116,43 +104,39 @@ def verificar_saude_email(app=None):
         except RuntimeError:
             return False, "Sem app context"
     
-    if not HAS_FLASK_MAIL:
-        return False, "Flask-Mail não instalado"
+    if not HAS_SENDGRID:
+        return False, "SendGrid não instalado"
     
-    if not mail or not MAIL_INITIALIZED:
+    if not sg_client or not MAIL_INITIALIZED:
         return False, "Email service não inicializado"
     
     is_valid, message = _validar_configuracao_email(app)
     if not is_valid:
         return False, message
     
-    return True, "Email service operacional"
+    return True, "Email service (SendGrid) operacional"
 
 
 def _enviar_email_thread(app, destinatarios: list, assunto: str, html: str, remetente: str = None):
     """
-    Função interna para enviar email em thread separada (NÃO BLOQUEIA)
+    Função interna para enviar email via SendGrid em thread separada (NÃO BLOQUEIA)
     
     Esta função é chamada em uma thread separada para não bloquear a requisição HTTP
     Com retry automático (até 3 tentativas)
     """
-    import sys
-    import time
-    import socket
-    
     max_tentativas = 3
     tentativa = 0
     
     while tentativa < max_tentativas:
         tentativa += 1
-        sys.stderr.write(f"[STDERR] Tentativa {tentativa}/{max_tentativas} de enviar email\n")
+        sys.stderr.write(f"[STDERR] Tentativa {tentativa}/{max_tentativas} de enviar email via SendGrid\n")
         sys.stderr.flush()
         logger.info(f"[INFO] Tentativa {tentativa} de enviar email para {destinatarios}")
         
         try:
-            if not mail:
-                logger.error("[ERROR] Email service nao inicializado")
-                sys.stderr.write(f"[STDERR] Mail service não inicializado\n")
+            if not sg_client:
+                logger.error("[ERROR] SendGrid client nao inicializado")
+                sys.stderr.write(f"[STDERR] SendGrid client não inicializado\n")
                 sys.stderr.flush()
                 return
             
@@ -160,34 +144,44 @@ def _enviar_email_thread(app, destinatarios: list, assunto: str, html: str, reme
             with app.app_context():
                 logger.info(f"[INFO] App context ativado")
                 
-                # Preparar mensagem
-                msg = Message(
-                    subject=assunto,
-                    recipients=destinatarios,
-                    html=html,
-                    sender=remetente
-                )
-                logger.info(f"[INFO] Mensagem preparada")
-                sys.stderr.write(f"[STDERR] Tentando enviar via SMTP...\n")
+                # Preparar remetente
+                if not remetente or remetente == 'noreply@battlezone.local':
+                    remetente = app.config.get('MAIL_USERNAME', 'noreply@battlezone.local')
+                
+                logger.info(f"[INFO] Preparando email via SendGrid")
+                sys.stderr.write(f"[STDERR] Preparando email para envio via SendGrid...\n")
                 sys.stderr.flush()
                 
-                # ENVIAR COM TIMEOUT
                 try:
-                    # Configurar timeout de socket
-                    socket.setdefaulttimeout(app.config.get('MAIL_TIMEOUT', 10))
+                    # Criar mensagem para SendGrid
+                    message = Mail(
+                        from_email=Email(remetente),
+                        to_emails=destinatarios,  # SendGrid aceita lista de emails
+                        subject=assunto,
+                        html_content=Content("text/html", html)
+                    )
                     
-                    mail.send(msg)
-                    
-                    logger.info(f"[OK] Email enviado com sucesso na tentativa {tentativa}")
-                    sys.stderr.write(f"[STDERR] Email enviado com sucesso!\n")
+                    logger.info(f"[INFO] Mensagem preparada para SendGrid")
+                    sys.stderr.write(f"[STDERR] Enviando via API SendGrid...\n")
                     sys.stderr.flush()
-                    return  # Sucesso!
                     
-                except socket.timeout:
-                    sys.stderr.write(f"[STDERR] TIMEOUT na tentativa {tentativa} - tentando novamente...\n")
-                    sys.stderr.flush()
-                    logger.warning(f"[WARNING] Timeout na tentativa {tentativa}, tentando novamente...")
-                    time.sleep(2)  # Aguardar antes de retry
+                    # Enviar email via API SendGrid (nenhum timeout de socket necessário)
+                    response = sg_client.send(message)
+                    
+                    # Verificar response status (200-299 = sucesso)
+                    if 200 <= response.status_code <= 299:
+                        logger.info(f"[OK] Email enviado com sucesso na tentativa {tentativa}")
+                        logger.info(f"   Status: {response.status_code}")
+                        sys.stderr.write(f"[STDERR] Email enviado com sucesso! (Status: {response.status_code})\n")
+                        sys.stderr.flush()
+                        return  # Sucesso!
+                    else:
+                        # Erro da API
+                        error_msg = f"SendGrid API retornou status {response.status_code}"
+                        logger.warning(f"[WARNING] {error_msg} na tentativa {tentativa}")
+                        sys.stderr.write(f"[STDERR] Erro na tentativa {tentativa}: {error_msg}\n")
+                        sys.stderr.flush()
+                        time.sleep(2)  # Aguardar antes de retry
                     
                 except Exception as e:
                     sys.stderr.write(f"[STDERR] Erro na tentativa {tentativa}: {type(e).__name__}: {str(e)}\n")
@@ -209,7 +203,7 @@ def _enviar_email_thread(app, destinatarios: list, assunto: str, html: str, reme
 
 def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = None) -> bool:
     """
-    Envia um email ASSINCRONAMENTE (não bloqueia a requisição)
+    Envia um email ASSINCRONAMENTE via SendGrid (não bloqueia a requisição)
     
     Args:
         destinatarios: Lista de emails ou string com email único
@@ -223,13 +217,13 @@ def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = 
     
     # ===== VALIDACAO PRE-ENVIO =====
     
-    if not HAS_FLASK_MAIL:
-        logger.error("[ERROR] Flask-Mail nao disponivel - email nao pode ser enviado")
+    if not HAS_SENDGRID:
+        logger.error("[ERROR] SendGrid nao disponivel - email nao pode ser enviado")
         return False
     
-    if not mail:
+    if not sg_client:
         logger.error("[ERROR] Email service nao inicializado - email nao pode ser enviado")
-        logger.error("   [INFO] Verifique as variaveis de ambiente MAIL_* em RAILWAY_DEPLOYMENT.env")
+        logger.error("   [INFO] Verifique as variaveis de ambiente SENDGRID_API_KEY e MAIL_USERNAME")
         return False
     
     # Validar destinatarios
@@ -291,7 +285,7 @@ def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = 
         )
         thread.start()
         
-        logger.info(f"[OK] Email agendado para envio (async)")
+        logger.info(f"[OK] Email agendado para envio (async) via SendGrid")
         logger.info(f"     Para: {len(destinatarios)} destinatário(s)")
         logger.info(f"     Assunto: {assunto[:50]}...")
         
@@ -308,27 +302,15 @@ def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = 
         # Tentar identificar tipo de erro
         error_str = str(e).lower()
         
-        if 'connection' in error_str or 'timeout' in error_str:
-            logger.error("   💡 Problema de conexão SMTP - verifique:")
-            logger.error("     - MAIL_SERVER está correto?")
-            logger.error("     - MAIL_PORT está correto?")
-            logger.error("     - Firewall está bloqueando SMTP?")
+        if 'api' in error_str or '401' in error_str or '403' in error_str:
+            logger.error("   Erro de autenticação - verifique:")
+            logger.error("     - SENDGRID_API_KEY está correto?")
+            logger.error("     - Chave não expirou?")
         
-        elif 'auth' in error_str or 'credential' in error_str or 'unauthorized' in error_str:
-            logger.error("   💡 Erro de autenticação - verifique:")
-            logger.error("     - MAIL_USERNAME está correto?")
-            logger.error("     - MAIL_PASSWORD está correto?")
-            logger.error("     - Está usando 'Senha de Aplicativo' do Gmail (não a senha da conta)?")
-        
-        elif 'smtpauthenticationerror' in error_str:
-            logger.error("   💡 Autenticação SMTP falhou")
-            logger.error("     - Para Gmail: Use 'Senha de Aplicativo' em https://myaccount.google.com/apppasswords")
-            logger.error("     - Verifique se 2FA está ativado na conta")
-        
-        elif 'tls' in error_str.lower():
-            logger.error("   💡 Erro TLS/SSL - verifique:")
-            logger.error("     - MAIL_USE_TLS está configurado como true?")
-            logger.error("     - Certificados SSL estão válidos?")
+        elif 'email' in error_str or 'sender' in error_str:
+            logger.error("   Erro com email - verifique:")
+            logger.error("     - MAIL_USERNAME (From email) não verificado no SendGrid?")
+            logger.error("     - Email está bem formatado?")
         
         return False
 
@@ -343,8 +325,8 @@ def enviar_notificacao_solicitacao(solicitacao, app):
     """
     from backend.models import User
     
-    if not mail:
-        logger.warning("⚠️ Email service not initialized, cannot send notification")
+    if not sg_client:
+        logger.warning("Email service not initialized, cannot send notification")
         return False
     
     try:
@@ -487,8 +469,8 @@ def enviar_confirmacao_solicitacao(usuario_email: str, nome_usuario: str, app):
         nome_usuario: Nome do solicitante
         app: Aplicação Flask
     """
-    if not mail:
-        logger.warning("⚠️ Email service not initialized")
+    if not sg_client:
+        logger.warning("Email service not initialized")
         return False
     
     try:
@@ -574,7 +556,7 @@ def enviar_email_reset_senha(usuario_email: str, nome_usuario: str, reset_link: 
     """
     # ===== VALIDACAO PRE-ENVIO =====
     
-    if not mail:
+    if not sg_client:
         logger.error("[ERROR] Email service nao inicializado - nao pode enviar reset de senha")
         return False
     

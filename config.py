@@ -97,16 +97,10 @@ class Config:
     UPLOAD_FOLDER = 'static/uploads'
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_UPLOAD_SIZE', 16 * 1024 * 1024))  # 16MB padrão
     
-    # Email
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'localhost')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', 25))
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    # Timeout para conexão SMTP (importante em Railway!)
-    MAIL_TIMEOUT = 10  # segundos
-    # Configurações adicionais para Flask-Mail
-    MAIL_MAX_EMAILS = 1  # Enviar 1 por vez
+    # Email - SendGrid (Transactional Email Service)
+    # SENDGRID é usado em vez de SMTP para contornar limitações de firewall em Railway
+    SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')  # Obter de variáveis de ambiente
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')  # Email verificado no SendGrid
     
     # Configuração de Health Check (verifica conexão a cada 30 segundos)
     DB_HEALTH_CHECK_INTERVAL = 30  # segundos
