@@ -117,9 +117,14 @@
                                             {% endif %}
                                         {% else %}
                                             {% if é_admin_gerente %}
-                                            <button class="btn btn-sm btn-laranja w-100" onclick="sortearOperador({{ bp.id }}, {{ semana }})">
-                                                <i class="fas fa-dice"></i> Sortear
-                                            </button>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-laranja flex-grow-1" onclick="sortearOperador({{ bp.id }}, {{ semana }})">
+                                                    <i class="fas fa-dice"></i> Aleatório
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-laranja" onclick="abrirSorteioManual({{ bp.id }}, {{ semana }}, '{{ bp.nome }}')">
+                                                    <i class="fas fa-user-check"></i> Manual
+                                                </button>
+                                            </div>
                                             {% else %}
                                             <span class="text-muted">Em breve</span>
                                             {% endif %}
@@ -239,6 +244,17 @@
         background-color: var(--laranja-escuro);
         color: white;
     }
+    
+    .btn-outline-laranja {
+        color: var(--laranja);
+        border: 2px solid var(--laranja);
+        background-color: transparent;
+    }
+    
+    .btn-outline-laranja:hover {
+        background-color: var(--laranja);
+        color: white;
+    }
 </style>
 
 <!-- Scripts -->
@@ -327,6 +343,92 @@
             })
             .catch(err => alert('Erro: ' + err.message));
     }
+    
+    // ==================== SORTEIO MANUAL DE OPERADORES ====================
+    function abrirSorteioManual(battlepassId, semana, nomeOperador) {
+        const modal = new bootstrap.Modal(document.getElementById('modalSorteioManual'));
+        document.getElementById('inputBattlepassIdManual').value = battlepassId;
+        document.getElementById('inputSemanaManual').value = semana;
+        document.getElementById('inputNomeOperadorManual').value = '';
+        document.getElementById('labelOperadorManual').textContent = nomeOperador;
+        modal.show();
+    }
+    
+    function confirmarSorteioManual() {
+        const battlepassId = document.getElementById('inputBattlepassIdManual').value;
+        const semana = document.getElementById('inputSemanaManual').value;
+        const nomeOperador = document.getElementById('inputNomeOperadorManual').value.trim();
+        
+        if (!nomeOperador) {
+            alert('❌ Por favor, digite o nome do operador');
+            return;
+        }
+        
+        console.log('[SORTEIO] Sorteado manualmente:', { battlepassId, semana, nomeOperador });
+        
+        fetch(`/api/sortear-operador-manual`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                battlepass_id: parseInt(battlepassId),
+                semana: parseInt(semana),
+                mes: {{ mes }},
+                ano: {{ ano }},
+                warname: nomeOperador
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Operador sorteado manualmente com sucesso!');
+                bootstrap.Modal.getInstance(document.getElementById('modalSorteioManual')).hide();
+                location.reload();
+            } else {
+                alert('❌ Erro ao sortear: ' + data.error);
+            }
+        })
+        .catch(err => {
+            console.error('[SORTEIO] Erro:', err);
+            alert('❌ Erro ao sortear: ' + err.message);
+        });
+    }
 </script>
+
+<!-- MODAL: SORTEIO MANUAL DE OPERADOR -->
+<div class="modal fade" id="modalSorteioManual" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark border-laranja">
+            <div class="modal-header border-laranja">
+                <h5 class="modal-title text-laranja">
+                    <i class="fas fa-user-ninja me-2"></i>Sortear Operador Manualmente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-laranja">Battlepass:</label>
+                    <p id="labelOperadorManual" class="text-muted mb-0">-</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Digite o Warname do Operador:</label>
+                    <input type="text" class="form-control" id="inputNomeOperadorManual" 
+                           placeholder="Ex: ShadowOps, EliteNinja...">
+                    <small class="text-muted">Digite o warname exato do operador</small>
+                </div>
+                <input type="hidden" id="inputBattlepassIdManual">
+                <input type="hidden" id="inputSemanaManual">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-laranja" onclick="confirmarSorteioManual()">
+                    <i class="fas fa-check me-2"></i>Confirmar Sorteio
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

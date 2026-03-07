@@ -3198,7 +3198,7 @@ def sorteios():
              'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
     mes_nome = meses[mes] if 1 <= mes <= 12 else 'Inválido'
     
-    return render_template('eventos.html',
+    return render_template('sorteios.html',
                          semana=semana,
                          mes=mes,
                          mes_nome=mes_nome,
@@ -3587,6 +3587,91 @@ def api_sortear_operador():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/sortear-operador-manual', methods=['POST'])
+@login_required
+@admin_required
+def api_sortear_operador_manual():
+    """Sorteia um operador MANUALMENTE (escolhido pelo admin)"""
+    from backend.models import Battlepass, Sorteio, Operador
+    
+    data = request.get_json()
+    battlepass_id = data.get('battlepass_id')
+    semana = data.get('semana')
+    mes = data.get('mes')
+    ano = data.get('ano')
+    warname = data.get('warname', '').strip()
+    
+    try:
+        # Validar parâmetros
+        if not all([battlepass_id, semana, mes, ano, warname]):
+            return jsonify({'success': False, 'error': 'Parâmetros incompletos'}), 400
+        
+        battlepass = Battlepass.query.get_or_404(battlepass_id)
+        
+        # Mapear tipo de battlepass
+        tipo_map = {
+            'operador_basico': 'OPERADOR',
+            'operador_elite': 'ELITE_CAVEIRA'
+        }
+        
+        tipo_operador = tipo_map.get(battlepass.tipo)
+        if not tipo_operador:
+            return jsonify({'success': False, 'error': 'Tipo de battlepass inválido'}), 400
+        
+        # Buscar operador por warname
+        operador = Operador.query.filter(
+            Operador.warname.ilike(warname),
+            Operador.battlepass == tipo_operador
+        ).first()
+        
+        if not operador:
+            return jsonify({
+                'success': False,
+                'error': f'Operador "{warname}" com Battlepass {tipo_operador} não encontrado'
+            }), 400
+        
+        # Verificar se já existe sorteio para esta semana
+        sorteio_existente = Sorteio.query.filter_by(
+            battlepass_id=battlepass_id,
+            semana=semana,
+            mes=mes,
+            ano=ano,
+            deletado=False
+        ).first()
+        
+        if sorteio_existente:
+            db.session.delete(sorteio_existente)
+        
+        # Criar novo sorteio manual
+        sorteio = Sorteio(
+            battlepass_id=battlepass_id,
+            mes=mes,
+            ano=ano,
+            semana=semana,
+            operador_id=operador.id,
+            sorteado_por=current_user.id
+        )
+        
+        db.session.add(sorteio)
+        db.session.commit()
+        
+        app.logger.info(f"[SORTEIO] Operador {operador.warname} sorteado MANUALMENTE para {battlepass.nome} (Semana {semana})")
+        
+        return jsonify({
+            'success': True,
+            'sorteado': {
+                'id': operador.id,
+                'nome': operador.nome,
+                'warname': operador.warname
+            }
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'[SORTEIO] Erro ao sortear operador manualmente: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/sortear-equipe', methods=['POST'])
 @login_required
 @admin_required
@@ -3777,9 +3862,12 @@ def api_criar_evento():
     from backend.models import Evento, EventoBrinde
     from datetime import datetime as dt
     import json
+    import base64
     
     try:
         data = request.form.to_dict()
+        
+        app.logger.info(f"[EVENTO] Iniciando criação. Dados recebidos: nome={data.get('nome')}, dados_recebidos={list(data.keys())}")
         
         # Validar campos obrigatórios
         if not all([data.get('nome'), data.get('data_evento'), data.get('campo')]):
@@ -3812,51 +3900,84 @@ def api_criar_evento():
                 'error': f'Formato de data inválido: "{data_evento_str}". Esperado: YYYY-MM-DD HH:MM'
             }), 400
         
-        # Processar fotos
+        # Processar fotos com segurança
         fotos = []
-        if 'fotos' in request.files:
-            files = request.files.getlist('fotos')
-            for file in files[:5]:  # Máximo 5 fotos
-                if file and file.filename:
-                    import base64
-                    fotos.append(base64.b64encode(file.read()).decode())
+        try:
+            if 'fotos' in request.files:
+                files = request.files.getlist('fotos')
+                app.logger.info(f"[EVENTO] Arquivos recebidos: {len(files)}")
+                
+                for idx, file in enumerate(files[:5]):  # Máximo 5 fotos
+                    if file and file.filename:
+                        try:
+                            # Validar que é uma imagem
+                            if not file.content_type or 'image' not in file.content_type:
+                                app.logger.warning(f"[EVENTO] Arquivo {idx} não é imagem: {file.content_type}")
+                                continue
+                            
+                            file_data = file.read()
+                            if len(file_data) > 5 * 1024 * 1024:  # Máximo 5MB por foto
+                                app.logger.warning(f"[EVENTO] Arquivo {idx} muito grande: {len(file_data)} bytes")
+                                continue
+                            
+                            encoded = base64.b64encode(file_data).decode('utf-8')
+                            fotos.append(encoded)
+                            app.logger.info(f"[EVENTO] Foto {idx} codificada: {len(encoded)} caracteres")
+                        except Exception as foto_err:
+                            app.logger.error(f"[EVENTO] Erro ao processar foto {idx}: {str(foto_err)}")
+                            continue
+        except Exception as files_err:
+            app.logger.error(f"[EVENTO] Erro ao processar arquivos: {str(files_err)}")
+            # Não falhar por causa de fotos
         
         # Criar evento
-        evento = Evento(
-            nome=data.get('nome'),
-            descricao=data.get('descricao', ''),
-            data_evento=data_evento,
-            campo=data.get('campo', 'GERAL'),
-            valor_pessoa=float(data.get('valor_pessoa', 0)) if data.get('valor_pessoa') else None,
-            valor_individual=float(data.get('valor_individual', 0)) if data.get('valor_individual') else None,
-            fotos=json.dumps(fotos) if fotos else None,
-            criado_por=current_user.id,
-            ativo=True
-        )
+        try:
+            evento = Evento(
+                nome=data.get('nome').strip(),
+                descricao=data.get('descricao', '').strip(),
+                data_evento=data_evento,
+                campo=data.get('campo', 'GERAL').strip(),
+                valor_pessoa=float(data.get('valor_pessoa', 0)) if data.get('valor_pessoa') else None,
+                valor_individual=float(data.get('valor_individual', 0)) if data.get('valor_individual') else None,
+                fotos=json.dumps(fotos) if fotos else None,
+                criado_por=current_user.id,
+                ativo=True
+            )
+            
+            app.logger.info(f"[EVENTO] Objeto Evento criado na memória")
+            
+            db.session.add(evento)
+            db.session.flush()
+            
+            app.logger.info(f"[EVENTO] Evento inserido no DB, ID: {evento.id}")
+            
+            # Adicionar brindes
+            brindes = request.form.getlist('brindes')
+            app.logger.info(f"[EVENTO] Processando {len(brindes)} brindes")
+            
+            for idx, brinde_desc in enumerate(brindes):
+                if brinde_desc.strip():
+                    brinde = EventoBrinde(
+                        evento_id=evento.id,
+                        descricao=brinde_desc.strip(),
+                        ordem=idx
+                    )
+                    db.session.add(brinde)
+            
+            db.session.commit()
+            
+            app.logger.info(f"[EVENTO] Evento criado com sucesso: {evento.nome} (ID: {evento.id})")
+            
+            return jsonify({
+                'success': True,
+                'evento_id': evento.id,
+                'message': 'Evento criado com sucesso!'
+            }), 201
         
-        db.session.add(evento)
-        db.session.flush()
-        
-        # Adicionar brindes
-        brindes = request.form.getlist('brindes')
-        for idx, brinde_desc in enumerate(brindes):
-            if brinde_desc.strip():
-                brinde = EventoBrinde(
-                    evento_id=evento.id,
-                    descricao=brinde_desc,
-                    ordem=idx
-                )
-                db.session.add(brinde)
-        
-        db.session.commit()
-        
-        app.logger.info(f"[EVENTO] Evento criado: {evento.nome} (ID: {evento.id})")
-        
-        return jsonify({
-            'success': True,
-            'evento_id': evento.id,
-            'message': 'Evento criado com sucesso!'
-        }), 201
+        except Exception as evento_err:
+            db.session.rollback()
+            app.logger.error(f"[EVENTO] Erro ao criar objeto Evento: {str(evento_err)}", exc_info=True)
+            return jsonify({'success': False, 'error': f'Erro ao criar evento: {str(evento_err)}'}), 400
     
     except ValueError as ve:
         db.session.rollback()
@@ -3865,7 +3986,7 @@ def api_criar_evento():
     
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f'[EVENTO] Erro ao criar evento: {str(e)}', exc_info=True)
+        app.logger.error(f'[EVENTO] Erro ao criar evento (externo): {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': f'Erro: {str(e)}'}), 500
 
 
