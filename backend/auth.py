@@ -321,7 +321,7 @@ def forgot_password():
         
         # ===== BUSCAR USUÁRIO =====
         
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter(User.email.ilike(email)).first()
         
         if not user:
             # 🔐 SEGURANÇA: Mostrar que não existe, mas de forma clara
@@ -549,8 +549,9 @@ def validate_email_for_reset():
         logger.info(f"[INFO] Modelo User carregado: {User}")
         
         # Executar query com debugging detalhado
-        logger.info(f"[INFO] Executando query: User.query.filter_by(email='{email}').first()")
-        user = User.query.filter_by(email=email).first()
+        # Usar ilike para case-insensitive search
+        logger.info(f"[INFO] Executando query: User.query.filter(User.email.ilike('{email}')).first()")
+        user = User.query.filter(User.email.ilike(email)).first()
         
         logger.info(f"[INFO] Resultado da query: {user}")
         
