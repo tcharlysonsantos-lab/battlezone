@@ -135,18 +135,20 @@ def _enviar_email_thread(app, destinatarios: list, assunto: str, html: str, reme
     
     Esta função é chamada em uma thread separada para não bloquear a requisição HTTP
     """
-    import signal
-    
-    def timeout_handler(signum, frame):
-        raise TimeoutError("Envio de email ultrapassou o tempo limite")
+    import sys
     
     try:
         logger.info(f"[INFO] Thread iniciada para enviar email")
+        sys.stderr.write(f"[STDERR] Thread iniciada\n")
+        sys.stderr.flush()
+        
         logger.info(f"   Destinatarios: {destinatarios}")
         logger.info(f"   Assunto: {assunto[:40]}...")
         
         if not mail:
             logger.error("[ERROR] Email service nao inicializado - nao pode enviar")
+            sys.stderr.write(f"[STDERR] Mail não inicializado\n")
+            sys.stderr.flush()
             return
         
         # Usar app context fornecido
@@ -162,32 +164,60 @@ def _enviar_email_thread(app, destinatarios: list, assunto: str, html: str, reme
                 sender=remetente
             )
             logger.info(f"[INFO] Mensagem preparada")
+            sys.stderr.write(f"[STDERR] Mensagem preparada, tentando enviar...\n")
+            sys.stderr.flush()
             
             # ENVIAR (pode levar tempo - mas em thread separada!)
             logger.info(f"[INFO] Enviando email via SMTP...")
             logger.info(f"[INFO] Conectando ao SMTP: {app.config.get('MAIL_SERVER')}:{app.config.get('MAIL_PORT')}")
+            sys.stderr.write(f"[STDERR] Iniciando mail.send() para {destinatarios}\n")
+            sys.stderr.flush()
             
             try:
-                # Tentar enviar com timeout de 30 segundos
+                # Tentar enviar com logging
+                logger.debug(f"[DEBUG] Chamando mail.send()...")
                 mail.send(msg)
                 logger.info(f"[OK] Email enviado com sucesso (async)")
-            except TimeoutError as te:
-                logger.error(f"[ERROR] Timeout ao enviar email: {str(te)}")
-                logger.error(f"   Possível causa: Conexão SMTP lenta ou bloqueada")
+                sys.stderr.write(f"[STDERR] Email enviado com sucesso!\n")
+                sys.stderr.flush()
+                
             except smtplib.SMTPAuthenticationError as ae:
+                sys.stderr.write(f"[STDERR] ERRO AUTENTICACAO: {str(ae)}\n")
+                sys.stderr.flush()
                 logger.error(f"[ERROR] Autenticacao SMTP falhou: {str(ae)}")
                 logger.error(f"   Verificar: MAIL_USERNAME e MAIL_PASSWORD corretos?")
+                
             except smtplib.SMTPException as se:
+                sys.stderr.write(f"[STDERR] ERRO SMTP: {str(se)}\n")
+                sys.stderr.flush()
                 logger.error(f"[ERROR] Erro SMTP: {str(se)}")
+                
             except ConnectionRefusedError as ce:
+                sys.stderr.write(f"[STDERR] ERRO CONEXAO: {str(ce)}\n")
+                sys.stderr.flush()
                 logger.error(f"[ERROR] Conexao recusada: {str(ce)}")
                 logger.error(f"   Verificar: MAIL_SERVER e MAIL_PORT corretos?")
+                
+            except TimeoutError as te:
+                sys.stderr.write(f"[STDERR] TIMEOUT: {str(te)}\n")
+                sys.stderr.flush()
+                logger.error(f"[ERROR] Timeout ao enviar email: {str(te)}")
+                logger.error(f"   Possível causa: Conexão SMTP lenta ou bloqueada")
+                
+            except Exception as e:
+                sys.stderr.write(f"[STDERR] ERRO DESCONHECIDO: {type(e).__name__}: {str(e)}\n")
+                sys.stderr.flush()
+                logger.error(f"[ERROR] Erro ao enviar email: {type(e).__name__}: {str(e)}")
         
     except Exception as e:
+        sys.stderr.write(f"[STDERR] ERRO GERAL: {type(e).__name__}: {str(e)}\n")
+        sys.stderr.flush()
         logger.error(f"[ERROR] Falha ao enviar email (async): {str(e)}")
         logger.error(f"        Tipo: {type(e).__name__}")
         import traceback
         logger.error(f"        Traceback: {traceback.format_exc()}")
+        sys.stderr.write(f"[STDERR] Traceback: {traceback.format_exc()}\n")
+        sys.stderr.flush()
 
 
 def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = None) -> bool:
