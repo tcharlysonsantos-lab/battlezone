@@ -4516,6 +4516,63 @@ def criar_partidas_teste():
         return jsonify({'error': str(e), 'type': type(e).__name__}), 500
 
 
+@app.route('/setup/criar-tabelas-eventos/<secret_key>')
+def criar_tabelas_eventos(secret_key):
+    """Cria as tabelas de Evento e EventoBrinde - use SECRET_KEY para segurança"""
+    import os
+    
+    # Segurança: verificar secret key correta
+    if secret_key != os.environ.get('SECRET_KEY', ''):
+        return jsonify({'error': 'Invalid secret key'}), 403
+    
+    try:
+        from backend.models import Evento, EventoBrinde
+        
+        print("[INFO] 📊 Criando tabelas de Evento e EventoBrinde...")
+        
+        # Criar as tabelas
+        db.create_all()
+        
+        # Verificar se as tabelas existem
+        inspector = db.inspect(db.engine)
+        tabelas_existentes = inspector.get_table_names()
+        
+        resultado = {
+            'success': True,
+            'message': 'Tabelas criadas com sucesso!',
+            'timestamp': datetime.now().isoformat(),
+            'tabelas': {
+                'eventos': 'eventos' in tabelas_existentes,
+                'evento_brindes': 'evento_brindes' in tabelas_existentes
+            }
+        }
+        
+        if 'eventos' in tabelas_existentes:
+            colunas = [col['name'] for col in inspector.get_columns('eventos')]
+            resultado['tabelas']['eventos_colunas'] = colunas
+            print("✅ Tabela 'eventos' criada com sucesso!")
+        else:
+            print("❌ Falha ao criar tabela 'eventos'")
+            resultado['success'] = False
+        
+        if 'evento_brindes' in tabelas_existentes:
+            print("✅ Tabela 'evento_brindes' criada com sucesso!")
+        else:
+            print("❌ Falha ao criar tabela 'evento_brindes'")
+            resultado['success'] = False
+        
+        status_code = 200 if resultado['success'] else 400
+        return jsonify(resultado), status_code
+        
+    except Exception as e:
+        logger.error(f"[ERROR] Falha ao criar tabelas: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
 if __name__ == '__main__':
     # Em desenvolvimento, apenas rodar
     app.run(debug=False, host='0.0.0.0', port=5000)
