@@ -93,8 +93,15 @@ class Config:
     # Em produção, fazer força permanência de sessão para não perder durante navegação
     PERMANENT_SESSION_TIMEOUT_SECONDS = 30 * 60  # 30 minutos
     
-    # Upload
-    UPLOAD_FOLDER = 'static/uploads'
+    # Upload - Corrigido para usar frontend/static/uploads
+    # Em produção (Railway), usar caminho ABSOLUTO para garantir acesso correto
+    if os.environ.get('FLASK_ENV') == 'production' or not os.environ.get('DEBUG'):
+        # Produção: caminho absoluto
+        UPLOAD_FOLDER = os.path.abspath(os.path.join(BASE_DIR, 'frontend/static/uploads'))
+    else:
+        # Desenvolvimento: caminho relativo
+        UPLOAD_FOLDER = os.path.join(BASE_DIR, 'frontend/static/uploads')
+    
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_UPLOAD_SIZE', 16 * 1024 * 1024))  # 16MB padrão
     
     # Email - SendGrid (Transactional Email Service)
