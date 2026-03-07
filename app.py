@@ -3028,30 +3028,28 @@ def sorteios():
     """Página de Sorteios - Battlepass (RENOMEADO PARA EVENTOS)"""
     from backend.models import Battlepass, Sorteio, Evento
     from datetime import datetime as dt, timedelta
+    import math
     
     # Parâmetros
     semana = request.args.get('semana', type=int, default=None)
-    ano = request.args.get('ano', type=int, default=datetime.now().year)
-    mes = request.args.get('mes', type=int, default=datetime.now().month)
+    ano = request.args.get('ano', type=int, default=dt.now().year)
+    mes = request.args.get('mes', type=int, default=dt.now().month)
     
     # Se não especificou semana, calcular semana atual (semana do mês)
     if semana is None:
         hoje = dt.now()
-        import math
         semana = math.ceil(hoje.day / 7)  # Semana do mês (1-5)
     
     # Validar
     if not (1 <= semana <= 5):
         hoje = dt.now()
-        import math
         semana = math.ceil(hoje.day / 7)
     if ano < 2000 or ano > 2100:
-        ano = datetime.now().year
+        ano = dt.now().year
     
     # Function to sort eventos: próximos em primeiro (ASC), depois passados (DESC)
     def sort_eventos_by_proximity(eventos):
-        from datetime import datetime
-        today = datetime.now()
+        today = dt.now()
         
         # Separate into future and past events
         future_events = []
@@ -3060,7 +3058,7 @@ def sorteios():
         for e in eventos:
             if e.data_evento:
                 # Converter para date se for datetime para comparação
-                evento_date = e.data_evento.date() if isinstance(e.data_evento, datetime) else e.data_evento
+                evento_date = e.data_evento.date() if isinstance(e.data_evento, dt) else e.data_evento
                 today_date = today.date()
                 
                 if evento_date >= today_date:
