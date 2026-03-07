@@ -14,7 +14,7 @@ try:
     HAS_FLASK_MAIL = True
 except ImportError:
     HAS_FLASK_MAIL = False
-    logger.warning("⚠️  Flask-Mail não instalado. Emails não serão enviados. Instale com: pip install Flask-Mail")
+    logger.warning("[WARNING] Flask-Mail nao instalado. Emails nao serao enviados. Instale com: pip install Flask-Mail")
     Mail = None
     Message = None
 
@@ -39,13 +39,13 @@ def _validar_configuracao_email(app):
     if not mail_username or mail_username == 'seu-email@gmail.com' or mail_username == 'noreply@battlezone.local':
         return False, f"MAIL_USERNAME inválido ou não configurado: '{mail_username}'"
     
-    # ⚠️ VALIDAÇÃO CRÍTICA: Verificar se MAIL_USERNAME tem @ (é um email válido)
+    # VALIDACAO CRITICA: Verificar se MAIL_USERNAME tem @ (eh um email valido)
     if '@' not in mail_username:
-        return False, f"MAIL_USERNAME inválido - não é um email: '{mail_username}' (falta @ no email!)"
+        return False, f"MAIL_USERNAME invalido - nao eh um email: '{mail_username}' (falta @ no email!)"
     
-    # Validar formato básico de email
+    # Validar formato basico de email
     if not mail_username.endswith('@gmail.com') and not mail_username.endswith('@outlook.com') and '@' in mail_username:
-        logger.warning(f"[⚠️] MAIL_USERNAME não é Gmail/Outlook, pode não funcionar: '{mail_username}'")
+        logger.warning(f"[WARNING] MAIL_USERNAME nao eh Gmail/Outlook, pode nao funcionar: '{mail_username}'")
     
     if not mail_password or mail_password == 'sua-app-password':
         return False, "MAIL_PASSWORD não configurado"
@@ -55,9 +55,9 @@ def _validar_configuracao_email(app):
 
 def init_mail(app):
     """
-    Inicializa o serviço de email com a aplicação Flask
+    Inicializa o servico de email com a aplicacao Flask
     
-    ⚠️ IMPORTANTE: Variáveis de ambiente devem estar configuradas:
+    [INFO] IMPORTANTE: Variaveis de ambiente devem estar configuradas:
        - MAIL_SERVER (ex: smtp.gmail.com)
        - MAIL_PORT (ex: 587)
        - MAIL_USE_TLS (ex: true)
@@ -67,36 +67,36 @@ def init_mail(app):
     global mail, MAIL_INITIALIZED
     
     if not HAS_FLASK_MAIL:
-        logger.error("[🚨 ERRO] Flask-Mail não instalado!")
+        logger.error("[ERROR] Flask-Mail nao instalado!")
         logger.error("   Instale com: pip install Flask-Mail")
         return
     
-    # Validar configuração
+    # Validar configuracao
     is_valid, message = _validar_configuracao_email(app)
     
     if not is_valid:
-        logger.error(f"[🚨 ERRO] Configuração de email inválida: {message}")
-        logger.error("   ⚠️ Desabilitar emails até que as variáveis de ambiente sejam configuradas.")
-        logger.error("   📋 Copie RAILWAY_DEPLOYMENT.env para Railway Settings > Environment")
+        logger.error(f"[ERROR] Configuracao de email invalida: {message}")
+        logger.error("   [WARNING] Desabilitar emails ate que as variaveis de ambiente sejam configuradas.")
+        logger.error("   [INFO] Copie RAILWAY_DEPLOYMENT.env para Railway Settings > Environment")
         return
     
     try:
         mail = Mail(app)
         MAIL_INITIALIZED = True
         
-        # Log de sucesso com informações (sem expor senha)
-        logger.info("[✅ OK] Email service initialized successfully")
-        logger.info(f"   📧 MAIL_SERVER: {app.config.get('MAIL_SERVER')}")
-        logger.info(f"   👤 MAIL_USERNAME: {app.config.get('MAIL_USERNAME')}")
-        logger.info(f"   🔒 MAIL_PORT: {app.config.get('MAIL_PORT')}")
-        logger.info(f"   🔐 MAIL_USE_TLS: {app.config.get('MAIL_USE_TLS')}")
+        # Log de sucesso com informacoes (sem expor senha)
+        logger.info("[OK] Email service initialized successfully")
+        logger.info(f"   MAIL_SERVER: {app.config.get('MAIL_SERVER')}")
+        logger.info(f"   MAIL_USERNAME: {app.config.get('MAIL_USERNAME')}")
+        logger.info(f"   MAIL_PORT: {app.config.get('MAIL_PORT')}")
+        logger.info(f"   MAIL_USE_TLS: {app.config.get('MAIL_USE_TLS')}")
         
     except Exception as e:
-        logger.error(f"[🚨 ERRO] Falha ao inicializar Flask-Mail: {str(e)}")
+        logger.error(f"[ERROR] Falha ao inicializar Flask-Mail: {str(e)}")
         logger.error(f"   Tipo de erro: {type(e).__name__}")
-        logger.error("   Possíveis causas:")
-        logger.error("   - Variáveis de ambiente mal formatadas")
-        logger.error("   - Servidor SMTP inacessível")
+        logger.error("   Possiveis causas:")
+        logger.error("   - Variaveis de ambiente mal formatadas")
+        logger.error("   - Servidor SMTP inacessivel")
         logger.error("   - Firewall/Network bloqueando SMTP")
 
 
@@ -140,20 +140,20 @@ def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = 
         True se enviado com sucesso, False caso contrário
     """
     
-    # ===== VALIDAÇÃO PRÉ-ENVIO =====
+    # ===== VALIDACAO PRE-ENVIO =====
     
     if not HAS_FLASK_MAIL:
-        logger.error("[🚨] Flask-Mail não disponível - email não pode ser enviado")
+        logger.error("[ERROR] Flask-Mail nao disponivel - email nao pode ser enviado")
         return False
     
     if not mail:
-        logger.error("[🚨] Email service não inicializado - email não pode ser enviado")
-        logger.error("   💡 Verifique as variáveis de ambiente MAIL_* em RAILWAY_DEPLOYMENT.env")
+        logger.error("[ERROR] Email service nao inicializado - email nao pode ser enviado")
+        logger.error("   [INFO] Verifique as variaveis de ambiente MAIL_* em RAILWAY_DEPLOYMENT.env")
         return False
     
-    # Validar destinatários
+    # Validar destinatarios
     if not destinatarios:
-        logger.warning("[⚠️] Nenhum destinatário especificado")
+        logger.warning("[WARNING] Nenhum destinatario especificado")
         return False
     
     # Converter para lista se necessário
@@ -214,9 +214,9 @@ def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = 
     except Exception as e:
         # ===== TRATAMENTO DE ERRO DETALHADO =====
         
-        logger.error(f"[🚨] ERRO ao enviar email: {str(e)}")
+        logger.error(f"[ERROR] ERRO ao enviar email: {str(e)}")
         logger.error(f"     Tipo de erro: {type(e).__name__}")
-        logger.error(f"     Destinatários: {destinatarios}")
+        logger.error(f"     Destinatarios: {destinatarios}")
         logger.error(f"     Assunto: {assunto}")
         
         # Tentar identificar tipo de erro
@@ -486,18 +486,18 @@ def enviar_email_reset_senha(usuario_email: str, nome_usuario: str, reset_link: 
     Returns:
         True se enviado com sucesso, False caso contrário
     """
-    # ===== VALIDAÇÃO PRÉ-ENVIO =====
+    # ===== VALIDACAO PRE-ENVIO =====
     
     if not mail:
-        logger.error("[🚨] Email service não inicializado - não pode enviar reset de senha")
+        logger.error("[ERROR] Email service nao inicializado - nao pode enviar reset de senha")
         return False
     
     if not usuario_email or not usuario_email.strip():
-        logger.warning("[⚠️] Email do usuário vazio")
+        logger.warning("[WARNING] Email do usuario vazio")
         return False
     
     if not reset_link or not reset_link.strip():
-        logger.warning("[⚠️] Link de reset vazio")
+        logger.warning("[WARNING] Link de reset vazio")
         return False
     
     usuario_email = usuario_email.strip().lower()
@@ -611,14 +611,14 @@ def enviar_email_reset_senha(usuario_email: str, nome_usuario: str, reset_link: 
         )
         
         if sucesso:
-            logger.info(f"[✅] Email de reset de senha enviado para: {usuario_email[:3]}***@...") 
+            logger.info(f"[OK] Email de reset de senha enviado para: {usuario_email[:3]}***@...") 
         else:
-            logger.error(f"[🚨] Falha ao enviar email de reset de senha para: {usuario_email}")
+            logger.error(f"[ERROR] Falha ao enviar email de reset de senha para: {usuario_email}")
         
         return sucesso
     
     except Exception as e:
-        logger.error(f"[🚨] EXCEÇÃO ao enviar email de reset de senha: {str(e)}")
+        logger.error(f"[ERROR] EXCE CAO ao enviar email de reset de senha: {str(e)}")
         logger.error(f"     Tipo: {type(e).__name__}")
         logger.error(f"     Para: {usuario_email}")
         return False

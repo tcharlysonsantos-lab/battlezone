@@ -348,16 +348,16 @@ def forgot_password():
             
             logger = logging.getLogger(__name__)
             
-            # Verificar saúde do serviço de email antes de enviar
+            # Verificar saude do servico de email antes de enviar
             is_healthy, health_msg = verificar_saude_email()
-            logger.info(f"[🔍] Saúde Email: {health_msg}")
+            logger.info(f"[INFO] Saude Email: {health_msg}")
             
             if not is_healthy:
-                logger.warning(f"[⚠️] Email service não está saudável: {health_msg}")
+                logger.warning(f"[WARNING] Email service nao esta saudavel: {health_msg}")
                 flash(
-                    '⚠️ Serviço de email temporariamente indisponível.\n'
+                    'Servico de email temporariamente indisponivel.\n'
                     'Por favor, tente novamente em alguns minutos.\n'
-                    f'(Detalhes técnicos: {health_msg})',
+                    f'(Detalhes tecnicos: {health_msg})',
                     'warning'
                 )
                 return render_template('auth/forgot_password.html')
@@ -366,18 +366,18 @@ def forgot_password():
             email_enviado = enviar_email_reset_senha(user.email, user.nome, reset_link)
             
             if email_enviado:
-                logger.info(f"[✅] Email de reset enviado para: {user.email}")
+                logger.info(f"[OK] Email de reset enviado para: {user.email}")
                 flash(
-                    '✅ Email será enviado em alguns segundos!\n'
+                    'Email sera enviado em alguns segundos!\n'
                     'Verifique sua caixa de entrada (ou spam).\n'
-                    'O link é válido por 30 minutos.',
+                    'O link e valido por 30 minutos.',
                     'success'
                 )
             else:
-                logger.error(f"[🚨] Falha ao enviar email de reset para: {user.email}")
+                logger.error(f"[ERROR] Falha ao enviar email de reset para: {user.email}")
                 flash(
-                    '❌ Falha ao enviar email.\n'
-                    'Erros técnicos podem estar ocorrendo.\n'
+                    'Falha ao enviar email.\n'
+                    'Erros tecnicos podem estar ocorrendo.\n'
                     'Tente novamente em alguns minutos.',
                     'danger'
                 )
@@ -385,12 +385,12 @@ def forgot_password():
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f"[🚨] Exceção ao tentar enviar email de reset: {str(e)}")
+            logger.error(f"[ERROR] Excecao ao tentar enviar email de reset: {str(e)}")
             logger.error(f"     Tipo: {type(e).__name__}")
             logger.error(f"     User: {user.email}")
             
             flash(
-                '❌ Erro ao processar o reset de senha.\n'
+                'Erro ao processar o reset de senha.\n'
                 'Por favor, tente novamente mais tarde.',
                 'danger'
             )
@@ -485,7 +485,7 @@ def health_check_email():
     }
     
     # Log do health check
-    logger.info(f"[🔍] Email Health Check: {response['status']}")
+    logger.info(f"[INFO] Email Health Check: {response['status']}")
     
     return jsonify(response), 200 if is_healthy else 503
 
@@ -516,59 +516,59 @@ def validate_email_for_reset():
         data = request.get_json()
         
         if not data:
-            logger.warning("[⚠️] Request sem JSON válido")
+            logger.warning("[WARNING] Request sem JSON valido")
             return jsonify({
                 "exists": False,
-                "message": "❌ Formato de requisição inválido"
+                "message": "ERRO: Formato de requisicao invalido"
             }), 400
         
         email = data.get('email', '').strip().lower() if isinstance(data.get('email'), str) else ''
         
         # Validar email
         if not email:
-            logger.warning("[⚠️] Email vazio na requisição")
+            logger.warning("[WARNING] Email vazio na requisicao")
             return jsonify({
                 "exists": False,
-                "message": "❌ Email vazio"
+                "message": "ERRO: Email vazio"
             }), 400
         
         if '@' not in email:
-            logger.warning(f"[⚠️] Email inválido (sem @): {email}")
+            logger.warning(f"[WARNING] Email invalido (sem @): {email}")
             return jsonify({
                 "exists": False,
-                "message": "❌ Email inválido"
+                "message": "ERRO: Email invalido"
             }), 400
         
-        # ===== BUSCAR USUÁRIO NO BANCO =====
+        # ===== BUSCAR USUARIO NO BANCO =====
         
-        logger.debug(f"[🔍] Buscando email: {email}")
+        logger.debug(f"[INFO] Buscando email: {email}")
         user = User.query.filter_by(email=email).first()
         
         if user:
-            logger.info(f"[✅] Email encontrado no sistema: {email}")
+            logger.info(f"[OK] Email encontrado no sistema: {email}")
             return jsonify({
                 "exists": True,
-                "message": "✅ Email encontrado! Será enviado em segundos.",
+                "message": "OK: Email encontrado! Sera enviado em segundos.",
                 "user_found": True
             }), 200
         else:
-            logger.info(f"[ℹ️] Email não encontrado: {email}")
+            logger.info(f"[INFO] Email nao encontrado: {email}")
             return jsonify({
                 "exists": False,
-                "message": "❌ Não existe nenhuma conta cadastrada com este email",
+                "message": "Nao existe nenhuma conta cadastrada com este email",
                 "user_found": False
             }), 200
     
     except Exception as e:
         # ===== TRATAMENTO DE ERRO =====
         
-        logger.error(f"[🚨] ERRO ao validar email: {str(e)}")
+        logger.error(f"[ERROR] ERRO ao validar email: {str(e)}")
         logger.error(f"     Tipo: {type(e).__name__}")
         logger.error(f"     Stack: {repr(e)}")
         
         # Retornar erro JSON em vez de HTML
         return jsonify({
             "exists": False,
-            "message": "❌ Erro ao processar validação. Tente novamente.",
+            "message": "Erro ao processar validacao. Tente novamente.",
             "error": type(e).__name__
         }), 500
