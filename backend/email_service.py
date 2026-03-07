@@ -128,7 +128,7 @@ def verificar_saude_email(app=None):
     return True, "Email service operacional"
 
 
-def _enviar_email_thread(destinatarios: list, assunto: str, html: str, remetente: str = None):
+def _enviar_email_thread(app, destinatarios: list, assunto: str, html: str, remetente: str = None):
     """
     Função interna para enviar email em thread separada (NÃO BLOQUEIA)
     
@@ -139,17 +139,19 @@ def _enviar_email_thread(destinatarios: list, assunto: str, html: str, remetente
             logger.error("[ERROR] Email service nao inicializado - nao pode enviar")
             return
         
-        # Preparar mensagem
-        msg = Message(
-            subject=assunto,
-            recipients=destinatarios,
-            html=html,
-            sender=remetente
-        )
-        
-        # ENVIAR (pode levar tempo - mas em thread separada!)
-        mail.send(msg)
-        logger.info(f"[OK] Email enviado com sucesso (async)")
+        # Usar app context fornecido
+        with app.app_context():
+            # Preparar mensagem
+            msg = Message(
+                subject=assunto,
+                recipients=destinatarios,
+                html=html,
+                sender=remetente
+            )
+            
+            # ENVIAR (pode levar tempo - mas em thread separada!)
+            mail.send(msg)
+            logger.info(f"[OK] Email enviado com sucesso (async)")
         
     except Exception as e:
         logger.error(f"[ERROR] Falha ao enviar email (async): {str(e)}")
@@ -225,9 +227,17 @@ def enviar_email(destinatarios: list, assunto: str, html: str, remetente: str = 
         
         # ===== ENVIAR EMAIL ASSINCRONAMENTE (NÃO BLOQUEIA) =====
         # Inicia thread para enviar, função retorna imediatamente
+        
+        # Capturar app context para passar à thread
+        try:
+            app = current_app._get_current_object()
+        except RuntimeError:
+            logger.error("[ERROR] Nao conseguiu capturar app context para thread")
+            return False
+        
         thread = threading.Thread(
             target=_enviar_email_thread,
-            args=(destinatarios, assunto, html, remetente),
+            args=(app, destinatarios, assunto, html, remetente),
             daemon=True
         )
         thread.start()
