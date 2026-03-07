@@ -3665,10 +3665,6 @@ def api_sortear_equipe():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
-    
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/sorteio/<int:sorteio_id>', methods=['GET', 'DELETE'])
@@ -3860,7 +3856,7 @@ def api_criar_evento():
             'success': True,
             'evento_id': evento.id,
             'message': 'Evento criado com sucesso!'
-        })
+        }), 201
     
     except ValueError as ve:
         db.session.rollback()
@@ -3886,19 +3882,41 @@ def api_editar_evento(evento_id):
         evento = Evento.query.get_or_404(evento_id)
         data = request.form.to_dict()
         
-        # Atualizar campos
+        # Atualizar campos simples
         if 'nome' in data:
             evento.nome = data['nome']
         if 'descricao' in data:
             evento.descricao = data['descricao']
-        if 'data_evento' in data:
-            evento.data_evento = dt.strptime(data['data_evento'], '%Y-%m-%d %H:%M')
         if 'campo' in data:
             evento.campo = data['campo']
         if 'valor_pessoa' in data:
-            evento.valor_pessoa = float(data['valor_pessoa'] or 0)
+            evento.valor_pessoa = float(data['valor_pessoa'] or 0) if data.get('valor_pessoa') else None
         if 'valor_individual' in data:
-            evento.valor_individual = float(data['valor_individual'] or 0)
+            evento.valor_individual = float(data['valor_individual'] or 0) if data.get('valor_individual') else None
+        
+        # Processar data com múltiplos formatos
+        if 'data_evento' in data:
+            data_evento_str = data['data_evento'].strip()
+            formatos_data = [
+                '%Y-%m-%d %H:%M',
+                '%Y-%m-%dT%H:%M',
+                '%d/%m/%Y %H:%M',
+                '%Y-%m-%d %H:%M:%S',
+                '%Y-%m-%dT%H:%M:%S'
+            ]
+            
+            data_evento = None
+            for formato in formatos_data:
+                try:
+                    data_evento = dt.strptime(data_evento_str, formato)
+                    break
+                except ValueError:
+                    continue
+            
+            if data_evento:
+                evento.data_evento = data_evento
+            else:
+                raise ValueError(f'Formato de data inválido: "{data_evento_str}"')
         
         # Processar fotos
         if 'fotos' in request.files:
@@ -3925,10 +3943,18 @@ def api_editar_evento(evento_id):
         
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Evento atualizado!'})
+        app.logger.info(f"[EVENTO] Evento {evento_id} atualizado")
+        
+        return jsonify({'success': True, 'message': 'Evento atualizado com sucesso!'}), 200
+    
+    except ValueError as ve:
+        db.session.rollback()
+        app.logger.error(f'[EVENTO] Erro de validação ao editar {evento_id}: {str(ve)}')
+        return jsonify({'success': False, 'error': str(ve)}), 400
     
     except Exception as e:
         db.session.rollback()
+        app.logger.error(f'[EVENTO] Erro ao editar evento {evento_id}: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

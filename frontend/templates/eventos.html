@@ -564,78 +564,140 @@ function removerBrinde(btn) {
 
 // Salvar evento
 function salvarEvento() {
-    const form = document.getElementById('formEvento');
-    const eventoId = document.getElementById('inputEventoId').value;
-    const formData = new FormData(form);
+    console.log('[DEBUG] Iniciando salvarEvento()');
     
-    // Coletar brindes
-    const brindes = [];
-    document.querySelectorAll('input[name="brindes"]').forEach(input => {
-        if (input.value.trim()) {
-            brindes.push(input.value.trim());
+    // Obter referências dos elementos
+    const btnSalvar = event.target;
+    const originalText = btnSalvar.innerHTML;
+    
+    try {
+        // Validar campos obrigatórios
+        const nome = document.getElementById('inputNome').value.trim();
+        const data = document.getElementById('inputData').value.trim();
+        const hora = document.getElementById('inputHora').value.trim();
+        const campo = document.getElementById('inputCampo').value.trim();
+        
+        console.log('[DEBUG] Campos:', { nome, data, hora, campo });
+        
+        if (!nome) {
+            alert('❌ Por favor, preencha o NOME do evento');
+            document.getElementById('inputNome').focus();
+            return;
         }
-    });
-    
-    // Converter data de d/m/Y para Y-m-d
-    let dataEventoFormatada = document.getElementById('inputData').value;
-    const horaEvento = document.getElementById('inputHora').value;
-    
-    if (!dataEventoFormatada || !horaEvento) {
-        alert('Por favor, preencha data e hora do evento');
-        return;
-    }
-    
-    if (dataEventoFormatada) {
-        const [dia, mes, ano] = dataEventoFormatada.split('/');
-        dataEventoFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
-    }
-    
-    // Combinar data e hora: 2026-03-05 18:30
-    const dataHoraCompleta = `${dataEventoFormatada} ${horaEvento}`;
-    
-    // Cria nova FormData com brindes
-    const data = new FormData();
-    data.append('nome', document.getElementById('inputNome').value);
-    data.append('data_evento', dataHoraCompleta);
-    data.append('campo', document.getElementById('inputCampo').value);
-    data.append('descricao', document.getElementById('inputDescricao').value);
-    data.append('valor_pessoa', document.getElementById('inputValorPessoa').value || 0);
-    data.append('valor_individual', document.getElementById('inputValorIndividual').value || 0);
-    
-    brindes.forEach(brinde => {
-        data.append('brindes', brinde);
-    });
-    
-    // Adicionar fotos
-    const fotos = document.getElementById('inputFotos').files;
-    for (let foto of fotos) {
-        data.append('fotos', foto);
-    }
-    
-    // Enviar com CSRF token
-    const url = eventoId ? `/api/eventos/${eventoId}/editar` : '/api/eventos/criar';
-    const method = eventoId ? 'POST' : 'POST';
-    
-    fetch(url, {
-        method: method,
-        body: data,
-        headers: {
-            'X-CSRFToken': '{{ csrf_token() }}'
+        
+        if (!data) {
+            alert('❌ Por favor, preencha a DATA do evento');
+            document.getElementById('inputData').focus();
+            return;
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Evento salvo com sucesso!');
-            location.reload();
-        } else {
-            alert('Erro: ' + data.error);
+        
+        if (!hora) {
+            alert('❌ Por favor, preencha a HORA do evento');
+            document.getElementById('inputHora').focus();
+            return;
         }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao salvar evento');
-    });
+        
+        if (!campo) {
+            alert('❌ Por favor, selecione o CAMPO do evento');
+            document.getElementById('inputCampo').focus();
+            return;
+        }
+        
+        // Converter data de d/m/Y para Y-m-d
+        let dataEventoFormatada = data;
+        if (dataEventoFormatada.includes('/')) {
+            const [dia, mes, ano] = dataEventoFormatada.split('/');
+            dataEventoFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+        }
+        
+        // Combinar data e hora
+        const dataHoraCompleta = `${dataEventoFormatada} ${hora}`;
+        console.log('[DEBUG] Data/Hora formatada:', dataHoraCompleta);
+        
+        // Coletar brindes
+        const brindes = [];
+        document.querySelectorAll('input[name="brindes"]').forEach(input => {
+            if (input.value.trim()) {
+                brindes.push(input.value.trim());
+            }
+        });
+        console.log('[DEBUG] Brindes:', brindes);
+        
+        // Montar FormData
+        const formData = new FormData();
+        formData.append('nome', nome);
+        formData.append('data_evento', dataHoraCompleta);
+        formData.append('campo', campo);
+        formData.append('descricao', document.getElementById('inputDescricao').value || '');
+        formData.append('valor_pessoa', document.getElementById('inputValorPessoa').value || 0);
+        formData.append('valor_individual', document.getElementById('inputValorIndividual').value || 0);
+        
+        brindes.forEach(brinde => {
+            formData.append('brindes', brinde);
+        });
+        
+        // Adicionar fotos (máximo 5)
+        const fotos = document.getElementById('inputFotos').files;
+        for (let i = 0; i < Math.min(fotos.length, 5); i++) {
+            formData.append('fotos', fotos[i]);
+        }
+        console.log('[DEBUG] Fotos anexadas:', fotos.length);
+        
+        // Mostrar loading
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        
+        // URL e método
+        const eventoId = document.getElementById('inputEventoId').value;
+        const url = eventoId ? `/api/eventos/${eventoId}/editar` : '/api/eventos/criar';
+        
+        console.log('[DEBUG] Enviando para:', url);
+        
+        // Enviar dados
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => {
+            console.log('[DEBUG] Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+            }
+            
+            return response.json();
+        })
+        .then(data => {
+            console.log('[DEBUG] Resposta JSON:', data);
+            
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = originalText;
+            
+            if (data.success) {
+                alert('✅ Evento salvo com sucesso!');
+                // Fechar modal e recarregar
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEvento'));
+                if (modal) modal.hide();
+                setTimeout(() => location.reload(), 500);
+            } else {
+                alert('❌ Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
+                console.error('[DEBUG] Erro da API:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('[DEBUG] Erro no fetch:', error);
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = originalText;
+            alert('❌ Erro ao salvar evento:\n' + error.message);
+        });
+        
+    } catch (error) {
+        console.error('[DEBUG] Erro no salvarEvento:', error);
+        alert('❌ Erro ao processar: ' + error.message);
+    }
 }
 
 // Editar evento
