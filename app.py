@@ -3111,23 +3111,44 @@ def sorteios():
     # Preparar dados de sorteios
     sorteios_data = {
         'operador': {
-            'semana_atual': {}
+            'mes': {},
+            'semanas': {
+                1: {},
+                2: {},
+                3: {},
+                4: {},
+                5: {}
+            }
         },
         'equipe': {
             'mes': {}
         }
     }
     
-    # Preencher sorteios de operadores (SEMANAIS)
+    # Preencher sorteios de operadores (SEMANAIS) - Todas as semanas do mês
+    for semana_num in range(1, 6):  # Semanas 1-5
+        for bp in battlepasses_operador:
+            sorteio_semana = Sorteio.query.filter_by(
+                battlepass_id=bp.id,
+                ano=ano,
+                mes=mes,
+                semana=semana_num,
+                deletado=False
+            ).first()
+            
+            sorteios_data['operador']['semanas'][semana_num][bp.id] = sorteio_semana
+    
+    # Preencher resultado mensal de operadores
     for bp in battlepasses_operador:
-        sorteio_semana = Sorteio.query.filter_by(
+        sorteio_mes = Sorteio.query.filter_by(
             battlepass_id=bp.id,
+            mes=mes,
             ano=ano,
-            semana=semana,
+            semana=None,
             deletado=False
         ).first()
         
-        sorteios_data['operador']['semana_atual'][bp.id] = sorteio_semana
+        sorteios_data['operador']['mes'][bp.id] = sorteio_mes
     
     # Preencher sorteios de equipes (MENSAIS)
     for bp in battlepasses_equipe:
@@ -3144,9 +3165,15 @@ def sorteios():
     # Verificar se é admin/gerente
     é_admin_gerente = current_user.nivel in ['admin', 'gerente']
     
-    return render_template('eventos.html',
+    # Nomes dos meses em português
+    meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+             'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+    mes_nome = meses[mes] if 1 <= mes <= 12 else 'Inválido'
+    
+    return render_template('sorteios.html',
                          semana=semana,
                          mes=mes,
+                         mes_nome=mes_nome,
                          ano=ano,
                          eventos_warfield=eventos_warfield,
                          eventos_redline=eventos_redline,
