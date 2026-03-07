@@ -33,8 +33,14 @@ def _validar_configuracao_email(app):
     Returns:
         (is_valid: bool, message: str)
     """
-    sendgrid_api_key = app.config.get('SENDGRID_API_KEY', '').strip()
-    mail_username = app.config.get('MAIL_USERNAME', '').strip()
+    # Verificar None antes de fazer .strip()
+    sendgrid_api_key = app.config.get('SENDGRID_API_KEY')
+    if sendgrid_api_key:
+        sendgrid_api_key = sendgrid_api_key.strip()
+    
+    mail_username = app.config.get('MAIL_USERNAME')
+    if mail_username:
+        mail_username = mail_username.strip()
     
     if not sendgrid_api_key or sendgrid_api_key == 'sua-chave-sendgrid-aqui':
         return False, "SENDGRID_API_KEY não configurado"
