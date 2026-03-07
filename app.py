@@ -3029,11 +3029,92 @@ def historico_sorteios():
                          meses_nomes=meses_nomes)
 
 
+# ==================== ROTA DE EVENTOS ====================
+
+@app.route('/eventos')
+@login_required
+@operador_session_required
+def eventos():
+    """Página de Eventos da Battlezone (apenas eventos, sem sorteios)"""
+    from backend.models import Evento
+    from datetime import datetime as dt
+    
+    # Function to sort eventos: próximos em primeiro (ASC), depois passados (DESC)
+    def sort_eventos_by_proximity(eventos):
+        today = dt.now()
+        
+        # Separate into future and past events
+        future_events = []
+        past_events = []
+        
+        for e in eventos:
+            if e.data_evento:
+                # Converter para date se for datetime para comparação
+                evento_date = e.data_evento.date() if isinstance(e.data_evento, dt) else e.data_evento
+                today_date = today.date()
+                
+                if evento_date >= today_date:
+                    future_events.append(e)
+                else:
+                    past_events.append(e)
+        
+        # Sort each group
+        future_events.sort(key=lambda e: e.data_evento)  # Próximos primeiro (ASC)
+        past_events.sort(key=lambda e: e.data_evento, reverse=True)  # Mais recentes passados primeiro (DESC)
+        
+        # Combine: future first, then past
+        return future_events + past_events
+    
+    # Buscar eventos por campo
+    eventos_warfield = []
+    eventos_redline = []
+    eventos_geral = []
+    
+    try:
+        eventos_warfield_raw = Evento.query.filter_by(
+            campo='Warfield',
+            ativo=True,
+            deletado=False
+        ).all()
+        eventos_warfield = sort_eventos_by_proximity(eventos_warfield_raw)
+        
+        eventos_redline_raw = Evento.query.filter_by(
+            campo='Redline',
+            ativo=True,
+            deletado=False
+        ).all()
+        eventos_redline = sort_eventos_by_proximity(eventos_redline_raw)
+        
+        eventos_geral_raw = Evento.query.filter_by(
+            campo='GERAL',
+            ativo=True,
+            deletado=False
+        ).all()
+        eventos_geral = sort_eventos_by_proximity(eventos_geral_raw)
+    except Exception as e:
+        logger.warning(f"[WARNING] Erro ao buscar eventos: {str(e)}")
+        eventos_warfield = []
+        eventos_redline = []
+        eventos_geral = []
+    
+    # Verificar se é admin/gerente
+    é_admin_gerente = current_user.nivel in ['admin', 'gerente']
+    
+    return render_template('eventos.html',
+                         eventos_warfield=eventos_warfield,
+                         eventos_redline=eventos_redline,
+                         eventos_geral=eventos_geral,
+                         é_admin_gerente=é_admin_gerente,
+                         current_user=current_user)
+
+
+# ==================== ROTA DE SORTEIOS ====================
+
 @app.route('/sorteios')
 @login_required
 @operador_session_required
 def sorteios():
-    """Página de Sorteios - Battlepass (RENOMEADO PARA EVENTOS)"""
+    """Página de Sorteios - Battlepass"""
     from backend.models import Battlepass, Sorteio, Evento
     from datetime import datetime as dt, timedelta
     import math
