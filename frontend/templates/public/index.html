@@ -15,8 +15,11 @@
                 <a href="#partidas-hoje" class="btn btn-laranja btn-lg me-3">
                     <i class="fas fa-calendar-alt me-2"></i>Ver partidas de hoje
                 </a>
-                <a href="{{ url_for('auth.criar_conta') }}" class="btn btn-outline-laranja btn-lg">
+                <a href="{{ url_for('auth.criar_conta') }}" class="btn btn-outline-laranja btn-lg me-3">
                     <i class="fas fa-user-plus me-2"></i>Criar conta
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-laranja btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login
                 </a>
             </div>
         </div>
@@ -67,57 +70,6 @@
                     <p class="text-muted">Que tal agendar a primeira?</p>
                     <a href="{{ url_for('auth.criar_conta') }}" class="btn btn-laranja mt-3">
                         <i class="fas fa-user-plus me-2"></i>Criar conta aqui
-                    </a>
-                </div>
-            </div>
-        {% endif %}
-    </div>
-</section>
-
-<!-- PRÓXIMAS PARTIDAS (PRÓXIMOS 7 DIAS) -->
-<section id="proximas-partidas" class="py-5 bg-cinza-escuro">
-    <div class="container">
-        <h2 class="text-laranja text-center mb-5">
-            <i class="fas fa-calendar-check me-3"></i>Próximas Partidas (Próximos 7 dias)
-        </h2>
-        
-        {% if proximas_partidas %}
-            <div class="row">
-                {% for partida in proximas_partidas %}
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-header" style="background-color: #FF6B00; color: white;">
-                            <i class="fas fa-calendar-alt me-2"></i>{{ partida.data }} às {{ partida.horario }}
-                        </div>
-                        <div class="card-body">
-                            <h5 class="text-laranja">{{ partida.nome }}</h5>
-                            <p class="mb-2">
-                                <i class="fas fa-map-marker-alt me-2"></i><strong>{{ partida.campo }}</strong>
-                            </p>
-                            <p class="mb-2">
-                                <i class="fas fa-crosshairs me-2"></i>{{ partida.modo }}
-                            </p>
-                            <p class="mb-3">
-                                <i class="fas fa-users me-2"></i><strong>{{ partida.total_participantes }}</strong> participantes
-                            </p>
-                            <div class="d-grid">
-                                <a href="{{ url_for('auth.criar_conta') }}" class="btn btn-laranja">
-                                    <i class="fas fa-user-plus me-2"></i>Se inscrever
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="card">
-                <div class="card-body text-center py-5">
-                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
-                    <h4>Nenhuma partida agendada para os próximos 7 dias</h4>
-                    <p class="text-muted">As partidas serão agendadas em breve!</p>
-                    <a href="{{ url_for('auth.criar_conta') }}" class="btn btn-laranja mt-3">
-                        <i class="fas fa-user-plus me-2"></i>Criar conta e acompanhar
                     </a>
                 </div>
             </div>
