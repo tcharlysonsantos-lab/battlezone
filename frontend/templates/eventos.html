@@ -288,6 +288,16 @@
                                                 <small class="text-white-50 d-block mb-2">
                                                     @{{ sorteio.operador.warname }}
                                                 </small>
+                                                <!-- Info do Admin/Gerente que sorteou -->
+                                                {% if sorteio.usuario_sorteio %}
+                                                    <div style="background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; margin: 10px 0; border-left: 3px solid #00C851;">
+                                                        <small class="text-white-50 d-block mb-1">Sorteado por:</small>
+                                                        <span style="color: #FFD700; font-weight: bold; font-size: 0.9rem;">{{ sorteio.usuario_sorteio.username }}</span>
+                                                        <small class="text-white-50 d-block" style="margin-top: 4px;">
+                                                            {{ sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A' }}
+                                                        </small>
+                                                    </div>
+                                                {% endif %}
                                                 {% if é_admin_gerente %}
                                                     <button class="btn btn-sm btn-outline-danger mt-2" onclick="deletarSorteio({{ sorteio.id }}, true)">
                                                         <i class="fas fa-trash"></i> Remover
@@ -337,9 +347,16 @@
                                                 <h6 style="color: white; font-weight: bold; margin-bottom: 8px;">
                                                     {{ sorteio.equipe.nome }}
                                                 </h6>
-                                                <small class="text-white-50 d-block mb-2">
-                                                    Sorteada em {{ sorteio.sorteado_em.strftime('%d/%m/%Y') if sorteio.sorteado_em else 'N/A' }}
-                                                </small>
+                                                <!-- Info do Admin/Gerente que sorteou -->
+                                                {% if sorteio.usuario_sorteio %}
+                                                    <div style="background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; margin: 10px 0; border-left: 3px solid #0066CC;">
+                                                        <small class="text-white-50 d-block mb-1">Sorteada por:</small>
+                                                        <span style="color: #FFD700; font-weight: bold; font-size: 0.9rem;">{{ sorteio.usuario_sorteio.username }}</span>
+                                                        <small class="text-white-50 d-block" style="margin-top: 4px;">
+                                                            {{ sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A' }}
+                                                        </small>
+                                                    </div>
+                                                {% endif %}
                                                 {% if é_admin_gerente %}
                                                     <button class="btn btn-sm btn-outline-danger mt-2" onclick="deletarSorteio({{ sorteio.id }}, false)">
                                                         <i class="fas fa-trash"></i> Remover
