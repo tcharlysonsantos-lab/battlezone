@@ -4926,6 +4926,58 @@ def seed_battlepasses_endpoint():
         }), 500
 
 
+@app.route('/setup/debug-battlepasses-query')
+def debug_battlepasses_query():
+    """Debug: Testa exactamente o que as queries retornam"""
+    try:
+        from backend.models import Battlepass
+        
+        # Test 1: Todos
+        todas = Battlepass.query.all()
+        
+        # Test 2: Apenas operadores
+        operadores_raw = Battlepass.query.filter(
+            Battlepass.categoria == 'operador',
+            Battlepass.ativo == True
+        ).all()
+        
+        # Test 3: Apenas equipes
+        equipes_raw = Battlepass.query.filter(
+            Battlepass.categoria == 'equipe',
+            Battlepass.ativo == True
+        ).all()
+        
+        resultado = {
+            'timestamp': datetime.now().isoformat(),
+            'test_1_todas': {
+                'count': len(todas),
+                'items': [{'id': bp.id, 'nome': bp.nome, 'categoria': bp.categoria, 'ativo': bp.ativo} for bp in todas]
+            },
+            'test_2_operadores_filter': {
+                'count': len(operadores_raw),
+                'items': [{'id': bp.id, 'nome': bp.nome, 'categoria': bp.categoria, 'ativo': bp.ativo} for bp in operadores_raw]
+            },
+            'test_3_equipes_filter': {
+                'count': len(equipes_raw),
+                'items': [{'id': bp.id, 'nome': bp.nome, 'categoria': bp.categoria, 'ativo': bp.ativo} for bp in equipes_raw]
+            },
+            'diagnostico': {
+                'problema_possivel': 'Nenhum' if len(operadores_raw) > 0 and len(equipes_raw) > 0 else 'Queries retornando vazio!',
+                'database_type': 'PostgreSQL' if 'postgresql' in str(db.engine.url) else 'SQLite'
+            }
+        }
+        
+        return jsonify(resultado), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc(),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
 @app.route('/setup/criar-partidas-teste')
 def criar_partidas_teste():
     """Cria partidas de teste para todas as combinações de campo, plano e tempo"""
