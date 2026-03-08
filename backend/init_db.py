@@ -76,30 +76,63 @@ def seed_battlepasses(app):
             logger.info("[SEED] 🌱 Inserindo battlepasses de exemplo...")
             
             # Battlepasses de Operador (semanais)
-            bp_operador_1 = Battlepass(
-                nome="Operador - Semana",
-                descricao="Sorteio semanal para operadores",
-                categoria="operador",
-                tipo="sorteio",
-                ativo=True,
-                deletado=False
-            )
+            battlepasses_operador = [
+                Battlepass(
+                    tipo="operador_basico",
+                    nome="Operador Básico",
+                    descricao="Sorteio semanal para operadores - Categoria Básica",
+                    categoria="operador",
+                    ativo=True
+                ),
+                Battlepass(
+                    tipo="operador_elite",
+                    nome="Operador Elite",
+                    descricao="Sorteio semanal para operadores - Categoria Elite",
+                    categoria="operador",
+                    ativo=True
+                ),
+                Battlepass(
+                    tipo="operador_premium",
+                    nome="Operador Premium",
+                    descricao="Sorteio semanal para operadores - Categoria Premium",
+                    categoria="operador",
+                    ativo=True
+                ),
+            ]
             
             # Battlepasses de Equipe (mensais)
-            bp_equipe_1 = Battlepass(
-                nome="Equipe - Mês",
-                descricao="Sorteio mensal para equipes",
-                categoria="equipe",
-                tipo="sorteio",
-                ativo=True,
-                deletado=False
-            )
+            battlepasses_equipe = [
+                Battlepass(
+                    tipo="equipe_basica",
+                    nome="Equipe Básica",
+                    descricao="Sorteio mensal para equipes - Categoria Básica",
+                    categoria="equipe",
+                    ativo=True
+                ),
+                Battlepass(
+                    tipo="equipe_elite",
+                    nome="Equipe Elite",
+                    descricao="Sorteio mensal para equipes - Categoria Elite",
+                    categoria="equipe",
+                    ativo=True
+                ),
+                Battlepass(
+                    tipo="equipe_premium",
+                    nome="Equipe Premium",
+                    descricao="Sorteio mensal para equipes - Categoria Premium",
+                    categoria="equipe",
+                    ativo=True
+                ),
+            ]
             
-            db.session.add(bp_operador_1)
-            db.session.add(bp_equipe_1)
+            # Adicionar todas as battlepasses
+            for bp in battlepasses_operador + battlepasses_equipe:
+                db.session.add(bp)
+            
             db.session.commit()
             
-            logger.info("[SEED] ✅ 2 battlepasses foram criadas com sucesso!")
+            total_criadas = len(battlepasses_operador) + len(battlepasses_equipe)
+            logger.info(f"[SEED] ✅ {total_criadas} battlepasses foram criadas com sucesso!")
             
     except Exception as e:
         logger.error(f"[SEED] ✗ Erro ao seed battlepasses: {e}")
