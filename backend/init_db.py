@@ -91,13 +91,6 @@ def seed_battlepasses(app):
                     categoria="operador",
                     ativo=True
                 ),
-                Battlepass(
-                    tipo="operador_premium",
-                    nome="Operador Premium",
-                    descricao="Sorteio semanal para operadores - Categoria Premium",
-                    categoria="operador",
-                    ativo=True
-                ),
             ]
             
             # Battlepasses de Equipe (mensais)
@@ -106,20 +99,6 @@ def seed_battlepasses(app):
                     tipo="equipe_basica",
                     nome="Equipe Básica",
                     descricao="Sorteio mensal para equipes - Categoria Básica",
-                    categoria="equipe",
-                    ativo=True
-                ),
-                Battlepass(
-                    tipo="equipe_elite",
-                    nome="Equipe Elite",
-                    descricao="Sorteio mensal para equipes - Categoria Elite",
-                    categoria="equipe",
-                    ativo=True
-                ),
-                Battlepass(
-                    tipo="equipe_premium",
-                    nome="Equipe Premium",
-                    descricao="Sorteio mensal para equipes - Categoria Premium",
                     categoria="equipe",
                     ativo=True
                 ),

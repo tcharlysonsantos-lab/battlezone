@@ -393,7 +393,7 @@ def dashboard():
         sorteios_realizados = []
         try:
             sorteios_realizados = Sorteio.query.filter_by(
-                ativo=True
+                deletado=False
             ).options(
                 db.joinedload(Sorteio.operador),
                 db.joinedload(Sorteio.equipe),

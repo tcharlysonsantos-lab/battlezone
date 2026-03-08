@@ -38,12 +38,6 @@ def seed_battlepasses():
                 "descricao": "Sorteio semanal para operadores - Categoria Elite",
                 "categoria": "operador"
             },
-            {
-                "tipo": "operador_premium",
-                "nome": "Operador Premium",
-                "descricao": "Sorteio semanal para operadores - Categoria Premium",
-                "categoria": "operador"
-            },
         ]
         
         # Battlepasses de Equipes
@@ -52,18 +46,6 @@ def seed_battlepasses():
                 "tipo": "equipe_basica",
                 "nome": "Equipe Básica",
                 "descricao": "Sorteio mensal para equipes - Categoria Básica",
-                "categoria": "equipe"
-            },
-            {
-                "tipo": "equipe_elite",
-                "nome": "Equipe Elite",
-                "descricao": "Sorteio mensal para equipes - Categoria Elite",
-                "categoria": "equipe"
-            },
-            {
-                "tipo": "equipe_premium",
-                "nome": "Equipe Premium",
-                "descricao": "Sorteio mensal para equipes - Categoria Premium",
                 "categoria": "equipe"
             },
         ]
