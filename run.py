@@ -10,6 +10,7 @@ from datetime import datetime
 try:
     from app import app, db, cloud_manager
     from backend.health_check import db_health_check
+    from backend.init_db import init_database
 except Exception as e:
     print(f"ERROR importing app: {e}")
     print("\nVerify:")
@@ -101,37 +102,23 @@ def main():
     
     print("\n[DB] Inicializando banco de dados...")
     
-    # Inicialização não-bloqueadora do banco
+    # ===== NOVA INICIALIZAÇÃO ROBUSTA =====
     try:
-        with app.app_context():
-            # Tentar criar tabelas com timeout curto (não bloqueia o app)
-            import signal
-            
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Timeout ao conectar ao banco de dados")
-            
-            # Verificar tipo de banco configurado
-            from config import config
-            db_type = getattr(config, 'DB_TYPE', 'SQLite')
-            
-            # Para localhost (SQLite) ou se DEBUG=True, criar tabelas
-            # Para produção (PostgreSQL), deixar a migração para depois
-            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
-                print(f"   [{db_type}] Detectado")
-                if not os.path.exists('instance/database.db'):
-                    print("   ➜ Criando tabelas...")
-                    try:
-                        db.create_all()
-                        print("   [OK] Tabelas criadas!")
-                        criar_admin_inicial()
-                    except Exception as e:
-                        print(f"   [WARN] Erro ao criar tabelas (continuando): {e}")
-            else:
-                print(f"   [{db_type}] Detectado (Railway)")
-                print("   [INFO] Banco será inicializado na primeira conexão")
+        print("   ➜ Chamando init_database() para validar todas as tabelas...")
+        init_database(app)
+        print("   [OK] Banco de dados validado com sucesso!")
     except Exception as e:
-        print(f"   [WARN] Aviso ao inicializar banco: {e}")
-        print("   [INFO] Continuando mesmo assim...")
+        print(f"   [WARN] Erro no init_database (continuando): {e}")
+        # Tentar fallback: db.create_all() básico
+        try:
+            with app.app_context():
+                print("   ➜ Tentando fallback com db.create_all()...")
+                db.create_all()
+                print("   [OK] Fallback executado!")
+                criar_admin_inicial()
+        except Exception as e2:
+            print(f"   [WARN] Fallback também falhou: {e2}")
+            print("   [INFO] Continuando mesmo assim (tabelas podem ser criadas na primeira conexão)...")
     
     # Iniciar Health Check para conexão persistente
     print("\n[DB] Iniciando Database Health Check...")
