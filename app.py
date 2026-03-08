@@ -19,7 +19,7 @@ from sqlalchemy import func
 from config import config as app_config
 
 # Importar módulos do backend
-from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao, PagamentoOperador, Evento
+from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao, PagamentoOperador, Evento, Sorteio, Battlepass
 from backend.auth import auth_bp
 from backend.pagamentos_routes import pagamento_bp
 from backend.decorators import requer_permissao, operador_session_required, admin_required
@@ -389,6 +389,20 @@ def dashboard():
             app.logger.warning(f"[DASHBOARD] Eventos query erro (tabela pode não existir): {e}")
             todos_eventos = []
         
+        # ✅ BUSCAR SORTEIOS REALIZADOS (últimos 10)
+        sorteios_realizados = []
+        try:
+            sorteios_realizados = Sorteio.query.filter_by(
+                ativo=True
+            ).options(
+                db.joinedload(Sorteio.operador),
+                db.joinedload(Sorteio.equipe),
+                db.joinedload(Sorteio.battlepass)
+            ).order_by(Sorteio.sorteado_em.desc()).limit(10).all()
+        except Exception as e:
+            app.logger.warning(f"[DASHBOARD] Sorteios query erro (tabela pode não existir): {e}")
+            sorteios_realizados = []
+        
         return render_template('dashboard.html',
                              total_operadores=total_operadores,
                              total_equipes=total_equipes,
@@ -396,7 +410,8 @@ def dashboard():
                              itens_baixo=itens_baixo,
                              proximas_partidas=proximas_partidas,
                              total_vendas_hoje=total_vendas_hoje,
-                             todos_eventos=todos_eventos)
+                             todos_eventos=todos_eventos,
+                             sorteios_realizados=sorteios_realizados)
     
     except Exception as e:
         app.logger.error(f"[DASHBOARD ERROR] {str(e)}", exc_info=True)
