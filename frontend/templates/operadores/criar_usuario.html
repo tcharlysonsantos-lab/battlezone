@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Criar Usuário - {{ operador.nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <!-- Card de confirmação -->
+            <div class="card border-laranja">
+                <div class="card-header" style="background-color: #FF6B00; color: white;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-plus me-2"></i>Criar Usuário para Operador
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Informações do Operador -->
+                    <div class="alert alert-info">
+                        <h6 class="mb-2"><strong>Operador:</strong></h6>
+                        <p class="mb-1"><i class="fas fa-user me-2"></i><strong>Nome:</strong> {{ operador.nome }}</p>
+                        <p class="mb-1"><i class="fas fa-gamepad me-2"></i><strong>Warname:</strong> {{ operador.warname }}</p>
+                        <p class="mb-1"><i class="fas fa-envelope me-2"></i><strong>Email:</strong> {{ operador.email }}</p>
+                    </div>
+
+                    <!-- Informações sobre o processo -->
+                    <div class="alert alert-warning" style="border-left: 4px solid #FFD700;">
+                        <h6 class="mb-2"><strong>⚡ Como funciona:</strong></h6>
+                        <ul class="mb-0" style="font-size: 0.95rem;">
+                            <li>Uma <strong>senha aleatória</strong> será gerada</li>
+                            <li>Será enviada para <strong>{{ operador.email }}</strong></li>
+                            <li>O operador pode usar a opção <strong>"Esqueci Senha"</strong> para redefinir</li>
+                            <li>Após o login, pode alterar a senha em Configurações</li>
+                        </ul>
+                    </div>
+
+                    <!-- Botões de ação -->
+                    <div class="d-grid gap-2">
+                        <form method="POST" class="mb-2">
+                            <button type="submit" class="btn btn-success btn-lg w-100">
+                                <i class="fas fa-check me-2"></i>Criar Usuário e Enviar Senha
+                            </button>
+                        </form>
+                        <a href="{{ url_for('listar_operadores') }}" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                    </div>
+
+                    <!-- Nota importante -->
+                    <div class="mt-3 p-3" style="background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #FF6B00;">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Nota:</strong> O email será enviado para confirmar o termo de uso e segurança do sistema.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-lg {
+    padding: 0.8rem 1.5rem;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

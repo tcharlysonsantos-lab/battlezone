@@ -148,9 +148,9 @@ def main():
         from config import config
         
         checks = {
-            'SECRET_KEY': '✅' if config.SECRET_KEY else '❌',
-            'FLASK_ENV': '✅' if os.environ.get('FLASK_ENV') else '⚠️',
-            'DEBUG': '✅' if not config.DEBUG else '❌',  # DEBUG=False é bom
+            'SECRET_KEY': '[OK]' if config.SECRET_KEY else '[FAIL]',
+            'FLASK_ENV': '[OK]' if os.environ.get('FLASK_ENV') else '[WARN]',
+            'DEBUG': '[OK]' if not config.DEBUG else '[FAIL]',  # DEBUG=False é bom
         }
         
         for item, status in checks.items():
@@ -158,10 +158,10 @@ def main():
         
         # Avisar se está em debug
         if config.DEBUG:
-            print("\n⚠️  DEBUG MODE ATIVADO! Isso é apenas para desenvolvimento.")
+            print("\n[WARN] DEBUG MODE ATIVADO! Isso é apenas para desenvolvimento.")
             print("   Para produção, defina FLASK_ENV=production em seguranca.env")
     except Exception as e:
-        print(f"❌ ERRO ao verificar configuração: {e}")
+        print(f"[ERROR] ERRO ao verificar configuração: {e}")
     
     # Verificar sincronização com Drive
     print(f"\n[CLOUD] Pasta de nuvem: {cloud_manager.CAMINHO_NUVEM}")

@@ -2992,8 +2992,7 @@ def historico_sorteios():
                 'operador': sorteio_semana.operador.nome if sorteio_semana and sorteio_semana.operador else None,
                 'operador_warname': sorteio_semana.operador.warname if sorteio_semana and sorteio_semana.operador else None,
                 'data': sorteio_semana.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio_semana and sorteio_semana.sorteado_em else 'Não sorteado',
-                'sorteio_id': sorteio_semana.id if sorteio_semana else None,
-                'sorteado_por': sorteio_semana.usuario_sorteio.username if sorteio_semana and sorteio_semana.usuario_sorteio else None
+                'sorteio_id': sorteio_semana.id if sorteio_semana else None
             })
     else:
         # Buscar sorteios mensais para equipes
@@ -3009,8 +3008,7 @@ def historico_sorteios():
             'mes': mes,
             'equipe': sorteio.equipe.nome if sorteio and sorteio.equipe else None,
             'data': sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio and sorteio.sorteado_em else 'Não sorteado',
-            'sorteio_id': sorteio.id if sorteio else None,
-            'sorteado_por': sorteio.usuario_sorteio.username if sorteio and sorteio.usuario_sorteio else None
+            'sorteio_id': sorteio.id if sorteio else None
         }]
     
     # Verificar permissão
