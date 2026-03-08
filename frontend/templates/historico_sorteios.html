@@ -47,6 +47,14 @@
                                 <h5 style="color: white; font-weight: bold; margin-bottom: 8px;">{{ item.operador }}</h5>
                                 <p class="text-white-50 mb-3">@{{ item.operador_warname }}</p>
                                 <small style="color: var(--laranja);">{{ item.data }}</small>
+                                
+                                <!-- Info de quem sorteou -->
+                                {% if item.sorteado_por %}
+                                    <div style="background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; margin-top: 12px; border-left: 3px solid var(--laranja);">
+                                        <small class="text-white-50 d-block mb-1">Sorteado por:</small>
+                                        <span style="color: #FFD700; font-weight: bold; font-size: 0.9rem;">{{ item.sorteado_por }}</span>
+                                    </div>
+                                {% endif %}
                             </div>
                             {% if é_admin_gerente %}
                             <div class="d-flex gap-2 justify-content-center mt-3">
@@ -85,6 +93,14 @@
                             <i class="fas fa-shield-alt" style="font-size: 48px; color: #C0C0C0; margin-bottom: 30px; display: block;"></i>
                             <h5 style="color: white; font-weight: bold; margin-bottom: 20px;">{{ item.equipe }}</h5>
                             <p style="color: #0066CC; font-size: 14px;">{{ item.data }}</p>
+                            
+                            <!-- Info de quem sorteou -->
+                            {% if item.sorteado_por %}
+                                <div style="background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; margin: 12px 0; border-left: 3px solid #0066CC;">
+                                    <small class="text-white-50 d-block mb-1">Sorteada por:</small>
+                                    <span style="color: #FFD700; font-weight: bold; font-size: 0.9rem;">{{ item.sorteado_por }}</span>
+                                </div>
+                            {% endif %}
                             {% if é_admin_gerente %}
                             <div class="d-flex gap-2 justify-content-center mt-4">
                                 <button class="btn btn-sm btn-outline-info" 
