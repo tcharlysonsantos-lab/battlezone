@@ -4810,7 +4810,7 @@ def setup_create_keno(secret_key):
 def db_stats():
     """Show data count in each table"""
     try:
-        from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao, PagamentoOperador
+        from backend.models import db, User, Operador, Equipe, Partida, PartidaParticipante, Venda, Estoque, Log, Solicitacao, PagamentoOperador, Battlepass, Evento, Sorteio
         
         # Count records in each table
         stats = {
@@ -4827,6 +4827,9 @@ def db_stats():
                 'logs': Log.query.count(),
                 'solicitacoes': Solicitacao.query.count(),
                 'pagamento_operador': PagamentoOperador.query.count(),
+                'battlepasses': Battlepass.query.count(),
+                'eventos': Evento.query.count(),
+                'sorteios': Sorteio.query.count(),
             },
             'total_records': sum([
                 User.query.count(),
@@ -4839,12 +4842,88 @@ def db_stats():
                 Log.query.count(),
                 Solicitacao.query.count(),
                 PagamentoOperador.query.count(),
+                Battlepass.query.count(),
+                Evento.query.count(),
+                Sorteio.query.count(),
             ])
         }
         
         return jsonify(stats), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/setup/diagnostico-battlepasses')
+def diagnostico_battlepasses():
+    """Diagnóstico completo de battlepasses - Debug endpoint"""
+    try:
+        from backend.models import Battlepass
+        
+        total_battlepasses = Battlepass.query.count()
+        operador_count = Battlepass.query.filter_by(categoria='operador').count()
+        equipe_count = Battlepass.query.filter_by(categoria='equipe').count()
+        
+        # Listar todas
+        todas = Battlepass.query.all()
+        lista_detalhada = []
+        for bp in todas:
+            lista_detalhada.append({
+                'id': bp.id,
+                'nome': bp.nome,
+                'tipo': bp.tipo,
+                'categoria': bp.categoria,
+                'ativo': bp.ativo,
+                'created_at': bp.created_at.isoformat() if bp.created_at else None,
+            })
+        
+        resultado = {
+            'timestamp': datetime.now().isoformat(),
+            'database_type': 'PostgreSQL' if 'postgresql' in str(db.engine.url) else 'SQLite',
+            'diagnostico': {
+                'total_battlepasses': total_battlepasses,
+                'operadores': operador_count,
+                'equipes': equipe_count,
+                'status': '✅ OK' if total_battlepasses > 0 else '❌ VAZIO - Rodar /setup/seed-battlepasses',
+            },
+            'detalhes': lista_detalhada,
+            'acao': 'Se vazio, use: POST /setup/seed-battlepasses'
+        }
+        
+        return jsonify(resultado), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'acao': 'Erro ao consultar battlepasses'
+        }), 500
+
+
+@app.route('/setup/seed-battlepasses', methods=['POST', 'GET'])
+def seed_battlepasses_endpoint():
+    """Endpoint para forçar seeding de battlepasses"""
+    try:
+        from backend.init_db import seed_battlepasses
+        
+        # Executar seed
+        seed_battlepasses(app)
+        
+        from backend.models import Battlepass
+        total = Battlepass.query.count()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Battlepasses foram criadas/verificadas',
+            'total_battlepasses': total,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 
 @app.route('/setup/criar-partidas-teste')
