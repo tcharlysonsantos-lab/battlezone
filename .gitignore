@@ -1,43 +1,86 @@
-﻿# Python
+# ==================== ARQUIVOS TEMPORÁRIOS DE DEBUG E TESTE ====================
+# Estes arquivos não são mais necessários no repositório
+
+# Scripts de teste e debug
+check_csrf.py
+create_eventos_table.py
+criar_usuario_teste.py
+deploy_battlepass_fix.py
+deploy_interativo.py
+deploy_via_url.py
+fix_battlepass_column.py
+resetar_senha.py
+test_ajax.py
+test_case_insensitive.py
+test_changes.py
+test_email_send.py
+test_endpoint.py
+test_forgot_password_flow.py
+test_smtp_connection.py
+test_usuarios.py
+validate_battlepass_fix.py
+verificar_battlepasses.py
+
+# Documentação antiga de correções específicas
+AJUSTE_EMAIL_RAILWAY.md
+ANALISE_ESQUECI_SENHA.md
+BANCO_DADOS.md
+CORRECAO_BATTLEPASS_RAILWAY.md
+DEBUG_EMAIL_RESUMO.md
+DEPLOYMENT_RAILWAY.md
+DEPLOY_MANUAL_RAILWAY.md
+DIAGNOSTICO_FORENSE_EMAIL.md
+DIAGRAMA_OTIMIZACOES.md
+ENTREGA_OTIMIZACOES.md
+ERRO_CRITICO_MAIL_USERNAME.md
+FEATURES_RESET_SENHA_MELHORADO.md
+FIX_BATTLEPASS.md
+FIX_EMAIL_SMTP.md
+GUIA_FINAL_BATTLEPASS_FIX.md
+LEIA_ISSO_PRIMEIRO.md
+OTIMIZACOES_ANALISE.md
+OTIMIZACOES_IMPLEMENTADAS.md
+POSTGRESQL_SETUP.md
+PROXIMO_PASSO.txt
+RAILWAY_DB_FIX.md
+README_OTIMIZACOES.md
+SENDGRID_SETUP.md
+SETUP_DATABASE.md
+VALIDACAO_OTIMIZACOES.md
+VERSION.txt
+
+# Arquivos de saída de testes
+test_error.txt
+test_output.txt
+
+# Cache Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.log
 
-# Banco de dados
-instance/*.db
-*.db
-*.sqlite
-*.sqlite3
-
-# Ambiente virtual
-venv/
+# Ambientes virtuais
 .venv/
+venv/
 env/
-ENV/
-env.bak/
-venv.bak/
 
-# IDE e editores
+# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
+
+# OS
 .DS_Store
+Thumbs.db
 
-# Arquivos de configuração local
+# Banco de dados local
+instance/database.db
+instance/*.db
+
+# Uploads/temporary files
+frontend/static/uploads/
+backups_local/
+
+# Variáveis de ambiente
 .env
-*.env
-config.local.py
-
-# Backups e arquivos temporários
-backups/
-*.bak
-*.tmp
-
-# ==================== NGROK ====================
-.env.ngrok
-.ngrok/
-logs/ngrok*.log
+.env.local
+seguranca.env
