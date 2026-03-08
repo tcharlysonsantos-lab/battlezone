@@ -349,14 +349,9 @@ def dashboard():
                 db.session.add(operador)
                 # ✅ NÃO fazer commit aqui - deixar pro after_request fazer batch commit
         
-        # ✅ OTIMIZAÇÃO: Uma única query com func.count() agregado
-        stats = db.session.query(
-            func.count(Operador.id).label('total_operadores'),
-            func.count(Equipe.id).label('total_equipes')
-        ).first()
-        
-        total_operadores = stats.total_operadores or 0
-        total_equipes = stats.total_equipes or 0
+        # ✅ OTIMIZAÇÃO: Contar operadores e equipes com queries separadas (sem produto cartesiano)
+        total_operadores = db.session.query(func.count(Operador.id)).scalar() or 0
+        total_equipes = db.session.query(func.count(Equipe.id)).scalar() or 0
         
         # ✅ OTIMIZAÇÃO: Data como string para comparação eficiente
         hoje = datetime.now().strftime("%d/%m/%Y")
