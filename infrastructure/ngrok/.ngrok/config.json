@@ -1,0 +1,28 @@
+{
+  "api_key": "nxRPrb0c6j-5Xev5bOQojWxGgrnnpwJj8uUPhbT_8ZM",
+  "generated_at": "2026-03-02T15:44:00.173261",
+  "ngrok": {
+    "authtoken": "COLOQUE_SEU_TOKEN_AQUI",
+    "region": "sa",
+    "protocol": "http",
+    "port": 5000,
+    "bind_tls": "both"
+  },
+  "security": {
+    "rate_limit": {
+      "enabled": true,
+      "requests_per_minute": 60,
+      "burst_size": 10
+    },
+    "ip_whitelist_enabled": false,
+    "ip_whitelist": [],
+    "require_api_key": true,
+    "log_all_requests": true
+  },
+  "reminders": {
+    "1": "\u26a0\ufe0f  GUARDAR ESTA CHAVE EM LOCAL SEGURO!",
+    "2": "\u26a0\ufe0f  ADICIONAR authtoken do Ngrok (https://dashboard.ngrok.com/auth)",
+    "3": "\u26a0\ufe0f  N\u00c3O compartilhar esta chave em reposit\u00f3rio git!",
+    "4": "\u26a0\ufe0f  Alterar api_key regularmente"
+  }
+}
