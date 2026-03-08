@@ -4978,6 +4978,109 @@ def debug_battlepasses_query():
         }), 500
 
 
+@app.route('/setup/debug-eventos-dados')
+@login_required
+def debug_eventos_dados():
+    """Debug: Simula EXATAMENTE o que /eventos passa para o template"""
+    try:
+        from backend.models import Evento, Battlepass, Sorteio
+        from datetime import datetime as dt
+        import math
+        
+        # Mesma lógica de /eventos
+        hoje = dt.now()
+        semana_atual = math.ceil(hoje.day / 7)
+        mes = hoje.month
+        ano = hoje.year
+        
+        # Buscar battlepasses (EXATAMENTE como em /eventos)
+        battlepasses_operador = Battlepass.query.filter(
+            Battlepass.categoria == 'operador',
+            Battlepass.ativo == True
+        ).all()
+        
+        battlepasses_equipe = Battlepass.query.filter(
+            Battlepass.categoria == 'equipe',
+            Battlepass.ativo == True
+        ).all()
+        
+        # Preparar dados de sorteios (EXATAMENTE como em /eventos)
+        sorteios_data = {
+            'operador': {
+                'semanas': {
+                    1: {},
+                    2: {},
+                    3: {},
+                    4: {},
+                    5: {}
+                }
+            },
+            'equipe': {
+                'mes': {}
+            }
+        }
+        
+        # Preencher sorteios de operadores
+        for semana_num in range(1, 6):
+            for bp in battlepasses_operador:
+                sorteio_semana = Sorteio.query.filter_by(
+                    battlepass_id=bp.id,
+                    ano=ano,
+                    mes=mes,
+                    semana=semana_num,
+                    deletado=False
+                ).first()
+                sorteios_data['operador']['semanas'][semana_num][bp.id] = sorteio_semana
+        
+        # Preencher sorteios de equipes
+        for bp in battlepasses_equipe:
+            sorteio_mes = Sorteio.query.filter_by(
+                battlepass_id=bp.id,
+                mes=mes,
+                ano=ano,
+                semana=None,
+                deletado=False
+            ).first()
+            sorteios_data['equipe']['mes'][bp.id] = sorteio_mes
+        
+        resultado = {
+            'timestamp': datetime.now().isoformat(),
+            'dados_passados_para_template': {
+                'semana_atual': semana_atual,
+                'mes': mes,
+                'ano': ano,
+                'battlepasses_operador_count': len(battlepasses_operador),
+                'battlepasses_operador': [
+                    {'id': bp.id, 'nome': bp.nome, 'categoria': bp.categoria, 'ativo': bp.ativo}
+                    for bp in battlepasses_operador
+                ],
+                'battlepasses_equipe_count': len(battlepasses_equipe),
+                'battlepasses_equipe': [
+                    {'id': bp.id, 'nome': bp.nome, 'categoria': bp.categoria, 'ativo': bp.ativo}
+                    for bp in battlepasses_equipe
+                ],
+                'sorteios_operadores': {
+                    'semana_atual_dados': sorteios_data['operador']['semanas'].get(semana_atual, {})
+                },
+                'sorteios_equipes': {
+                    'mes_dados': sorteios_data['equipe']['mes']
+                }
+            },
+            'problema_diagnosticado': 'Nenhum' if len(battlepasses_operador) > 0 else 'PROBLEMA: battlepasses_operador vazio!',
+            'solucao': 'Se os dados estão aqui mas não aparecem na página /eventos, é CACHE do navegador. Use Ctrl+Shift+R'
+        }
+        
+        return jsonify(resultado), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc(),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
 @app.route('/setup/criar-partidas-teste')
 def criar_partidas_teste():
     """Cria partidas de teste para todas as combinações de campo, plano e tempo"""
