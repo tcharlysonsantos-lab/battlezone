@@ -3035,9 +3035,10 @@ def historico_sorteios():
 @login_required
 @operador_session_required
 def eventos():
-    """Página de Eventos da Battlezone (apenas eventos, sem sorteios)"""
-    from backend.models import Evento
+    """Página de Eventos da Battlezone com seção de Sorteios & Resultados"""
+    from backend.models import Evento, Battlepass, Sorteio
     from datetime import datetime as dt
+    import math
     
     # Function to sort eventos: próximos em primeiro (ASC), depois passados (DESC)
     def sort_eventos_by_proximity(eventos):
@@ -3097,6 +3098,75 @@ def eventos():
         eventos_redline = []
         eventos_geral = []
     
+    # ====== DADOS DE SORTEIOS ======
+    hoje = dt.now()
+    semana_atual = math.ceil(hoje.day / 7)  # Semana do mês (1-5)
+    mes = hoje.month
+    ano = hoje.year
+    
+    # Buscar battlepasses
+    battlepasses_operador = []
+    battlepasses_equipe = []
+    
+    try:
+        battlepasses_operador = Battlepass.query.filter(
+            Battlepass.categoria == 'operador',
+            Battlepass.ativo == True
+        ).all()
+    except Exception as e:
+        logger.warning(f"[WARNING] Erro ao buscar battlepasses de operador: {str(e)}")
+        battlepasses_operador = []
+    
+    try:
+        battlepasses_equipe = Battlepass.query.filter(
+            Battlepass.categoria == 'equipe',
+            Battlepass.ativo == True
+        ).all()
+    except Exception as e:
+        logger.warning(f"[WARNING] Erro ao buscar battlepasses de equipe: {str(e)}")
+        battlepasses_equipe = []
+    
+    # Preparar dados de sorteios
+    sorteios_data = {
+        'operador': {
+            'semanas': {
+                1: {},
+                2: {},
+                3: {},
+                4: {},
+                5: {}
+            }
+        },
+        'equipe': {
+            'mes': {}
+        }
+    }
+    
+    # Preencher sorteios de operadores (SEMANAIS) - Todas as semanas do mês
+    for semana_num in range(1, 6):
+        for bp in battlepasses_operador:
+            sorteio_semana = Sorteio.query.filter_by(
+                battlepass_id=bp.id,
+                ano=ano,
+                mes=mes,
+                semana=semana_num,
+                deletado=False
+            ).first()
+            
+            sorteios_data['operador']['semanas'][semana_num][bp.id] = sorteio_semana
+    
+    # Preencher sorteios de equipes (MENSAIS)
+    for bp in battlepasses_equipe:
+        sorteio_mes = Sorteio.query.filter_by(
+            battlepass_id=bp.id,
+            mes=mes,
+            ano=ano,
+            semana=None,
+            deletado=False
+        ).first()
+        
+        sorteios_data['equipe']['mes'][bp.id] = sorteio_mes
+    
     # Verificar se é admin/gerente
     é_admin_gerente = current_user.nivel in ['admin', 'gerente']
     
@@ -3104,6 +3174,12 @@ def eventos():
                          eventos_warfield=eventos_warfield,
                          eventos_redline=eventos_redline,
                          eventos_geral=eventos_geral,
+                         semana_atual=semana_atual,
+                         mes=mes,
+                         ano=ano,
+                         battlepasses_operador=battlepasses_operador,
+                         battlepasses_equipe=battlepasses_equipe,
+                         sorteios_data=sorteios_data,
                          é_admin_gerente=é_admin_gerente,
                          current_user=current_user)
 
@@ -3830,6 +3906,88 @@ def api_sortear_equipe():
     
     except Exception as e:
         db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/sortear-equipe-manual', methods=['POST'])
+@login_required
+@admin_required
+def api_sortear_equipe_manual():
+    """Sorteia uma equipe MANUALMENTE (escolhida pelo admin)"""
+    from backend.models import Battlepass, Sorteio, Equipe
+    
+    data = request.get_json()
+    battlepass_id = data.get('battlepass_id')
+    mes = data.get('mes')
+    ano = data.get('ano')
+    nome_equipe = data.get('nome_equipe', '').strip()
+    
+    try:
+        # Validar parâmetros
+        if not all([battlepass_id, mes, ano, nome_equipe]):
+            return jsonify({'success': False, 'error': 'Parâmetros incompletos'}), 400
+        
+        battlepass = Battlepass.query.get_or_404(battlepass_id)
+        
+        # Mapear tipo de battlepass
+        tipo_map = {
+            'equipe_basica': 'EQUIPE_BASICA'
+        }
+        
+        tipo_equipe = tipo_map.get(battlepass.tipo)
+        if not tipo_equipe:
+            return jsonify({'success': False, 'error': 'Tipo de battlepass inválido'}), 400
+        
+        # Buscar equipe por nome
+        equipe = Equipe.query.filter(
+            Equipe.nome.ilike(nome_equipe),
+            Equipe.battlepass == tipo_equipe
+        ).first()
+        
+        if not equipe:
+            return jsonify({
+                'success': False,
+                'error': f'Equipe "{nome_equipe}" com Battlepass {tipo_equipe} não encontrada'
+            }), 400
+        
+        # Verificar se já existe sorteio para este mês
+        sorteio_existente = Sorteio.query.filter_by(
+            battlepass_id=battlepass_id,
+            semana=None,
+            mes=mes,
+            ano=ano,
+            deletado=False
+        ).first()
+        
+        if sorteio_existente:
+            db.session.delete(sorteio_existente)
+        
+        # Criar novo sorteio manual
+        sorteio = Sorteio(
+            battlepass_id=battlepass_id,
+            mes=mes,
+            ano=ano,
+            semana=None,
+            equipe_id=equipe.id,
+            sorteado_por=current_user.id
+        )
+        
+        db.session.add(sorteio)
+        db.session.commit()
+        
+        app.logger.info(f"[SORTEIO] Equipe {equipe.nome} sorteada MANUALMENTE para {battlepass.nome}")
+        
+        return jsonify({
+            'success': True,
+            'sorteado': {
+                'id': equipe.id,
+                'nome': equipe.nome
+            }
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'[SORTEIO] Erro ao sortear equipe manualmente: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

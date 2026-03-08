@@ -251,6 +251,123 @@
         </div>
     </section>
 
+    <!-- ====== SEÇÃO 4: SORTEIOS & RESULTADOS ====== -->
+    <section class="mb-5">
+        <div class="card border-warning">
+            <div class="card-header" style="background-color: #FF6B00; color: white;">
+                <h3 class="mb-0"><i class="fas fa-dice"></i> Sorteios & Resultados</h3>
+                <small class="text-white-50">Semana {{ semana_atual }} de {{ ano }}</small>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- COLUNA 1: SORTEIOS DE OPERADORES (SEMANAIS) -->
+                    <div class="col-lg-6 mb-4">
+                        <h5 class="mb-4" style="color: #00C851;">
+                            <i class="fas fa-users"></i> Sorteios - Operadores
+                        </h5>
+                        
+                        {% if battlepasses_operador %}
+                            {% for bp in battlepasses_operador %}
+                                {% set sorteio = sorteios_data['operador']['semanas'][semana_atual].get(bp.id) %}
+                                
+                                <div class="card mb-3" style="background-color: var(--cinza-claro); border-left: 4px solid #00C851;">
+                                    <div class="card-header" style="background-color: var(--cinza-escuro); border-bottom: 2px solid #00C851; cursor: pointer;" 
+                                         onclick="irParaHistoricoOperador({{ bp.id }})">
+                                        <h6 class="mb-0" style="cursor: pointer; margin: 0; color: #00C851; font-weight: bold;">
+                                            {{ bp.nome }} (Semana {{ semana_atual }})
+                                        </h6>
+                                    </div>
+                                    
+                                    <div class="card-body text-center py-4">
+                                        {% if sorteio and sorteio.operador %}
+                                            <div class="sorteio-resultado">
+                                                <i class="fas fa-trophy" style="font-size: 32px; color: #00C851; margin-bottom: 15px; display: block;"></i>
+                                                <h6 style="color: white; font-weight: bold; margin-bottom: 8px;">
+                                                    {{ sorteio.operador.nome }}
+                                                </h6>
+                                                <small class="text-white-50 d-block mb-2">
+                                                    @{{ sorteio.operador.warname }}
+                                                </small>
+                                                {% if é_admin_gerente %}
+                                                    <button class="btn btn-sm btn-outline-danger mt-2" onclick="deletarSorteio({{ sorteio.id }}, true)">
+                                                        <i class="fas fa-trash"></i> Remover
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <p class="text-muted mb-3">Nenhum resultado</p>
+                                            {% if é_admin_gerente %}
+                                                <button class="btn btn-sm btn-success" onclick="abrirSorteioManual({{ bp.id }}, {{ semana_atual }}, '{{ bp.nome }}')">
+                                                    <i class="fas fa-dice me-1"></i> Sortear Agora
+                                                </button>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i> Nenhuma battlepass de operador configurada
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- COLUNA 2: SORTEIOS DE EQUIPES (MENSAIS) -->
+                    <div class="col-lg-6 mb-4">
+                        <h5 class="mb-4" style="color: #0066CC;">
+                            <i class="fas fa-shield-alt"></i> Sorteios - Equipes (Mês)
+                        </h5>
+                        
+                        {% if battlepasses_equipe %}
+                            {% for bp in battlepasses_equipe %}
+                                {% set sorteio = sorteios_data['equipe']['mes'].get(bp.id) %}
+                                
+                                <div class="card mb-3" style="background-color: var(--cinza-claro); border-left: 4px solid #0066CC;">
+                                    <div class="card-header" style="background-color: var(--cinza-escuro); border-bottom: 2px solid #0066CC; cursor: pointer;" 
+                                         onclick="irParaHistoricoEquipe({{ bp.id }})">
+                                        <h6 class="mb-0" style="cursor: pointer; margin: 0; color: #0066CC; font-weight: bold;">
+                                            {{ bp.nome }} (Mês)
+                                        </h6>
+                                    </div>
+                                    
+                                    <div class="card-body text-center py-4">
+                                        {% if sorteio and sorteio.equipe %}
+                                            <div class="sorteio-resultado">
+                                                <i class="fas fa-shield-alt" style="font-size: 32px; color: #C0C0C0; margin-bottom: 15px; display: block;"></i>
+                                                <h6 style="color: white; font-weight: bold; margin-bottom: 8px;">
+                                                    {{ sorteio.equipe.nome }}
+                                                </h6>
+                                                <small class="text-white-50 d-block mb-2">
+                                                    Sorteada em {{ sorteio.sorteado_em.strftime('%d/%m/%Y') if sorteio.sorteado_em else 'N/A' }}
+                                                </small>
+                                                {% if é_admin_gerente %}
+                                                    <button class="btn btn-sm btn-outline-danger mt-2" onclick="deletarSorteio({{ sorteio.id }}, false)">
+                                                        <i class="fas fa-trash"></i> Remover
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <p class="text-muted mb-3">Nenhum resultado</p>
+                                            {% if é_admin_gerente %}
+                                                <button class="btn btn-sm btn-primary" onclick="sortearEquipeManual({{ bp.id }}, {{ mes }}, {{ ano }})">
+                                                    <i class="fas fa-dice me-1"></i> Sortear Agora
+                                                </button>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i> Nenhuma battlepass de equipe configurada
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- MODAL: NOVO/EDITAR EVENTO -->
 <div class="modal fade" id="modalNovoEvento" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -1040,6 +1157,126 @@ function abrirHistoricoEquipe(battlepassId, battlepassNome) {
     modal.show();
 }
 
+// Deletar sorteio
+function deletarSorteio(sorteioId, isOperador) {
+    if (confirm('Tem certeza que deseja remover este sorteio?')) {
+        fetch(`/api/sorteio/${sorteioId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Sorteio removido com sucesso!');
+                location.reload();
+            } else {
+                alert('❌ Erro ao remover: ' + data.error);
+            }
+        })
+        .catch(err => alert('❌ Erro: ' + err.message));
+    }
+}
+
+// Abrir modal de sorteio manual de operador
+function abrirSorteioManual(battlepassId, semana, nomeBattlepass) {
+    const modal = new bootstrap.Modal(document.getElementById('modalSorteioManualOperador'));
+    document.getElementById('inputBattlepassIdManual').value = battlepassId;
+    document.getElementById('inputSemanaManual').value = semana;
+    document.getElementById('labelBattlepassManual').textContent = nomeBattlepass;
+    document.getElementById('inputNomeOperadorManual').value = '';
+    modal.show();
+}
+
+// Confirmar sorteio manual de operador
+function confirmarSorteioManualOperador() {
+    const battlepassId = document.getElementById('inputBattlepassIdManual').value;
+    const semana = document.getElementById('inputSemanaManual').value;
+    const warname = document.getElementById('inputNomeOperadorManual').value.trim();
+    
+    if (!warname) {
+        alert('❌ Por favor, digite o warname do operador');
+        return;
+    }
+    
+    fetch(`/api/sortear-operador-manual`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            battlepass_id: parseInt(battlepassId),
+            semana: parseInt(semana),
+            mes: {{ mes }},
+            ano: {{ ano }},
+            warname: warname
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Operador sorteado com sucesso!');
+            bootstrap.Modal.getInstance(document.getElementById('modalSorteioManualOperador')).hide();
+            location.reload();
+        } else {
+            alert('❌ Erro: ' + data.error);
+        }
+    })
+    .catch(err => {
+        console.error('Erro:', err);
+        alert('❌ Erro ao sortear: ' + err.message);
+    });
+}
+
+// Sortear equipe manualmente
+function sortearEquipeManual(battlepassId, mes, ano) {
+    const modal = new bootstrap.Modal(document.getElementById('modalSorteioManualEquipe'));
+    document.getElementById('inputBattlepassIdEquipe').value = battlepassId;
+    document.getElementById('inputNomeEquipeManual').value = '';
+    modal.show();
+}
+
+// Confirmar sorteio manual de equipe
+function confirmarSorteioManualEquipe() {
+    const battlepassId = document.getElementById('inputBattlepassIdEquipe').value;
+    const nomeEquipe = document.getElementById('inputNomeEquipeManual').value.trim();
+    
+    if (!nomeEquipe) {
+        alert('❌ Por favor, digite o nome da equipe');
+        return;
+    }
+    
+    fetch(`/api/sortear-equipe-manual`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            battlepass_id: parseInt(battlepassId),
+            mes: {{ mes }},
+            ano: {{ ano }},
+            nome_equipe: nomeEquipe
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Equipe sorteada com sucesso!');
+            bootstrap.Modal.getInstance(document.getElementById('modalSorteioManualEquipe')).hide();
+            location.reload();
+        } else {
+            alert('❌ Erro: ' + data.error);
+        }
+    })
+    .catch(err => {
+        console.error('Erro:', err);
+        alert('❌ Erro ao sortear: ' + err.message);
+    });
+}
+
 // Redirecionamento para histórico
 function irParaHistoricoOperador(battlepassId, battlepassNome) {
     window.location.href = `/historico-sorteios?tipo=operador&battlepass_id=${battlepassId}&mes={{mes}}&ano={{ano}}`;
@@ -1050,4 +1287,66 @@ function irParaHistoricoEquipe(battlepassId, battlepassNome) {
 }
 
 </script>
+
+<!-- MODAL: SORTEIO MANUAL OPERADOR -->
+<div class="modal fade" id="modalSorteioManualOperador" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark border-success">
+            <div class="modal-header border-success">
+                <h5 class="modal-title text-success">
+                    <i class="fas fa-user-ninja me-2"></i>Sortear Operador Manualmente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-success">Battlepass:</label>
+                    <p id="labelBattlepassManual" class="text-muted mb-0">-</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Digite o Warname do Operador:</label>
+                    <input type="text" class="form-control" id="inputNomeOperadorManual" 
+                           placeholder="Ex: ShadowOps, EliteNinja...">
+                </div>
+                <input type="hidden" id="inputBattlepassIdManual">
+                <input type="hidden" id="inputSemanaManual">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="confirmarSorteioManualOperador()">
+                    <i class="fas fa-check me-2"></i>Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: SORTEIO MANUAL EQUIPE -->
+<div class="modal fade" id="modalSorteioManualEquipe" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark border-primary">
+            <div class="modal-header border-primary">
+                <h5 class="modal-title text-primary">
+                    <i class="fas fa-shield-alt me-2"></i>Sortear Equipe Manualmente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Digite o Nome da Equipe:</label>
+                    <input type="text" class="form-control" id="inputNomeEquipeManual" 
+                           placeholder="Ex: Alpha Squad, Delta Force...">
+                </div>
+                <input type="hidden" id="inputBattlepassIdEquipe">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarSorteioManualEquipe()">
+                    <i class="fas fa-check me-2"></i>Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
