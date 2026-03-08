@@ -288,6 +288,16 @@
                                                 <small class="text-white-50 d-block mb-2">
                                                     @{{ sorteio.operador.warname }}
                                                 </small>
+                                                <!-- Info do Admin/Gerente que sorteou -->
+                                                {% if sorteio.usuario_sorteio %}
+                                                    <div style="background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; margin: 10px 0; border-left: 3px solid #00C851;">
+                                                        <small class="text-white-50 d-block mb-1">Sorteado por:</small>
+                                                        <span style="color: #FFD700; font-weight: bold; font-size: 0.9rem;">{{ sorteio.usuario_sorteio.username }}</span>
+                                                        <small class="text-white-50 d-block" style="margin-top: 4px;">
+                                                            {{ sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A' }}
+                                                        </small>
+                                                    </div>
+                                                {% endif %}
                                                 {% if é_admin_gerente %}
                                                     <button class="btn btn-sm btn-outline-danger mt-2" onclick="deletarSorteio({{ sorteio.id }}, true)">
                                                         <i class="fas fa-trash"></i> Remover
@@ -297,7 +307,7 @@
                                         {% else %}
                                             <p class="text-muted mb-3">Nenhum resultado</p>
                                             {% if é_admin_gerente %}
-                                                <button class="btn btn-sm btn-success" onclick="abrirSorteioManual({{ bp.id }}, {{ semana_atual }}, '{{ bp.nome }}')">
+                                                <button class="btn btn-sm btn-success" onclick="sortearOperadorAleatorio({{ bp.id }}, {{ semana_atual }})" id="btn-sortear-op-{{ bp.id }}">
                                                     <i class="fas fa-dice me-1"></i> Sortear Agora
                                                 </button>
                                             {% endif %}
@@ -337,9 +347,16 @@
                                                 <h6 style="color: white; font-weight: bold; margin-bottom: 8px;">
                                                     {{ sorteio.equipe.nome }}
                                                 </h6>
-                                                <small class="text-white-50 d-block mb-2">
-                                                    Sorteada em {{ sorteio.sorteado_em.strftime('%d/%m/%Y') if sorteio.sorteado_em else 'N/A' }}
-                                                </small>
+                                                <!-- Info do Admin/Gerente que sorteou -->
+                                                {% if sorteio.usuario_sorteio %}
+                                                    <div style="background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; margin: 10px 0; border-left: 3px solid #0066CC;">
+                                                        <small class="text-white-50 d-block mb-1">Sorteada por:</small>
+                                                        <span style="color: #FFD700; font-weight: bold; font-size: 0.9rem;">{{ sorteio.usuario_sorteio.username }}</span>
+                                                        <small class="text-white-50 d-block" style="margin-top: 4px;">
+                                                            {{ sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A' }}
+                                                        </small>
+                                                    </div>
+                                                {% endif %}
                                                 {% if é_admin_gerente %}
                                                     <button class="btn btn-sm btn-outline-danger mt-2" onclick="deletarSorteio({{ sorteio.id }}, false)">
                                                         <i class="fas fa-trash"></i> Remover
@@ -349,7 +366,7 @@
                                         {% else %}
                                             <p class="text-muted mb-3">Nenhum resultado</p>
                                             {% if é_admin_gerente %}
-                                                <button class="btn btn-sm btn-primary" onclick="sortearEquipeManual({{ bp.id }}, {{ mes }}, {{ ano }})">
+                                                <button class="btn btn-sm btn-primary" onclick="sortearEquipeAleatoria({{ bp.id }}, {{ mes }}, {{ ano }})" id="btn-sortear-eq-{{ bp.id }}">
                                                     <i class="fas fa-dice me-1"></i> Sortear Agora
                                                 </button>
                                             {% endif %}
@@ -1284,6 +1301,101 @@ function irParaHistoricoOperador(battlepassId, battlepassNome) {
 
 function irParaHistoricoEquipe(battlepassId, battlepassNome) {
     window.location.href = `/historico-sorteios?tipo=equipe&battlepass_id=${battlepassId}&mes={{mes}}&ano={{ano}}`;
+}
+
+// ===== SORTEIO ALEATÓRIO (100% ALEATÓRIO - SEM PARÂMETROS) =====
+
+// Sortear Operador - Completamente Aleatório
+function sortearOperadorAleatorio(battlepassId, semana) {
+    const btn = document.getElementById(`btn-sortear-op-${battlepassId}`);
+    const originalText = btn.innerHTML;
+    
+    // Desabilitar botão e mostrar loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sorteando...';
+    
+    fetch(`/api/sortear-operador`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            battlepass_id: parseInt(battlepassId),
+            semana: parseInt(semana),
+            mes: {{ mes }},
+            ano: {{ ano }}
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Animate the win
+            btn.innerHTML = '<i class="fas fa-trophy me-1"></i> ✅ ' + data.sorteado.nome.toUpperCase();
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-warning');
+            
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            alert('❌ Erro ao sortear: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(err => {
+        console.error('Erro:', err);
+        alert('❌ Erro ao sortear: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
+// Sortear Equipe - Completamente Aleatório
+function sortearEquipeAleatoria(battlepassId, mes, ano) {
+    const btn = document.getElementById(`btn-sortear-eq-${battlepassId}`);
+    const originalText = btn.innerHTML;
+    
+    // Desabilitar botão e mostrar loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sorteando...';
+    
+    fetch(`/api/sortear-equipe`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            battlepass_id: parseInt(battlepassId),
+            mes: parseInt(mes),
+            ano: parseInt(ano)
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Animate the win
+            btn.innerHTML = '<i class="fas fa-trophy me-1"></i> ✅ ' + data.sorteado.nome.toUpperCase();
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-warning');
+            
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            alert('❌ Erro ao sortear: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(err => {
+        console.error('Erro:', err);
+        alert('❌ Erro ao sortear: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
 }
 
 </script>
