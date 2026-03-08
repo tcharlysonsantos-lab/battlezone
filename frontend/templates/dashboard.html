@@ -264,18 +264,41 @@
 
 <!-- ====== SEÇÃO: SORTEIOS REALIZADOS ====== -->
 {% if sorteios_realizados %}
-<div class="card mt-5 mb-4">
-    <div class="card-header" style="background-color: #FFD700; color: black;">
-        <h5 class="mb-0"><i class="fas fa-dice"></i> Sorteios Realizados</h5>
+<div class="card mt-5 mb-4 border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); box-shadow: 0 8px 16px rgba(255, 215, 0, 0.15);">
+    <!-- HEADER COM GRADIENT -->
+    <div class="card-header border-0" style="background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%); color: black; padding: 1.5rem 1.5rem;">
+        <h5 class="mb-0" style="font-weight: 800; font-size: 1.3rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+            <i class="fas fa-trophy" style="margin-right: 10px;"></i> Sorteios Realizados
+        </h5>
+        <small style="color: #333; font-weight: 600;">Últimas premiações</small>
     </div>
-    <div class="card-body">
-        <div class="row">
+
+    <div class="card-body" style="padding: 2rem 1.5rem;">
+        <div class="row g-4">
             {% for sorteio in sorteios_realizados %}
-            <div class="col-12 col-md-6 col-lg-4 mb-3">
-                <div class="card h-100 shadow-sm" style="display: flex; flex-direction: column;">
-                    <!-- HEADER COM OPERADOR/EQUIPE -->
-                    <div class="card-header" style="background-color: #00C851; border: none; padding: 1.5rem 1rem; text-align: center;">
-                        <h5 class="card-title mb-2 text-white" style="font-weight: 700; font-size: 1.15rem;">
+            <div class="col-12 col-md-6 col-lg-4">
+                <!-- CARD SORTEIO -->
+                <div class="card h-100 border-0" style="background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%); 
+                                                        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.1), 
+                                                                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                                                        transition: all 0.3s ease;
+                                                        overflow: hidden;"
+                     onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 20px rgba(255, 215, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)';"
+                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 215, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05)';">
+                    
+                    <!-- HEADER COM ÍCONE E NOME -->
+                    <div style="background: linear-gradient(90deg, #00C851 0%, #00A844 100%); 
+                                padding: 1.5rem 1rem; text-align: center; position: relative; overflow: hidden;">
+                        <!-- Efeito de fundo -->
+                        <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);"></div>
+                        
+                        <!-- Ícone Grande -->
+                        <div style="position: relative; z-index: 1; margin-bottom: 0.8rem;">
+                            <i class="fas fa-star" style="font-size: 2.5rem; color: #FFD700; text-shadow: 0 2px 8px rgba(0,0,0,0.3);"></i>
+                        </div>
+                        
+                        <!-- Nome -->
+                        <h5 class="card-title mb-0" style="font-weight: 800; font-size: 1.25rem; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
                             {% if sorteio.operador %}
                                 {{ sorteio.operador.nome }}
                             {% elif sorteio.equipe %}
@@ -287,36 +310,35 @@
                     </div>
 
                     <!-- CORPO DO CARD -->
-                    <div class="card-body" style="flex: 1;">
+                    <div class="card-body" style="padding: 1.5rem 1rem;">
                         <!-- Warname -->
-                        <p style="color: #FFD700; font-weight: bold; margin-bottom: 0.5rem; font-size: 0.95rem;">
-                            {% if sorteio.operador %}
-                                {{ sorteio.operador.warname }}
-                            {% elif sorteio.equipe %}
-                                {{ sorteio.equipe.warname or sorteio.equipe.nome }}
-                            {% endif %}
-                        </p>
-
-                        <!-- Username com @ -->
-                        <p style="color: white; font-size: 0.9rem; margin-bottom: 0.8rem;">
-                            {% if sorteio.operador %}
-                                @{{ sorteio.operador.usuario or sorteio.operador.warname }}
-                            {% endif %}
-                        </p>
+                        <div style="margin-bottom: 1.2rem; padding-bottom: 1rem; border-bottom: 2px solid rgba(255, 215, 0, 0.2);">
+                            <p style="color: #FFD700; font-weight: 800; margin-bottom: 0.3rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">
+                                {% if sorteio.operador %}
+                                    🎮 {{ sorteio.operador.warname }}
+                                {% elif sorteio.equipe %}
+                                    🛡️ {{ sorteio.equipe.warname or sorteio.equipe.nome }}
+                                {% endif %}
+                            </p>
+                        </div>
 
                         <!-- Battlepass -->
-                        <div style="margin-bottom: 0.8rem;">
-                            <small style="color: #b0b0b0;">Battlepass:</small>
-                            <p style="margin: 0; font-size: 0.95rem; color: white;">
+                        <div style="margin-bottom: 1.2rem;">
+                            <small style="color: #b0b0b0; text-transform: uppercase; font-weight: 600; font-size: 0.8rem;">📦 Battlepass</small>
+                            <p style="margin: 0.5rem 0 0 0; font-size: 1rem; color: #00C851; font-weight: 700;">
                                 {{ sorteio.battlepass.nome if sorteio.battlepass else 'N/A' }}
                             </p>
                         </div>
 
                         <!-- Data/Hora Sorteado -->
-                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #444;">
-                            <small style="color: #b0b0b0;">Sorteado em:</small>
-                            <p style="margin: 0; font-size: 0.9rem; color: #FFD700; font-weight: bold;">
-                                {{ sorteio.sorteado_em.strftime('%d/%m/%Y %H:%M') if sorteio.sorteado_em else 'N/A' }}
+                        <div style="margin-top: 1rem; padding: 1rem; border-radius: 8px; background: rgba(255, 215, 0, 0.08); border-left: 3px solid #FFD700;">
+                            <small style="color: #b0b0b0; text-transform: uppercase; font-weight: 600; font-size: 0.8rem;">⏰ Sorteado em</small>
+                            <p style="margin: 0.5rem 0 0 0; font-weight: 700; color: #FFD700; font-size: 0.95rem;">
+                                {{ sorteio.sorteado_em.strftime('%d/%m/%Y') if sorteio.sorteado_em else 'N/A' }}
+                                <br>
+                                <span style="font-size: 0.85rem; color: #FFA500;">
+                                    {{ sorteio.sorteado_em.strftime('%H:%M') if sorteio.sorteado_em else 'N/A' }}
+                                </span>
                             </p>
                         </div>
                     </div>
