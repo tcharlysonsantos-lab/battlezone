@@ -60,3 +60,50 @@ def init_database(app):
         logger.error(f"[DB] ✗ Erro crítico na inicialização: {e}")
         # Não lançar exceção para não derrubar a app, apenas avisar
         logger.error("[DB] ⚠️  A aplicação continuará, mas funcionalidades podem estar limitadas")
+
+
+def seed_battlepasses(app):
+    """Insert default battlepasses if none exist - for Railway initialization"""
+    try:
+        with app.app_context():
+            # Verificar se já existem battlepasses
+            existing_battlepasses = Battlepass.query.count()
+            
+            if existing_battlepasses > 0:
+                logger.info(f"[SEED] ✓ Battlepasses já existem ({existing_battlepasses}). Pulando seed.")
+                return
+            
+            logger.info("[SEED] 🌱 Inserindo battlepasses de exemplo...")
+            
+            # Battlepasses de Operador (semanais)
+            bp_operador_1 = Battlepass(
+                nome="Operador - Semana",
+                descricao="Sorteio semanal para operadores",
+                categoria="operador",
+                tipo="sorteio",
+                ativo=True,
+                deletado=False
+            )
+            
+            # Battlepasses de Equipe (mensais)
+            bp_equipe_1 = Battlepass(
+                nome="Equipe - Mês",
+                descricao="Sorteio mensal para equipes",
+                categoria="equipe",
+                tipo="sorteio",
+                ativo=True,
+                deletado=False
+            )
+            
+            db.session.add(bp_operador_1)
+            db.session.add(bp_equipe_1)
+            db.session.commit()
+            
+            logger.info("[SEED] ✅ 2 battlepasses foram criadas com sucesso!")
+            
+    except Exception as e:
+        logger.error(f"[SEED] ✗ Erro ao seed battlepasses: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass

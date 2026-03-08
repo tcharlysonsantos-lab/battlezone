@@ -42,8 +42,9 @@ try:
     # Initialize database tables if needed
     logger.info("[WSGI] Initializing database...")
     try:
-        from backend.init_db import init_database
+        from backend.init_db import init_database, seed_battlepasses
         init_database(app)
+        seed_battlepasses(app)
         logger.info("[WSGI] Database initialized successfully")
     except Exception as db_error:
         logger.warning(f"[WSGI] Database initialization warning: {db_error}")

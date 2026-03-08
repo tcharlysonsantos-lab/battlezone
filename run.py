@@ -105,7 +105,9 @@ def main():
     # ===== NOVA INICIALIZAÇÃO ROBUSTA =====
     try:
         print("   ➜ Chamando init_database() para validar todas as tabelas...")
+        from backend.init_db import seed_battlepasses
         init_database(app)
+        seed_battlepasses(app)
         print("   [OK] Banco de dados validado com sucesso!")
     except Exception as e:
         print(f"   [WARN] Erro no init_database (continuando): {e}")

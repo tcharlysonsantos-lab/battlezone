@@ -4676,8 +4676,9 @@ def init_database_setup(secret_key):
         return jsonify({'error': 'Invalid secret key'}), 403
     
     try:
-        from backend.init_db import init_database
+        from backend.init_db import init_database, seed_battlepasses
         init_database(app)
+        seed_battlepasses(app)
         
         return jsonify({
             'success': True,
