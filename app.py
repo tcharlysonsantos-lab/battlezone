@@ -25,7 +25,7 @@ from backend.pagamentos_routes import pagamento_bp
 from backend.decorators import requer_permissao, operador_session_required, admin_required
 from backend.utils import get_valores_plano, get_modos_permitidos, PLANOS_WARFIELD, PLANOS_REDLINE
 from backend.cloud_manager import CloudManager
-from backend.forms import OperadorForm, EquipeForm, PartidaForm, VendaForm, EstoqueForm
+from backend.forms import OperadorForm, EquipeForm, PartidaForm, VendaForm, EstoqueForm, LoginForm
 from backend.security_utils import allowed_file_secure, safe_filename_with_timestamp, create_upload_directory
 from backend.email_service import init_mail
 from backend.health_check import db_health_check
@@ -256,7 +256,7 @@ def handle_csrf_error(e):
     logger.error(f"  Cookies: {list(request.cookies.keys())}")
     
     flash('Erro de segurança: Token CSRF inválido. Tente novamente.', 'danger')
-    return render_template('auth/login.html'), 400
+    return render_template('auth/login.html', form=LoginForm()), 400
 
 # ==================== USER LOADER ====================
 @login_manager.user_loader
